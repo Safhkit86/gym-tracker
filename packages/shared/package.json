@@ -1,0 +1,13 @@
+{
+  "name": "@gym-tracker/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "echo \"(shared) nessun test ancora\" && exit 0",
+    "lint": "echo \"(shared) nessun linter configurato ancora\" && exit 0"
+  }
+}

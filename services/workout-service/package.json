@@ -1,0 +1,11 @@
+{
+  "name": "@gym-tracker/workout-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "echo \"(TODO Fase 2) build non ancora implementata\" && exit 0",
+    "test": "echo \"(TODO Fase 2) test non ancora implementati\" && exit 0",
+    "lint": "echo \"(TODO Fase 2) lint non ancora configurato\" && exit 0"
+  }
+}

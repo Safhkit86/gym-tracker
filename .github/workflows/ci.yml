@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Se arrivano nuovi commit sulla stessa PR, annulla la run precedente in corso.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-test-build:
+    name: Lint, test e build (npm workspaces)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Installa le dipendenze
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      - name: Format check
+        run: npm run format:check
+
+  docker-build:
+    name: Build immagine Docker (auth-service)
+    runs-on: ubuntu-latest
+    needs: lint-test-build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build immagine auth-service
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/auth-service/Dockerfile
+          push: false
+          tags: gym-tracker/auth-service:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Job "cancello": tutti i job devono essere richiesti come required status
+  # check nelle branch protection rules di GitHub, oppure si può puntare
+  # questo singolo job come unico required check.
+  ci-status:
+    name: CI passed
+    runs-on: ubuntu-latest
+    needs: [lint-test-build, docker-build]
+    if: always()
+    steps:
+      - name: Verifica esito dei job precedenti
+        run: |
+          if [ "${{ needs.lint-test-build.result }}" != "success" ] || [ "${{ needs.docker-build.result }}" != "success" ]; then
+            echo "Uno o più job sono falliti."
+            exit 1
+          fi
+          echo "Tutti i controlli sono passati."

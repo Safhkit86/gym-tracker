@@ -1,0 +1,11 @@
+{
+  "name": "@gym-tracker/notify-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "echo \"(TODO Fase 4) build non ancora implementata\" && exit 0",
+    "test": "echo \"(TODO Fase 4) test non ancora implementati\" && exit 0",
+    "lint": "echo \"(TODO Fase 4) lint non ancora configurato\" && exit 0"
+  }
+}
