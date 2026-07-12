@@ -43,6 +43,10 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   codice va corretto, non il check.
 - Le PR di dimensioni contenute (un servizio o una feature alla volta) sono
   preferibili a PR enormi multi-servizio.
+- Quando una fase del percorso didattico viene completata, aggiorna sempre la
+  sezione "Roadmap del progetto" del `README.md`: spunta la casella della fase
+  (`- [x]`) e sposta l'annotazione `_(completata)_` sulla fase appena conclusa.
+  Fai rientrare questo aggiornamento nella stessa PR che completa la fase.
 
 ## Comandi utili
 

@@ -40,6 +40,7 @@ cp .env.example .env
 npm install
 docker compose up -d postgres redis rabbitmq   # solo infrastruttura
 npm run build --workspace=@gym-tracker/shared
+npm run db:migrate --workspace=@gym-tracker/auth-service   # crea le tabelle
 cd services/auth-service && npm run dev         # avvia auth-service in watch mode
 ```
 
@@ -61,22 +62,21 @@ curl http://localhost:4001/health
 
 ## CI/CD
 
-Ogni Pull Request verso `main` esegue automaticamente (`.github/workflows/ci.yml`):
+Ogni Pull Request verso `master` esegue automaticamente (`.github/workflows/ci.yml`):
 
 1. Lint su tutti i workspace
 2. Test su tutti i workspace
 3. Build TypeScript su tutti i workspace
 4. Build dell'immagine Docker di `auth-service`
 
-**Per attivare la validazione obbligatoria delle PR su GitHub:**
-Settings → Branches → Branch protection rule su `main` → abilita
-"Require status checks to pass before merging" e seleziona il check
-`CI passed` (il job `ci-status` del workflow).
+La validazione obbligatoria delle PR è **attiva**: su `master` è impostata una
+branch protection rule con il check `CI passed` (il job `ci-status` del workflow)
+come required status check, quindi una PR non è mergiabile finché la CI non è verde.
 
 ## Roadmap del progetto (percorso didattico)
 
-- [x] **Fase 0** — repo, CI/CD, Docker Compose _(questa fase)_
-- [ ] **Fase 1** — auth-service completo (registrazione, login, JWT)
+- [x] **Fase 0** — repo, CI/CD, Docker Compose
+- [x] **Fase 1** — auth-service completo (registrazione, login, JWT) _(completata)_
 - [ ] **Fase 2** — workout-service (schede, esercizi)
 - [ ] **Fase 3** — progress-service + motore di regole di progressione
 - [ ] **Fase 4** — notify-service
