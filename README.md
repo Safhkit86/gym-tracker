@@ -52,11 +52,11 @@ curl http://localhost:4001/health
 
 ## Comandi principali
 
-| Comando | Cosa fa |
-|---|---|
-| `npm run lint` | Lint su tutti i workspace |
-| `npm run test` | Test su tutti i workspace |
-| `npm run build` | Build su tutti i workspace |
+| Comando          | Cosa fa                         |
+| ---------------- | ------------------------------- |
+| `npm run lint`   | Lint su tutti i workspace       |
+| `npm run test`   | Test su tutti i workspace       |
+| `npm run build`  | Build su tutti i workspace      |
 | `npm run format` | Formatta il codice con Prettier |
 
 ## CI/CD
@@ -75,7 +75,7 @@ Settings → Branches → Branch protection rule su `main` → abilita
 
 ## Roadmap del progetto (percorso didattico)
 
-- [x] **Fase 0** — repo, CI/CD, Docker Compose *(questa fase)*
+- [x] **Fase 0** — repo, CI/CD, Docker Compose _(questa fase)_
 - [ ] **Fase 1** — auth-service completo (registrazione, login, JWT)
 - [ ] **Fase 2** — workout-service (schede, esercizi)
 - [ ] **Fase 3** — progress-service + motore di regole di progressione

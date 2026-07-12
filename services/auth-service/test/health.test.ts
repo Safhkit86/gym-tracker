@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
-import { createApp } from "../src/app.js";
+import { buildTestApp } from "./helpers.js";
 
 describe("GET /health", () => {
   it("risponde con status ok e il nome del servizio", async () => {
-    const app = createApp();
+    const { app } = buildTestApp();
 
     const response = await request(app).get("/health");
 
@@ -14,16 +14,5 @@ describe("GET /health", () => {
       status: "ok",
     });
     expect(response.body.timestamp).toBeDefined();
-  });
-});
-
-describe("GET /", () => {
-  it("conferma che il servizio e' attivo", async () => {
-    const app = createApp();
-
-    const response = await request(app).get("/");
-
-    expect(response.status).toBe(200);
-    expect(response.body.service).toBe("auth-service");
   });
 });

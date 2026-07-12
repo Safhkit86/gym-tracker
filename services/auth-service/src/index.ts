@@ -1,10 +1,30 @@
 import { createApp } from "./app.js";
+import { loadConfig } from "./config.js";
+import { createDb } from "./db/client.js";
+import { argon2Hasher } from "./domain/password.js";
+import { createJoseTokenService } from "./domain/token.js";
+import { KyselyUserRepository } from "./repositories/user-repository.js";
 
-const PORT = Number(process.env.PORT ?? 4001);
+const config = loadConfig();
 
-const app = createApp();
+const db = createDb(config.DATABASE_URL);
 
-app.listen(PORT, () => {
-  // eslint-disable-next-line no-console
-  console.log(`[auth-service] listening on port ${PORT}`);
+const app = createApp({
+  users: new KyselyUserRepository(db),
+  passwords: argon2Hasher,
+  tokens: createJoseTokenService({ secret: config.JWT_SECRET }),
 });
+
+const server = app.listen(config.PORT, () => {
+  // eslint-disable-next-line no-console
+  console.log(`[auth-service] listening on port ${config.PORT}`);
+});
+
+// Chiusura pulita: termina il pool Postgres allo spegnimento.
+for (const signal of ["SIGTERM", "SIGINT"] as const) {
+  process.on(signal, () => {
+    server.close(() => {
+      void db.destroy();
+    });
+  });
+}
