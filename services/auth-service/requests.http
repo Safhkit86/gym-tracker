@@ -1,0 +1,71 @@
+# Richieste manuali per auth-service (Fase 1).
+#
+# Richiede l'estensione VS Code "REST Client" (humao.rest-client):
+# sopra ogni blocco compare "Send Request" — cliccalo e vedi la risposta
+# nella tab a fianco. Esegui prima Login (o Register), poi /me: il token
+# viene preso automaticamente dalla risposta del login.
+#
+# Prerequisiti: infrastruttura + auth-service avviati e migrazione eseguita
+#   docker compose up -d
+#   npm run db:migrate --workspace=@gym-tracker/auth-service
+
+@baseUrl = http://localhost:4001
+@email = demo@example.com
+@password = supersegreta
+
+### Health check (questa e' una GET: si apre anche direttamente nel browser)
+GET {{baseUrl}}/health
+
+### Registrazione — la prima volta risponde 201; se l'utente esiste gia' -> 409
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Login — cattura il token dalla risposta (usato sotto per /me)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### /me — endpoint protetto, usa il token del login qui sopra
+GET {{baseUrl}}/me
+Authorization: Bearer {{login.response.body.token}}
+
+### /me senza token -> 401 UNAUTHORIZED
+GET {{baseUrl}}/me
+
+### Login con password errata -> 401 INVALID_CREDENTIALS
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "password-sbagliata"
+}
+
+### Registrazione con email non valida -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "non-una-email",
+  "password": "supersegreta"
+}
+
+### Registrazione con password troppo corta (< 8) -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "corta@example.com",
+  "password": "123"
+}
