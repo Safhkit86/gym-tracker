@@ -48,6 +48,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Necessario per la cache type=gha: il driver docker di default non
+      # supporta l'export della cache, serve il driver docker-container.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build immagine auth-service
         uses: docker/build-push-action@v6
         with:
