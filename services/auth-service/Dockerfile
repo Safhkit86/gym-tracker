@@ -17,6 +17,7 @@ RUN npm install --workspace=@gym-tracker/shared --workspace=@gym-tracker/auth-se
 # --- Stage 2: build TypeScript ---
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json* ./
 COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
 COPY services/auth-service services/auth-service

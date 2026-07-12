@@ -24,6 +24,13 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   Un endpoint nuovo senza test non è considerato completo.
 - Niente `console.log` in produzione salvo il log di avvio del server
   (l'eslint rule `no-console` è a "warn", non "error", per questo motivo).
+- Il `Dockerfile` di ogni servizio usa come build context la root del
+  monorepo (necessario perché npm workspaces risolva `@gym-tracker/shared`).
+  Ogni stage che esegue comandi npm con `--workspace` deve copiare il
+  `package.json` (e `package-lock.json*`) di root, non solo quelli dei
+  singoli workspace: senza il manifest di root, `/app` non è riconosciuto
+  come workspace root e `npm run build --workspace=...` fallisce con
+  `ENOENT: package.json`. Usa il Dockerfile di `auth-service` come modello.
 
 ## Commit e PR
 
