@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, master]
   push:
-    branches: [main]
+    branches: [main, master]
 
 # Se arrivano nuovi commit sulla stessa PR, annulla la run precedente in corso.
 concurrency:
