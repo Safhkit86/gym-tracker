@@ -8,7 +8,7 @@ web app che, in futuro, da un'app Android, tramite un API Gateway condiviso.
 ## Architettura
 
 ```
-Web app (in costruzione) / Android app (futuro)
+Web app (apps/web, in costruzione) / Android app (futuro)
             │
        API Gateway            (minimo: reverse-proxy verso i servizi)
             │
@@ -32,10 +32,14 @@ Web app (in costruzione) / Android app (futuro)
 - **notify-service** — notifiche quando una regola di progressione scatta
   (Fase 4)
 
+- **web** (`apps/web`) — React + Vite + TypeScript, CSS semplice, fetch
+  nativo. Parla solo con `api-gateway`, mai con i singoli servizi.
+
 Dalla Fase 3 in poi, ogni fase backend include anche la parte di interfaccia
 web corrispondente (dove serve), invece di costruire tutta la webapp in blocco
 alla fine: si parte comunque da un ricongiungimento per auth-service e
-workout-service (Fase 1 e 2), gia' completi lato backend.
+workout-service (Fase 1 e 2), gia' completi lato backend — login/registrazione
+sono gia' coperti, la UI delle schede (Fase 2) e' il prossimo passo.
 
 ## Requisiti
 
@@ -55,6 +59,7 @@ cd services/auth-service && npm run dev         # avvia auth-service in watch mo
 # in altri terminali:
 #   cd services/workout-service && npm run dev
 #   cd services/api-gateway && npm run dev
+#   cd apps/web && npm run dev             # webapp su http://localhost:5173
 ```
 
 Oppure avvia tutto containerizzato:
@@ -89,8 +94,9 @@ come required status check, quindi una PR non è mergiabile finché la CI non è
 ## Roadmap del progetto (percorso didattico)
 
 - [x] **Fase 0** — repo, CI/CD, Docker Compose
-- [x] **Fase 1** — auth-service completo (registrazione, login, JWT)
-- [x] **Fase 2** — workout-service (schede, esercizi) _(completata)_
+- [x] **Fase 1** — auth-service completo (registrazione, login, JWT) + UI
+      (login, registrazione, dashboard protetta) _(completata)_
+- [x] **Fase 2** — workout-service (schede, esercizi): backend completo, UI in arrivo
 - [ ] **Fase 3** — progress-service + motore di regole di progressione
 - [ ] **Fase 4** — notify-service
 - [ ] **Fase 5** — hardening API Gateway (autenticazione centralizzata, rate

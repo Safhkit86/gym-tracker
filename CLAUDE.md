@@ -7,9 +7,12 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
 
 - `packages/shared` — tipi e contratti condivisi tra i servizi
 - `services/auth-service` — utenti, autenticazione, JWT (implementato)
-- `services/workout-service` — schede/esercizi (Fase 2, TODO)
+- `services/workout-service` — schede/esercizi (implementato)
+- `services/api-gateway` — unico punto di ingresso per i client, reverse-proxy
+  verso i servizi (implementato in forma minima)
 - `services/progress-service` — storico + regole di progressione (Fase 3, TODO)
 - `services/notify-service` — notifiche (Fase 4, TODO)
+- `apps/web` — webapp React/Vite/TypeScript, parla solo con `api-gateway`
 
 ## Convenzioni di codice
 
@@ -38,6 +41,20 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   `kysely_migration_auth`, `kysely_migration_workout`), altrimenti la tabella
   di tracking migrazioni di default (`kysely_migration`) collide tra servizi
   e la migrazione fallisce con "corrupted migrations".
+- `apps/web` usa una versione di `vitest` diversa da quella dei servizi
+  backend (backend su v2, frontend su v4, per compatibilità con Vite 8): npm
+  tiene due copie separate (una in root, una annidata in `apps/web`). Un
+  pacchetto hoisted in root che fa `expect.extend(...)` o `declare module
+"vitest"` (es. `@testing-library/jest-dom`) risolve `vitest` da dove _lui_
+  vive, non da dove girano i test — se le due copie non coincidono, i matcher
+  non vengono registrati/i tipi non combaciano a runtime pur passando il
+  typecheck. Vedi `apps/web/src/test/setup.ts` e `jest-dom.d.ts` per il
+  workaround (importare `expect` ed estenderlo a mano dentro il workspace,
+  invece di affidarsi all'entry point `/vitest` del pacchetto).
+- `api-gateway` ha `cors()` globale perché la webapp (altra origine: Vite dev
+  o un dominio statico) lo chiama via fetch da browser: senza CORS le
+  richieste vengono bloccate lato client. Nessun altro servizio ne ha bisogno,
+  la webapp non li chiama mai direttamente.
 
 ## Commit e PR
 

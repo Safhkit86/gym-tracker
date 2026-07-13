@@ -1,0 +1,92 @@
+:root {
+  color-scheme: light dark;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: canvas;
+  color: canvastext;
+}
+
+main {
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: 0.9rem;
+}
+
+input {
+  padding: 0.5rem 0.625rem;
+  font-size: 1rem;
+  border: 1px solid #8888;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: inherit;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+button.secondary {
+  background: transparent;
+  color: inherit;
+  border: 1px solid #8888;
+}
+
+.form-error {
+  color: #dc2626;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #8884;
+}
+
+.app-nav__links {
+  display: flex;
+  gap: 1rem;
+}
