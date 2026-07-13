@@ -80,5 +80,21 @@ services:
   # progress-service, notify-service verranno aggiunti rispettivamente in
   # Fase 3 e 4 del percorso didattico.
 
+  # --- API Gateway: unico punto di ingresso per i client (web/Android) ---
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: ${API_GATEWAY_PORT:-4000}
+      AUTH_SERVICE_URL: http://auth-service:4001
+      WORKOUT_SERVICE_URL: http://workout-service:4002
+    ports:
+      - "${API_GATEWAY_PORT:-4000}:4000"
+    depends_on:
+      - auth-service
+      - workout-service
+
 volumes:
   postgres-data:

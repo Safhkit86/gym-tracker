@@ -1,0 +1,51 @@
+# Richieste manuali attraverso api-gateway (Fase 2.5 — Gateway minimo).
+#
+# Stesso flusso di auth-service/requests.http e workout-service/requests.http,
+# ma passando dall'unico punto di ingresso (porta 4000) invece che chiamare i
+# servizi direttamente sulle loro porte.
+#
+# Prerequisiti: infrastruttura + servizi + gateway avviati e migrazioni eseguite
+#   docker compose up -d
+#   npm run db:migrate --workspace=@gym-tracker/auth-service
+#   npm run db:migrate --workspace=@gym-tracker/workout-service
+
+@baseUrl = http://localhost:4000
+@email = demo@example.com
+@password = supersegreta
+
+### Health check del gateway (non proxato)
+GET {{baseUrl}}/health
+
+### Register (via gateway -> auth-service)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Login (via gateway -> auth-service) -- cattura il token
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### /me (via gateway -> auth-service)
+GET {{baseUrl}}/me
+Authorization: Bearer {{login.response.body.token}}
+
+### /exercises (via gateway -> workout-service)
+GET {{baseUrl}}/exercises
+Authorization: Bearer {{login.response.body.token}}
+
+### /workouts (via gateway -> workout-service)
+GET {{baseUrl}}/workouts
+Authorization: Bearer {{login.response.body.token}}
+
+### Rotta non mappata -> 404 dal gateway stesso
+GET {{baseUrl}}/does-not-exist
