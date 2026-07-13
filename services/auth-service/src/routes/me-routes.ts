@@ -1,12 +1,11 @@
 import { Router } from "express";
-import type { PublicUser } from "@gym-tracker/shared";
+import type { AccessTokenService, PublicUser } from "@gym-tracker/shared";
 import { UnauthorizedError } from "../errors.js";
-import type { TokenService } from "../domain/token.js";
 import type { UserRepository } from "../repositories/user-repository.js";
 import { authenticate } from "../middleware/authenticate.js";
 
 /** Rotta protetta di esempio: restituisce l'utente autenticato. */
-export function createMeRoutes(users: UserRepository, tokens: TokenService): Router {
+export function createMeRoutes(users: UserRepository, tokens: AccessTokenService): Router {
   const router = Router();
 
   router.get("/me", authenticate(tokens), async (req, res, next) => {

@@ -1,8 +1,7 @@
 import express, { type Express } from "express";
-import { buildHealthStatus } from "@gym-tracker/shared";
+import { buildHealthStatus, type AccessTokenService } from "@gym-tracker/shared";
 import { AuthService } from "./domain/auth-service.js";
 import type { PasswordHasher } from "./domain/password.js";
-import type { TokenService } from "./domain/token.js";
 import type { UserRepository } from "./repositories/user-repository.js";
 import { createAuthRoutes } from "./routes/auth-routes.js";
 import { createMeRoutes } from "./routes/me-routes.js";
@@ -18,7 +17,7 @@ const SERVICE_VERSION = "0.1.0";
 export interface AppDeps {
   users: UserRepository;
   passwords: PasswordHasher;
-  tokens: TokenService;
+  tokens: AccessTokenService;
 }
 
 export function createApp(deps: AppDeps): Express {

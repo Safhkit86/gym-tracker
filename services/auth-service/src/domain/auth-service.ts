@@ -1,8 +1,13 @@
-import type { AuthResponse, LoginRequest, PublicUser, RegisterRequest } from "@gym-tracker/shared";
+import type {
+  AccessTokenService,
+  AuthResponse,
+  LoginRequest,
+  PublicUser,
+  RegisterRequest,
+} from "@gym-tracker/shared";
 import { EmailAlreadyInUseError, InvalidCredentialsError } from "../errors.js";
 import type { UserRecord, UserRepository } from "../repositories/user-repository.js";
 import type { PasswordHasher } from "./password.js";
-import type { TokenService } from "./token.js";
 
 /** Normalizza l'email per confronto/unicita' (case-insensitive). */
 function normalizeEmail(email: string): string {
@@ -26,7 +31,7 @@ export class AuthService {
   constructor(
     private readonly users: UserRepository,
     private readonly passwords: PasswordHasher,
-    private readonly tokens: TokenService
+    private readonly tokens: AccessTokenService
   ) {}
 
   async register({ email, password }: RegisterRequest): Promise<AuthResponse> {

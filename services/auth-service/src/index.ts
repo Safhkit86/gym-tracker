@@ -1,8 +1,8 @@
+import { createAccessTokenService } from "@gym-tracker/shared";
 import { createApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { createDb } from "./db/client.js";
 import { argon2Hasher } from "./domain/password.js";
-import { createJoseTokenService } from "./domain/token.js";
 import { KyselyUserRepository } from "./repositories/user-repository.js";
 
 const config = loadConfig();
@@ -12,7 +12,7 @@ const db = createDb(config.DATABASE_URL);
 const app = createApp({
   users: new KyselyUserRepository(db),
   passwords: argon2Hasher,
-  tokens: createJoseTokenService({ secret: config.JWT_SECRET }),
+  tokens: createAccessTokenService(config.JWT_SECRET),
 });
 
 const server = app.listen(config.PORT, () => {

@@ -14,6 +14,12 @@ async function migrateToLatest(): Promise<void> {
   const migrator = new Migrator({
     db,
     provider: { getMigrations: async () => migrations },
+    // Namespace per servizio: piu' servizi condividono lo stesso database
+    // Postgres (vedi docker-compose.yml), quindi la tabella di tracking di
+    // Kysely (default "kysely_migration") deve avere un nome per servizio
+    // per non collidere con quella di workout-service e degli altri servizi.
+    migrationTableName: "kysely_migration_auth",
+    migrationLockTableName: "kysely_migration_lock_auth",
   });
 
   const { error, results } = await migrator.migrateToLatest();
