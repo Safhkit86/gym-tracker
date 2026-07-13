@@ -5,7 +5,8 @@
   "description": "Gym workout tracking platform - monorepo a microservizi (Node.js/TypeScript)",
   "workspaces": [
     "packages/*",
-    "services/*"
+    "services/*",
+    "apps/*"
   ],
   "scripts": {
     "lint": "npm run lint --workspaces --if-present",

@@ -1,4 +1,5 @@
 import express, { type Express, type Request } from "express";
+import cors from "cors";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { buildHealthStatus } from "@gym-tracker/shared";
 
@@ -49,6 +50,14 @@ function proxyTo(target: string) {
 
 export function createApp(deps: AppDeps): Express {
   const app = express();
+
+  // La webapp (altra origine: Vite dev su :5173, o un dominio statico in
+  // produzione) chiama il gateway via fetch da browser: senza CORS le
+  // richieste vengono bloccate lato client prima ancora di arrivare qui.
+  // Nessun cookie in gioco (auth via Bearer token), quindi riflettere
+  // l'origin e' sicuro; un allowlist esplicito arrivera' con l'hardening
+  // della Fase 5.
+  app.use(cors());
 
   // Endpoint di health check: verificato dalla pipeline CI e da Docker Compose.
   // Non proxato: e' del gateway stesso, non di un servizio a monte.
