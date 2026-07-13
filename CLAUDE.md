@@ -74,6 +74,10 @@ docker compose up -d postgres redis rabbitmq   # solo infrastruttura
 ## Cosa NON fare
 
 - Non far comunicare i client (web/Android) direttamente con un servizio:
-  passano sempre dall'API Gateway (Fase 5, non ancora implementato).
+  passano sempre dall'API Gateway (`services/api-gateway`, implementato in
+  forma minima come reverse-proxy; l'hardening con auth centralizzata e rate
+  limiting è previsto in Fase 5). Quando aggiungi una rotta a un nuovo
+  servizio, aggiungi anche il relativo `app.use(prefix, proxyTo(...))` nel
+  gateway.
 - Non duplicare tipi/contratti tra servizi: se un tipo serve a più di un
   servizio, va in `packages/shared`.

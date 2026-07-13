@@ -8,9 +8,9 @@ web app che, in futuro, da un'app Android, tramite un API Gateway condiviso.
 ## Architettura
 
 ```
-Web app / Android app (futuro)
+Web app (in costruzione) / Android app (futuro)
             │
-       API Gateway            (Fase 5, TODO)
+       API Gateway            (minimo: reverse-proxy verso i servizi)
             │
    ┌────────┼────────┬─────────┐
    │        │        │         │
@@ -21,12 +21,21 @@ Web app / Android app (futuro)
    PostgreSQL · Redis · RabbitMQ
 ```
 
+- **api-gateway** — unico punto di ingresso per i client: inoltra le richieste
+  ai servizi (`/auth`, `/me` → auth-service; `/exercises`, `/workouts` →
+  workout-service). Per ora solo reverse-proxy; autenticazione centralizzata
+  e rate limiting arriveranno con l'hardening previsto in Fase 5.
 - **auth-service** — utenti, JWT (Fase 1)
 - **workout-service** — schede, esercizi, set/reps/peso/recupero (Fase 2)
 - **progress-service** — storico allenamenti + motore di regole di
   progressione (Fase 3)
 - **notify-service** — notifiche quando una regola di progressione scatta
   (Fase 4)
+
+Dalla Fase 3 in poi, ogni fase backend include anche la parte di interfaccia
+web corrispondente (dove serve), invece di costruire tutta la webapp in blocco
+alla fine: si parte comunque da un ricongiungimento per auth-service e
+workout-service (Fase 1 e 2), gia' completi lato backend.
 
 ## Requisiti
 
@@ -43,14 +52,16 @@ npm run build --workspace=@gym-tracker/shared
 npm run db:migrate --workspace=@gym-tracker/auth-service      # crea le tabelle
 npm run db:migrate --workspace=@gym-tracker/workout-service   # crea le tabelle + seed catalogo
 cd services/auth-service && npm run dev         # avvia auth-service in watch mode
-# in un altro terminale: cd services/workout-service && npm run dev
+# in altri terminali:
+#   cd services/workout-service && npm run dev
+#   cd services/api-gateway && npm run dev
 ```
 
 Oppure avvia tutto containerizzato:
 
 ```bash
 docker compose up -d --build
-curl http://localhost:4001/health
+curl http://localhost:4000/health   # api-gateway: unico punto di ingresso
 ```
 
 ## Comandi principali
@@ -69,7 +80,7 @@ Ogni Pull Request verso `master` esegue automaticamente (`.github/workflows/ci.y
 1. Lint su tutti i workspace
 2. Test su tutti i workspace
 3. Build TypeScript su tutti i workspace
-4. Build dell'immagine Docker di ogni servizio implementato (`auth-service`, `workout-service`)
+4. Build dell'immagine Docker di ogni servizio implementato (`auth-service`, `workout-service`, `api-gateway`)
 
 La validazione obbligatoria delle PR è **attiva**: su `master` è impostata una
 branch protection rule con il check `CI passed` (il job `ci-status` del workflow)
@@ -82,10 +93,17 @@ come required status check, quindi una PR non è mergiabile finché la CI non è
 - [x] **Fase 2** — workout-service (schede, esercizi) _(completata)_
 - [ ] **Fase 3** — progress-service + motore di regole di progressione
 - [ ] **Fase 4** — notify-service
-- [ ] **Fase 5** — API Gateway + web app (React)
+- [ ] **Fase 5** — hardening API Gateway (autenticazione centralizzata, rate
+      limiting) + rifinitura webapp
 - [ ] **Fase 6** — osservabilità (log, metriche, tracing)
 - [ ] **Fase 7** — Kubernetes (opzionale)
 - [ ] **Fase 8** — app Android
+
+L'API Gateway in versione minima (solo reverse-proxy, vedi `services/api-gateway`)
+è stato anticipato rispetto alla Fase 5 originale: serviva da subito per non
+far parlare la webapp direttamente con i singoli servizi (vedi "Cosa NON fare"
+in `CLAUDE.md`). La Fase 5 resta per l'hardening (auth centralizzata, rate
+limiting) quando servirà.
 
 Vedi `CLAUDE.md` per le convenzioni di codice usate da Claude Code in questo
 repo.
