@@ -62,8 +62,23 @@ services:
       postgres:
         condition: service_healthy
 
-  # workout-service, progress-service, notify-service verranno aggiunti
-  # rispettivamente in Fase 2, 3 e 4 del percorso didattico.
+  workout-service:
+    build:
+      context: .
+      dockerfile: services/workout-service/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: ${WORKOUT_SERVICE_PORT:-4002}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      DATABASE_URL: postgres://${POSTGRES_USER:-gymtracker}:${POSTGRES_PASSWORD:-gymtracker}@postgres:5432/${POSTGRES_DB:-gymtracker}
+    ports:
+      - "${WORKOUT_SERVICE_PORT:-4002}:4002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # progress-service, notify-service verranno aggiunti rispettivamente in
+  # Fase 3 e 4 del percorso didattico.
 
 volumes:
   postgres-data:
