@@ -26,8 +26,8 @@ function extractBearer(header: string | undefined): string | null {
 }
 
 /**
- * Verifica il Bearer JWT e popola `req.userClaims`.
- * Delega l'errore all'error handler tramite `next`.
+ * Verifica il Bearer JWT (emesso da auth-service, verificato qui con lo
+ * stesso AccessTokenService condiviso) e popola `req.userClaims`.
  */
 export function authenticate(tokens: AccessTokenService): RequestHandler {
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
@@ -39,7 +39,6 @@ export function authenticate(tokens: AccessTokenService): RequestHandler {
       req.userClaims = await tokens.verify(token);
       next();
     } catch (err) {
-      // Il verifier condiviso lancia TokenVerificationError: mappalo a 401.
       next(err instanceof TokenVerificationError ? new UnauthorizedError(err.message) : err);
     }
   };

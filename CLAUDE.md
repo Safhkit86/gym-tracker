@@ -31,6 +31,13 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   singoli workspace: senza il manifest di root, `/app` non è riconosciuto
   come workspace root e `npm run build --workspace=...` fallisce con
   `ENOENT: package.json`. Usa il Dockerfile di `auth-service` come modello.
+- Tutti i servizi condividono lo stesso database Postgres (stesso
+  `DATABASE_URL`, tabelle diverse per servizio): nel `Migrator` di Kysely
+  (`src/db/migrate.ts`) imposta sempre `migrationTableName` e
+  `migrationLockTableName` con un suffisso per servizio (es.
+  `kysely_migration_auth`, `kysely_migration_workout`), altrimenti la tabella
+  di tracking migrazioni di default (`kysely_migration`) collide tra servizi
+  e la migrazione fallisce con "corrupted migrations".
 
 ## Commit e PR
 
@@ -47,6 +54,11 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   sezione "Roadmap del progetto" del `README.md`: spunta la casella della fase
   (`- [x]`) e sposta l'annotazione `_(completata)_` sulla fase appena conclusa.
   Fai rientrare questo aggiornamento nella stessa PR che completa la fase.
+- Non lanciare mai più `docker compose build` (o `docker build`) in parallelo
+  sulla stessa macchina di sviluppo: Docker Desktop su Windows può bloccarsi
+  in contesa sullo stesso builder `buildx`, senza produrre alcun output, finché
+  non si riavvia Docker Desktop. Se serve costruire più immagini, farlo in
+  sequenza, una alla volta.
 
 ## Comandi utili
 

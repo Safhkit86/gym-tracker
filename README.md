@@ -21,7 +21,7 @@ Web app / Android app (futuro)
    PostgreSQL · Redis · RabbitMQ
 ```
 
-- **auth-service** — utenti, JWT (implementato in questa fase)
+- **auth-service** — utenti, JWT (Fase 1)
 - **workout-service** — schede, esercizi, set/reps/peso/recupero (Fase 2)
 - **progress-service** — storico allenamenti + motore di regole di
   progressione (Fase 3)
@@ -40,8 +40,10 @@ cp .env.example .env
 npm install
 docker compose up -d postgres redis rabbitmq   # solo infrastruttura
 npm run build --workspace=@gym-tracker/shared
-npm run db:migrate --workspace=@gym-tracker/auth-service   # crea le tabelle
+npm run db:migrate --workspace=@gym-tracker/auth-service      # crea le tabelle
+npm run db:migrate --workspace=@gym-tracker/workout-service   # crea le tabelle + seed catalogo
 cd services/auth-service && npm run dev         # avvia auth-service in watch mode
+# in un altro terminale: cd services/workout-service && npm run dev
 ```
 
 Oppure avvia tutto containerizzato:
@@ -67,7 +69,7 @@ Ogni Pull Request verso `master` esegue automaticamente (`.github/workflows/ci.y
 1. Lint su tutti i workspace
 2. Test su tutti i workspace
 3. Build TypeScript su tutti i workspace
-4. Build dell'immagine Docker di `auth-service`
+4. Build dell'immagine Docker di ogni servizio implementato (`auth-service`, `workout-service`)
 
 La validazione obbligatoria delle PR è **attiva**: su `master` è impostata una
 branch protection rule con il check `CI passed` (il job `ci-status` del workflow)
@@ -76,8 +78,8 @@ come required status check, quindi una PR non è mergiabile finché la CI non è
 ## Roadmap del progetto (percorso didattico)
 
 - [x] **Fase 0** — repo, CI/CD, Docker Compose
-- [x] **Fase 1** — auth-service completo (registrazione, login, JWT) _(completata)_
-- [ ] **Fase 2** — workout-service (schede, esercizi)
+- [x] **Fase 1** — auth-service completo (registrazione, login, JWT)
+- [x] **Fase 2** — workout-service (schede, esercizi) _(completata)_
 - [ ] **Fase 3** — progress-service + motore di regole di progressione
 - [ ] **Fase 4** — notify-service
 - [ ] **Fase 5** — API Gateway + web app (React)

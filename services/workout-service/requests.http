@@ -1,0 +1,96 @@
+# Richieste manuali per workout-service (Fase 2).
+#
+# Richiede l'estensione VS Code "REST Client" (humao.rest-client).
+# Il token si ottiene da auth-service (login), poi si usa qui: esegui prima
+# "Login (auth-service)", poi gli altri blocchi in ordine.
+#
+# Prerequisiti: infrastruttura + servizi avviati e migrazioni eseguite
+#   docker compose up -d
+#   npm run db:migrate --workspace=@gym-tracker/auth-service
+#   npm run db:migrate --workspace=@gym-tracker/workout-service
+
+@authUrl = http://localhost:4001
+@baseUrl = http://localhost:4002
+@email = demo@example.com
+@password = supersegreta
+
+### Health check di workout-service
+GET {{baseUrl}}/health
+
+### Login (auth-service) — cattura il token usato dai blocchi successivi.
+# Se l'utente non esiste ancora, registralo prima con auth-service/requests.http.
+# @name login
+POST {{authUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Catalogo esercizi (globali + propri)
+GET {{baseUrl}}/exercises
+Authorization: Bearer {{login.response.body.token}}
+
+### Crea un esercizio personale
+# @name createExercise
+POST {{baseUrl}}/exercises
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "name": "Hack squat",
+  "muscleGroup": "Gambe"
+}
+
+### Crea una scheda (sostituisci exerciseId con un id reale da GET /exercises)
+# @name createWorkout
+POST {{baseUrl}}/workouts
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "name": "Push day",
+  "notes": "Focus petto e spalle",
+  "exercises": [
+    {
+      "exerciseId": "{{createExercise.response.body.id}}",
+      "position": 1,
+      "sets": [
+        { "setNumber": 1, "targetReps": 10, "targetWeight": 40, "restSeconds": 90 },
+        { "setNumber": 2, "targetReps": 8, "targetWeight": 42.5, "restSeconds": 90 }
+      ]
+    }
+  ]
+}
+
+### Elenco delle proprie schede
+GET {{baseUrl}}/workouts
+Authorization: Bearer {{login.response.body.token}}
+
+### Dettaglio di una scheda
+GET {{baseUrl}}/workouts/{{createWorkout.response.body.id}}
+Authorization: Bearer {{login.response.body.token}}
+
+### Elimina una scheda
+DELETE {{baseUrl}}/workouts/{{createWorkout.response.body.id}}
+Authorization: Bearer {{login.response.body.token}}
+
+### /workouts senza token -> 401 UNAUTHORIZED
+GET {{baseUrl}}/workouts
+
+### Scheda con esercizio inesistente -> 400 INVALID_EXERCISE_REFERENCE
+POST {{baseUrl}}/workouts
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "name": "Scheda invalida",
+  "exercises": [
+    {
+      "exerciseId": "00000000-0000-0000-0000-000000000000",
+      "position": 1,
+      "sets": [{ "setNumber": 1, "targetReps": 10 }]
+    }
+  ]
+}
