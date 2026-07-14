@@ -8,6 +8,8 @@ export interface ExerciseRecord {
   ownerId: string | null;
   name: string;
   muscleGroup: string | null;
+  description: string | null;
+  sourceUrl: string | null;
 }
 
 export interface NewExercise {
@@ -29,6 +31,8 @@ interface ExerciseRow {
   owner_id: string | null;
   name: string;
   muscle_group: string | null;
+  description: string | null;
+  source_url: string | null;
 }
 
 function toRecord(row: ExerciseRow): ExerciseRecord {
@@ -37,6 +41,8 @@ function toRecord(row: ExerciseRow): ExerciseRecord {
     ownerId: row.owner_id,
     name: row.name,
     muscleGroup: row.muscle_group,
+    description: row.description,
+    sourceUrl: row.source_url,
   };
 }
 
@@ -51,7 +57,7 @@ export class KyselyExerciseRepository implements ExerciseRepository {
   async listAvailable(ownerId: string): Promise<ExerciseRecord[]> {
     const rows = await this.db
       .selectFrom("exercises")
-      .select(["id", "owner_id", "name", "muscle_group"])
+      .select(["id", "owner_id", "name", "muscle_group", "description", "source_url"])
       .where((eb) => eb.or([eb("owner_id", "is", null), eb("owner_id", "=", ownerId)]))
       .orderBy("name")
       .execute();
@@ -64,7 +70,7 @@ export class KyselyExerciseRepository implements ExerciseRepository {
     }
     const rows = await this.db
       .selectFrom("exercises")
-      .select(["id", "owner_id", "name", "muscle_group"])
+      .select(["id", "owner_id", "name", "muscle_group", "description", "source_url"])
       .where("id", "in", ids)
       .where((eb) => eb.or([eb("owner_id", "is", null), eb("owner_id", "=", ownerId)]))
       .execute();
@@ -80,7 +86,7 @@ export class KyselyExerciseRepository implements ExerciseRepository {
           name: exercise.name,
           muscle_group: exercise.muscleGroup,
         })
-        .returning(["id", "owner_id", "name", "muscle_group"])
+        .returning(["id", "owner_id", "name", "muscle_group", "description", "source_url"])
         .executeTakeFirstOrThrow();
       return toRecord(row);
     } catch (err) {
@@ -106,6 +112,8 @@ export class InMemoryExerciseRepository implements ExerciseRepository {
         ownerId: null,
         name: g.name,
         muscleGroup: g.muscleGroup,
+        description: null,
+        sourceUrl: null,
       };
       this.byId.set(record.id, record);
     }
@@ -136,6 +144,8 @@ export class InMemoryExerciseRepository implements ExerciseRepository {
       ownerId: exercise.ownerId,
       name: exercise.name,
       muscleGroup: exercise.muscleGroup,
+      description: null,
+      sourceUrl: null,
     };
     this.byId.set(record.id, record);
     return record;

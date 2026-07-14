@@ -73,6 +73,7 @@ export class WorkoutService {
         exerciseName: nameById.get(e.exerciseId) as string,
         position: e.position,
         notes: e.notes ?? null,
+        restSeconds: e.restSeconds ?? null,
         sets: e.sets.map((s) => ({
           setNumber: s.setNumber,
           targetReps: s.targetReps,
