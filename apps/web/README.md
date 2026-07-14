@@ -22,7 +22,10 @@ vedi `.env.example`).
 
 ## Struttura
 
-- `src/api/` — client HTTP verso il gateway, un modulo per dominio (auth, ecc.)
-- `src/auth/` — contesto di autenticazione (token in memoria + localStorage,
-  redirect se non autenticato)
-- `src/pages/` — una cartella/file per pagina, instradate con `react-router-dom`
+- `src/api/` — client HTTP verso il gateway, un modulo per dominio (`auth`,
+  `exercises`, `workouts`)
+- `src/auth/` — contesto di autenticazione (token in localStorage, redirect
+  se non autenticato)
+- `src/pages/` — una pagina per file, instradate con `react-router-dom`:
+  login/registrazione/dashboard (Fase 1), lista/creazione/dettaglio schede
+  (Fase 2)
