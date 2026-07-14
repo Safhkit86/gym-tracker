@@ -78,6 +78,12 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   sezione "Roadmap del progetto" del `README.md`: spunta la casella della fase
   (`- [x]`) e sposta l'annotazione `_(completata)_` sulla fase appena conclusa.
   Fai rientrare questo aggiornamento nella stessa PR che completa la fase.
+  Dato che ogni fase backend include anche la sua fetta di UI (vedi sopra):
+  **non spuntare la casella finché non sono completi sia il backend sia la
+  UI di quella fase**. Se il backend è pronto ma la UI è ancora da fare,
+  lascia la casella vuota (`- [ ]`) con una nota esplicita tipo "backend
+  completo, UI in arrivo" — una casella spuntata deve sempre significare
+  "non c'è altro da fare qui".
 - Non lanciare mai più `docker compose build` (o `docker build`) in parallelo
   sulla stessa macchina di sviluppo: Docker Desktop su Windows può bloccarsi
   in contesa sullo stesso builder `buildx`, senza produrre alcun output, finché

@@ -100,7 +100,8 @@ come required status check, quindi una PR non è mergiabile finché la CI non è
 - [x] **Fase 0** — repo, CI/CD, Docker Compose
 - [x] **Fase 1** — auth-service completo (registrazione, login, JWT) + UI
       (login, registrazione, dashboard protetta) _(completata)_
-- [x] **Fase 2** — workout-service (schede, esercizi): backend completo, UI in arrivo
+- [ ] **Fase 2** — workout-service (schede, esercizi): backend completo,
+      UI (lista/creazione/dettaglio schede) in arrivo
 - [ ] **Fase 3** — progress-service + motore di regole di progressione
 - [ ] **Fase 4** — notify-service
 - [ ] **Fase 5** — hardening API Gateway (autenticazione centralizzata, rate
