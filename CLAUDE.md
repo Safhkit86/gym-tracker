@@ -34,6 +34,13 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   singoli workspace: senza il manifest di root, `/app` non è riconosciuto
   come workspace root e `npm run build --workspace=...` fallisce con
   `ENOENT: package.json`. Usa il Dockerfile di `auth-service` come modello.
+- Ogni `src/config.ts` carica il `.env` di root con `dotenv` (vedi
+  `services/auth-service/src/config.ts`) prima di validare lo schema zod:
+  serve solo quando il servizio gira sull'host (`npm run dev`/`db:migrate`
+  fuori da Docker), dove le variabili non arrivano già impostate come fa
+  docker-compose. Non sovrascrive variabili già in `process.env` e non fa
+  nulla se il file non esiste (dentro l'immagine Docker `.env` non c'è).
+  Aggiungi questo stesso blocco al `config.ts` di ogni nuovo servizio.
 - Tutti i servizi condividono lo stesso database Postgres (stesso
   `DATABASE_URL`, tabelle diverse per servizio): nel `Migrator` di Kysely
   (`src/db/migrate.ts`) imposta sempre `migrationTableName` e
