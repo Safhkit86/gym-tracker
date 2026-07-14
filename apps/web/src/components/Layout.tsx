@@ -9,13 +9,13 @@ export function Layout() {
     <>
       <nav className="app-nav">
         <div className="app-nav__links">
-          <Link to="/">
-            <strong>gym-tracker</strong>
+          <Link to="/" className="app-nav__brand">
+            gym-tracker
           </Link>
           <Link to="/workouts">Schede</Link>
         </div>
         <div className="app-nav__links">
-          {user && <span>{user.email}</span>}
+          {user && <span className="app-nav__user">{user.email}</span>}
           <button type="button" className="secondary" onClick={logout}>
             Esci
           </button>
