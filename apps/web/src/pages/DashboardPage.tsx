@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 
 export function DashboardPage() {
@@ -7,7 +8,9 @@ export function DashboardPage() {
     <main>
       <h1>Ciao{user ? `, ${user.email}` : ""}</h1>
       {user && <p>Account creato il {new Date(user.createdAt).toLocaleDateString("it-IT")}.</p>}
-      <p>Le tue schede di allenamento arriveranno con la prossima fase.</p>
+      <p>
+        <Link to="/workouts">Vai alle tue schede di allenamento</Link>
+      </p>
     </main>
   );
 }

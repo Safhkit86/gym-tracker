@@ -5,6 +5,9 @@ import { Layout } from "./components/Layout";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { WorkoutsListPage } from "./pages/WorkoutsListPage";
+import { CreateWorkoutPage } from "./pages/CreateWorkoutPage";
+import { WorkoutDetailPage } from "./pages/WorkoutDetailPage";
 
 export function App() {
   return (
@@ -16,6 +19,9 @@ export function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path="/" element={<DashboardPage />} />
+              <Route path="/workouts" element={<WorkoutsListPage />} />
+              <Route path="/workouts/new" element={<CreateWorkoutPage />} />
+              <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

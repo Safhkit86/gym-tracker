@@ -8,7 +8,7 @@ web app che, in futuro, da un'app Android, tramite un API Gateway condiviso.
 ## Architettura
 
 ```
-Web app (apps/web, in costruzione) / Android app (futuro)
+Web app (apps/web) / Android app (futuro)
             │
        API Gateway            (minimo: reverse-proxy verso i servizi)
             │
@@ -37,9 +37,8 @@ Web app (apps/web, in costruzione) / Android app (futuro)
 
 Dalla Fase 1 in poi, ogni fase backend include anche la sua parte di
 interfaccia web (dove serve), invece di costruire tutta la webapp in blocco
-alla fine. La Fase 1 (login/registrazione) è già coperta; la UI delle schede
-(Fase 2) è il prossimo passo — vedi la roadmap qui sotto per lo stato
-aggiornato.
+alla fine. Fase 1 (login/registrazione) e Fase 2 (schede) sono già coperte;
+vedi la roadmap qui sotto per lo stato aggiornato.
 
 ## Requisiti
 
@@ -105,9 +104,9 @@ entrambi.
 - ✅ **Fase 1** — auth-service (registrazione, login, JWT)
   - ✅ Backend
   - ✅ UI (login, registrazione, dashboard protetta)
-- **Fase 2** — workout-service (schede, esercizi, set/reps/peso/recupero)
+- ✅ **Fase 2** — workout-service (schede, esercizi, set/reps/peso/recupero)
   - ✅ Backend
-  - ⬜ UI (lista, creazione, dettaglio schede)
+  - ✅ UI (lista, creazione, dettaglio schede)
 - **Fase 3** — progress-service + motore di regole di progressione
   - ⬜ Backend
   - ⬜ UI
