@@ -10,6 +10,10 @@ export interface Exercise {
   ownerId: string | null;
   name: string;
   muscleGroup: string | null;
+  /** Come eseguire l'esercizio; null se non disponibile (es. esercizi personali). */
+  description: string | null;
+  /** Link a una pagina sorgente (non media incorporati); null se non disponibile. */
+  sourceUrl: string | null;
 }
 
 export interface CreateExerciseRequest {
@@ -31,6 +35,8 @@ export interface WorkoutExerciseInput {
   exerciseId: string;
   position: number;
   notes?: string | null;
+  /** Recupero dopo questo esercizio, prima del successivo (secondi). */
+  restSeconds?: number | null;
   sets: WorkoutSetInput[];
 }
 
@@ -57,6 +63,8 @@ export interface WorkoutExercise {
   exerciseName: string;
   position: number;
   notes: string | null;
+  /** Recupero dopo questo esercizio, prima del successivo (secondi); null = non specificato. */
+  restSeconds: number | null;
   sets: WorkoutSet[];
 }
 

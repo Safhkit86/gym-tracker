@@ -7,6 +7,8 @@ function toDto(record: ExerciseRecord): Exercise {
     ownerId: record.ownerId,
     name: record.name,
     muscleGroup: record.muscleGroup,
+    description: record.description,
+    sourceUrl: record.sourceUrl,
   };
 }
 

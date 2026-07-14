@@ -24,6 +24,8 @@ export interface NormalizedExercise {
   exerciseName: string;
   position: number;
   notes: string | null;
+  /** Recupero dopo questo esercizio, prima del successivo (secondi). */
+  restSeconds: number | null;
   sets: NormalizedSet[];
 }
 
@@ -127,6 +129,7 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
         "we.exercise_id as exercise_id",
         "we.position as position",
         "we.notes as notes",
+        "we.rest_seconds as rest_seconds",
         "e.name as exercise_name",
       ])
       .where("we.workout_id", "=", id)
@@ -167,6 +170,7 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
         exerciseName: r.exercise_name,
         position: r.position,
         notes: r.notes,
+        restSeconds: r.rest_seconds,
         sets: setsByExercise.get(r.id) ?? [],
       })),
       createdAt: workout.created_at.toISOString(),
@@ -198,6 +202,7 @@ async function insertChildren(
         exercise_id: ex.exerciseId,
         position: ex.position,
         notes: ex.notes,
+        rest_seconds: ex.restSeconds,
       })
       .returning("id")
       .executeTakeFirstOrThrow();
@@ -306,6 +311,7 @@ function buildExercises(exercises: NormalizedExercise[]): WorkoutExercise[] {
     exerciseName: ex.exerciseName,
     position: ex.position,
     notes: ex.notes,
+    restSeconds: ex.restSeconds,
     sets: ex.sets.map((s) => ({
       id: randomUUID(),
       setNumber: s.setNumber,

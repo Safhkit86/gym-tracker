@@ -12,6 +12,10 @@ export interface ExercisesTable {
   owner_id: string | null;
   name: string;
   muscle_group: string | null;
+  /** Come eseguire l'esercizio; null per gli esercizi creati dagli utenti. */
+  description: string | null;
+  /** Link a una pagina sorgente (non un'immagine/video incorporati); null se non disponibile. */
+  source_url: string | null;
   created_at: Generated<Date>;
   updated_at: ColumnType<Date, Date | undefined, Date>;
 }
@@ -31,6 +35,8 @@ export interface WorkoutExercisesTable {
   exercise_id: string;
   position: number;
   notes: string | null;
+  /** Recupero dopo questo esercizio, prima del successivo (secondi); null = non specificato. */
+  rest_seconds: number | null;
 }
 
 export interface WorkoutSetsTable {

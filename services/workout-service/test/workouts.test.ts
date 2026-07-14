@@ -23,6 +23,7 @@ function workoutPayload(exerciseId: string) {
       {
         exerciseId,
         position: 1,
+        restSeconds: 120,
         sets: [
           { setNumber: 1, targetReps: 10, targetWeight: 40, restSeconds: 90 },
           { setNumber: 2, targetReps: 8, targetWeight: 42.5, restSeconds: 90 },
@@ -56,6 +57,7 @@ describe("POST /workouts", () => {
       exerciseId,
       exerciseName: "Panca piana",
       position: 1,
+      restSeconds: 120,
     });
     expect(response.body.exercises[0].sets).toHaveLength(2);
     expect(response.body.exercises[0].sets[1]).toMatchObject({
