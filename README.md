@@ -35,11 +35,11 @@ Web app (apps/web, in costruzione) / Android app (futuro)
 - **web** (`apps/web`) — React + Vite + TypeScript, CSS semplice, fetch
   nativo. Parla solo con `api-gateway`, mai con i singoli servizi.
 
-Dalla Fase 3 in poi, ogni fase backend include anche la parte di interfaccia
-web corrispondente (dove serve), invece di costruire tutta la webapp in blocco
-alla fine: si parte comunque da un ricongiungimento per auth-service e
-workout-service (Fase 1 e 2), gia' completi lato backend — login/registrazione
-sono gia' coperti, la UI delle schede (Fase 2) e' il prossimo passo.
+Dalla Fase 1 in poi, ogni fase backend include anche la sua parte di
+interfaccia web (dove serve), invece di costruire tutta la webapp in blocco
+alla fine. La Fase 1 (login/registrazione) è già coperta; la UI delle schede
+(Fase 2) è il prossimo passo — vedi la roadmap qui sotto per lo stato
+aggiornato.
 
 ## Requisiti
 
@@ -97,18 +97,28 @@ come required status check, quindi una PR non è mergiabile finché la CI non è
 
 ## Roadmap del progetto (percorso didattico)
 
-- [x] **Fase 0** — repo, CI/CD, Docker Compose
-- [x] **Fase 1** — auth-service completo (registrazione, login, JWT) + UI
-      (login, registrazione, dashboard protetta) _(completata)_
-- [ ] **Fase 2** — workout-service (schede, esercizi): backend completo,
-      UI (lista/creazione/dettaglio schede) in arrivo
-- [ ] **Fase 3** — progress-service + motore di regole di progressione
-- [ ] **Fase 4** — notify-service
-- [ ] **Fase 5** — hardening API Gateway (autenticazione centralizzata, rate
-      limiting) + rifinitura webapp
-- [ ] **Fase 6** — osservabilità (log, metriche, tracing)
-- [ ] **Fase 7** — Kubernetes (opzionale)
-- [ ] **Fase 8** — app Android
+✅ = fatto · ⬜ = da fare. Dalla Fase 1 in poi, ogni fase è divisa in backend
+e UI: si spuntano indipendentemente, la fase è completa solo quando lo sono
+entrambi.
+
+- ✅ **Fase 0** — repo, CI/CD, Docker Compose
+- ✅ **Fase 1** — auth-service (registrazione, login, JWT)
+  - ✅ Backend
+  - ✅ UI (login, registrazione, dashboard protetta)
+- **Fase 2** — workout-service (schede, esercizi, set/reps/peso/recupero)
+  - ✅ Backend
+  - ⬜ UI (lista, creazione, dettaglio schede)
+- **Fase 3** — progress-service + motore di regole di progressione
+  - ⬜ Backend
+  - ⬜ UI
+- **Fase 4** — notify-service
+  - ⬜ Backend
+  - ⬜ UI
+- ⬜ **Fase 5** — hardening API Gateway (autenticazione centralizzata, rate
+  limiting) + rifinitura webapp
+- ⬜ **Fase 6** — osservabilità (log, metriche, tracing)
+- ⬜ **Fase 7** — Kubernetes (opzionale)
+- ⬜ **Fase 8** — app Android
 
 L'API Gateway in versione minima (solo reverse-proxy, vedi `services/api-gateway`)
 è stato anticipato rispetto alla Fase 5 originale: serviva da subito per non

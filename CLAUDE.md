@@ -74,16 +74,13 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   codice va corretto, non il check.
 - Le PR di dimensioni contenute (un servizio o una feature alla volta) sono
   preferibili a PR enormi multi-servizio.
-- Quando una fase del percorso didattico viene completata, aggiorna sempre la
-  sezione "Roadmap del progetto" del `README.md`: spunta la casella della fase
-  (`- [x]`) e sposta l'annotazione `_(completata)_` sulla fase appena conclusa.
-  Fai rientrare questo aggiornamento nella stessa PR che completa la fase.
-  Dato che ogni fase backend include anche la sua fetta di UI (vedi sopra):
-  **non spuntare la casella finché non sono completi sia il backend sia la
-  UI di quella fase**. Se il backend è pronto ma la UI è ancora da fare,
-  lascia la casella vuota (`- [ ]`) con una nota esplicita tipo "backend
-  completo, UI in arrivo" — una casella spuntata deve sempre significare
-  "non c'è altro da fare qui".
+- La sezione "Roadmap del progetto" del `README.md` usa ✅ (fatto) / ⬜ (da
+  fare), non le checkbox `- [x]` di markdown. Dalla Fase 1 in poi ogni fase è
+  divisa in due sotto-punti indentati, **Backend** e **UI**, spuntati
+  indipendentemente. Quando completi un pezzo, aggiorna solo il suo ✅/⬜;
+  metti ✅ anche sulla riga della fase (il titolo) solo quando **entrambi**
+  i sotto-punti sono ✅ — altrimenti lascia il titolo della fase senza emoji.
+  Fai rientrare questo aggiornamento nella stessa PR che completa il pezzo.
 - Non lanciare mai più `docker compose build` (o `docker build`) in parallelo
   sulla stessa macchina di sviluppo: Docker Desktop su Windows può bloccarsi
   in contesa sullo stesso builder `buildx`, senza produrre alcun output, finché
