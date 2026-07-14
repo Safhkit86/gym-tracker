@@ -32,6 +32,7 @@ describe("WorkoutDetailPage", () => {
               exerciseName: "Panca piana",
               position: 1,
               notes: null,
+              restSeconds: 120,
               sets: [{ id: "s1", setNumber: 1, targetReps: 10, targetWeight: 40, restSeconds: 90 }],
             },
           ],
@@ -51,5 +52,6 @@ describe("WorkoutDetailPage", () => {
     expect(await screen.findByRole("heading", { name: "Push day" })).toBeInTheDocument();
     expect(screen.getByText("Panca piana")).toBeInTheDocument();
     expect(screen.getByText("40 kg")).toBeInTheDocument();
+    expect(screen.getByText(/recupero prima del prossimo esercizio: 120s/i)).toBeInTheDocument();
   });
 });

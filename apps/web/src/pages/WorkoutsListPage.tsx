@@ -35,7 +35,7 @@ export function WorkoutsListPage() {
     <main>
       <h1>Le tue schede</h1>
       <p>
-        <Link to="/workouts/new">Nuova scheda</Link>
+        <Link to="/workouts/new">+ Nuova scheda</Link>
       </p>
       {error && (
         <p role="alert" className="form-error">
@@ -47,11 +47,10 @@ export function WorkoutsListPage() {
       {workouts && workouts.length > 0 && (
         <ul className="workout-list">
           {workouts.map((workout) => (
-            <li key={workout.id}>
+            <li key={workout.id} className="card workout-list__item">
               <Link to={`/workouts/${workout.id}`}>{workout.name}</Link>
               <span className="workout-list__meta">
-                {" "}
-                — {workout.exerciseCount} {workout.exerciseCount === 1 ? "esercizio" : "esercizi"}
+                {workout.exerciseCount} {workout.exerciseCount === 1 ? "esercizio" : "esercizi"}
               </span>
             </li>
           ))}

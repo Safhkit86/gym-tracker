@@ -27,40 +27,42 @@ export function LoginPage() {
 
   return (
     <main>
-      <h1>Accedi</h1>
-      <form onSubmit={handleSubmit}>
-        <label>
-          Email
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            autoComplete="email"
-            required
-          />
-        </label>
-        <label>
-          Password
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            autoComplete="current-password"
-            required
-          />
-        </label>
-        {error && (
-          <p role="alert" className="form-error">
-            {error}
-          </p>
-        )}
-        <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Accesso in corso…" : "Accedi"}
-        </button>
-      </form>
-      <p>
-        Non hai un account? <Link to="/register">Registrati</Link>
-      </p>
+      <div className="card auth-card">
+        <h1>Accedi</h1>
+        <form onSubmit={handleSubmit}>
+          <label>
+            Email
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              autoComplete="email"
+              required
+            />
+          </label>
+          <label>
+            Password
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="current-password"
+              required
+            />
+          </label>
+          {error && (
+            <p role="alert" className="form-error">
+              {error}
+            </p>
+          )}
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Accesso in corso…" : "Accedi"}
+          </button>
+        </form>
+        <p>
+          Non hai un account? <Link to="/register">Registrati</Link>
+        </p>
+      </div>
     </main>
   );
 }

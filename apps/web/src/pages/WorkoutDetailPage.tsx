@@ -81,26 +81,33 @@ export function WorkoutDetailPage() {
         <section key={exercise.id} className="workout-exercise">
           <h2>{exercise.exerciseName}</h2>
           {exercise.notes && <p>{exercise.notes}</p>}
-          <table>
-            <thead>
-              <tr>
-                <th>Set</th>
-                <th>Reps</th>
-                <th>Peso</th>
-                <th>Recupero</th>
-              </tr>
-            </thead>
-            <tbody>
-              {exercise.sets.map((set) => (
-                <tr key={set.id}>
-                  <td>{set.setNumber}</td>
-                  <td>{set.targetReps}</td>
-                  <td>{set.targetWeight !== null ? `${set.targetWeight} kg` : "corpo libero"}</td>
-                  <td>{set.restSeconds !== null ? `${set.restSeconds}s` : "—"}</td>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Set</th>
+                  <th>Reps</th>
+                  <th>Peso</th>
+                  <th>Recupero</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {exercise.sets.map((set) => (
+                  <tr key={set.id}>
+                    <td>{set.setNumber}</td>
+                    <td>{set.targetReps}</td>
+                    <td>{set.targetWeight !== null ? `${set.targetWeight} kg` : "corpo libero"}</td>
+                    <td>{set.restSeconds !== null ? `${set.restSeconds}s` : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {exercise.restSeconds !== null && (
+            <p className="workout-exercise__rest">
+              Recupero prima del prossimo esercizio: {exercise.restSeconds}s
+            </p>
+          )}
         </section>
       ))}
 

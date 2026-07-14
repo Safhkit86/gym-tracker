@@ -15,6 +15,8 @@ interface SetForm {
 interface ExerciseForm {
   exerciseId: string;
   notes: string;
+  /** Recupero dopo questo esercizio, prima del successivo. */
+  restSeconds: string;
   sets: SetForm[];
 }
 
@@ -23,7 +25,20 @@ function emptySet(): SetForm {
 }
 
 function emptyExercise(defaultExerciseId: string): ExerciseForm {
-  return { exerciseId: defaultExerciseId, notes: "", sets: [emptySet()] };
+  return { exerciseId: defaultExerciseId, notes: "", restSeconds: "", sets: [emptySet()] };
+}
+
+/** Raggruppa il catalogo per gruppo muscolare, per una scelta piu' rapida
+ * tra i tanti esercizi disponibili (mostrato con <optgroup>). */
+function groupByMuscle(catalog: Exercise[]): Array<[string, Exercise[]]> {
+  const groups = new Map<string, Exercise[]>();
+  for (const exercise of catalog) {
+    const key = exercise.muscleGroup ?? "Altro";
+    const list = groups.get(key) ?? [];
+    list.push(exercise);
+    groups.set(key, list);
+  }
+  return [...groups.entries()];
 }
 
 /** Converte il form in un WorkoutInput: posizioni e numeri di set sono
@@ -36,6 +51,7 @@ function toWorkoutInput(name: string, notes: string, exercises: ExerciseForm[]):
       exerciseId: exercise.exerciseId,
       position: exerciseIndex + 1,
       notes: exercise.notes.trim() || undefined,
+      restSeconds: exercise.restSeconds.trim() ? Number(exercise.restSeconds) : undefined,
       sets: exercise.sets.map((set, setIndex) => ({
         setNumber: setIndex + 1,
         targetReps: Number(set.targetReps),
@@ -100,6 +116,20 @@ export function CreateWorkoutPage() {
     );
   }
 
+  /** Aggiunge una copia dell'ultimo set, cosi' non si riparte da zero quando
+   * i set successivi hanno gli stessi (o quasi) reps/peso/recupero. */
+  function duplicateSet(exerciseIndex: number): void {
+    setExercises((current) =>
+      current.map((exercise, i) => {
+        if (i !== exerciseIndex) {
+          return exercise;
+        }
+        const lastSet = exercise.sets[exercise.sets.length - 1];
+        return { ...exercise, sets: [...exercise.sets, { ...lastSet }] };
+      })
+    );
+  }
+
   function removeSet(exerciseIndex: number, setIndex: number): void {
     setExercises((current) =>
       current.map((exercise, i) =>
@@ -161,6 +191,9 @@ export function CreateWorkoutPage() {
     );
   }
 
+  const groupedCatalog = groupByMuscle(catalog);
+  const catalogById = new Map(catalog.map((item) => [item.id, item]));
+
   return (
     <main>
       <h1>Nuova scheda</h1>
@@ -174,88 +207,134 @@ export function CreateWorkoutPage() {
           <input value={notes} onChange={(event) => setNotes(event.target.value)} />
         </label>
 
-        {exercises.map((exercise, exerciseIndex) => (
-          <fieldset key={exerciseIndex} className="exercise-form">
-            <legend>Esercizio {exerciseIndex + 1}</legend>
-            <label>
-              Esercizio
-              <select
-                value={exercise.exerciseId}
-                onChange={(event) =>
-                  updateExercise(exerciseIndex, { exerciseId: event.target.value })
-                }
-              >
-                {catalog.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {exercise.sets.map((set, setIndex) => (
-              <div key={setIndex} className="set-form-row">
-                <label>
-                  Reps
-                  <input
-                    type="number"
-                    min={1}
-                    value={set.targetReps}
-                    onChange={(event) =>
-                      updateSet(exerciseIndex, setIndex, { targetReps: event.target.value })
-                    }
-                    required
-                  />
-                </label>
-                <label>
-                  Peso (kg)
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.5"
-                    value={set.targetWeight}
-                    onChange={(event) =>
-                      updateSet(exerciseIndex, setIndex, { targetWeight: event.target.value })
-                    }
-                  />
-                </label>
-                <label>
-                  Recupero (s)
-                  <input
-                    type="number"
-                    min={0}
-                    value={set.restSeconds}
-                    onChange={(event) =>
-                      updateSet(exerciseIndex, setIndex, { restSeconds: event.target.value })
-                    }
-                  />
-                </label>
-                {exercise.sets.length > 1 && (
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => removeSet(exerciseIndex, setIndex)}
-                  >
-                    Rimuovi set
-                  </button>
-                )}
+        {exercises.map((exercise, exerciseIndex) => {
+          const selected = catalogById.get(exercise.exerciseId);
+          return (
+            <fieldset key={exerciseIndex} className="exercise-form">
+              <legend>Esercizio {exerciseIndex + 1}</legend>
+              {/* Il <select> NON e' annidato nel <label> (a differenza degli
+                  altri campi): il nome accessibile di un <label> include il
+                  testo di tutti i suoi discendenti, quindi annidare un select
+                  con decine di <option> lo renderebbe "Esercizio Affondi Hack
+                  squat ..." per uno screen reader. Associazione esplicita via
+                  htmlFor/id, con i due come fratelli. */}
+              <div className="field">
+                <label htmlFor={`exercise-select-${exerciseIndex}`}>Esercizio</label>
+                <select
+                  id={`exercise-select-${exerciseIndex}`}
+                  value={exercise.exerciseId}
+                  onChange={(event) =>
+                    updateExercise(exerciseIndex, { exerciseId: event.target.value })
+                  }
+                >
+                  {groupedCatalog.map(([muscleGroup, items]) => (
+                    <optgroup key={muscleGroup} label={muscleGroup}>
+                      {items.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
               </div>
-            ))}
-            <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>
-              Aggiungi set
-            </button>
 
-            {exercises.length > 1 && (
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => removeExercise(exerciseIndex)}
-              >
-                Rimuovi esercizio
-              </button>
-            )}
-          </fieldset>
-        ))}
+              {selected?.description && (
+                <p className="exercise-description">
+                  {selected.description}{" "}
+                  {selected.sourceUrl && (
+                    <a href={selected.sourceUrl} target="_blank" rel="noreferrer">
+                      Scopri di più
+                    </a>
+                  )}
+                </p>
+              )}
+
+              {exercise.sets.map((set, setIndex) => (
+                <div key={setIndex} className="set-form-row">
+                  <label>
+                    Reps
+                    <input
+                      type="number"
+                      min={1}
+                      value={set.targetReps}
+                      onChange={(event) =>
+                        updateSet(exerciseIndex, setIndex, { targetReps: event.target.value })
+                      }
+                      required
+                    />
+                  </label>
+                  <label>
+                    Peso (kg)
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.5"
+                      value={set.targetWeight}
+                      onChange={(event) =>
+                        updateSet(exerciseIndex, setIndex, { targetWeight: event.target.value })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Recupero (s)
+                    <input
+                      type="number"
+                      min={0}
+                      value={set.restSeconds}
+                      onChange={(event) =>
+                        updateSet(exerciseIndex, setIndex, { restSeconds: event.target.value })
+                      }
+                    />
+                  </label>
+                  {exercise.sets.length > 1 && (
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => removeSet(exerciseIndex, setIndex)}
+                    >
+                      Rimuovi set
+                    </button>
+                  )}
+                </div>
+              ))}
+              <div className="exercise-form__actions">
+                <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>
+                  Aggiungi set
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => duplicateSet(exerciseIndex)}
+                >
+                  Duplica ultimo set
+                </button>
+              </div>
+
+              <label>
+                Recupero prima del prossimo esercizio (s)
+                <input
+                  type="number"
+                  min={0}
+                  value={exercise.restSeconds}
+                  onChange={(event) =>
+                    updateExercise(exerciseIndex, { restSeconds: event.target.value })
+                  }
+                />
+              </label>
+
+              {exercises.length > 1 && (
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => removeExercise(exerciseIndex)}
+                >
+                  Rimuovi esercizio
+                </button>
+              )}
+            </fieldset>
+          );
+        })}
 
         <button type="button" className="secondary" onClick={addExercise}>
           Aggiungi esercizio
