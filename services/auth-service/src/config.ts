@@ -1,4 +1,13 @@
+import { fileURLToPath } from "node:url";
+import { config as loadDotenv } from "dotenv";
 import { z } from "zod";
+
+// Carica il .env di root (non quello del singolo servizio) per l'esecuzione
+// sull'host (`npm run dev`/`db:migrate` fuori da Docker): li' le variabili
+// non arrivano gia' impostate come fa docker-compose. Non sovrascrive
+// variabili gia' presenti in process.env; se il file non esiste (es. dentro
+// l'immagine Docker, dove .env non viene copiato) non fa nulla.
+loadDotenv({ path: fileURLToPath(new URL("../../../.env", import.meta.url)) });
 
 /**
  * Configurazione letta e validata dalle variabili d'ambiente all'avvio.

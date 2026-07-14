@@ -48,6 +48,10 @@ sono gia' coperti, la UI delle schede (Fase 2) e' il prossimo passo.
 
 ## Setup locale
 
+I servizi caricano `.env` automaticamente (anche quando lanciati sull'host,
+fuori da Docker): il primo passo qui sotto non è solo un promemoria, è
+necessario perché `db:migrate`/`dev` trovino `DATABASE_URL` e `JWT_SECRET`.
+
 ```bash
 cp .env.example .env
 npm install
