@@ -11,6 +11,7 @@ import { WorkoutDetailPage } from "./pages/WorkoutDetailPage";
 import { LogSessionPage } from "./pages/LogSessionPage";
 import { SessionHistoryPage } from "./pages/SessionHistoryPage";
 import { SessionDetailPage } from "./pages/SessionDetailPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
 
 export function App() {
   return (
@@ -28,6 +29,7 @@ export function App() {
               <Route path="/workouts/:id/log" element={<LogSessionPage />} />
               <Route path="/sessions" element={<SessionHistoryPage />} />
               <Route path="/sessions/:id" element={<SessionDetailPage />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
