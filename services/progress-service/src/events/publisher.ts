@@ -1,14 +1,12 @@
 import amqplib, { type ChannelModel } from "amqplib";
-import type { ProgressionEvent } from "@gym-tracker/shared";
-
-export const PROGRESSION_EVENTS_QUEUE = "progression-events";
+import { PROGRESSION_EVENTS_QUEUE, type ProgressionEventMessage } from "@gym-tracker/shared";
 
 /**
  * Pubblica un evento quando il motore di regole scatta. `notify-service`
  * (Fase 4) consumera' questi messaggi dalla coda `progression-events`.
  */
 export interface ProgressionEventPublisher {
-  publish(event: ProgressionEvent): Promise<void>;
+  publish(event: ProgressionEventMessage): Promise<void>;
   close?(): Promise<void>;
 }
 
@@ -69,7 +67,7 @@ export class AmqpProgressionEventPublisher implements ProgressionEventPublisher 
     );
   }
 
-  async publish(event: ProgressionEvent): Promise<void> {
+  async publish(event: ProgressionEventMessage): Promise<void> {
     if (!this.channel) {
       throw new Error("Canale RabbitMQ non disponibile.");
     }
@@ -86,9 +84,9 @@ export class AmqpProgressionEventPublisher implements ProgressionEventPublisher 
 
 /** Per i test: nessun broker reale (stesso motivo per cui i test non usano mai Postgres reale). */
 export class InMemoryProgressionEventPublisher implements ProgressionEventPublisher {
-  readonly published: ProgressionEvent[] = [];
+  readonly published: ProgressionEventMessage[] = [];
 
-  async publish(event: ProgressionEvent): Promise<void> {
+  async publish(event: ProgressionEventMessage): Promise<void> {
     this.published.push(event);
   }
 }

@@ -95,7 +95,23 @@ services:
       rabbitmq:
         condition: service_healthy
 
-  # notify-service verra' aggiunto in Fase 4 del percorso didattico.
+  notify-service:
+    build:
+      context: .
+      dockerfile: services/notify-service/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: ${NOTIFY_SERVICE_PORT:-4004}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      DATABASE_URL: postgres://${POSTGRES_USER:-gymtracker}:${POSTGRES_PASSWORD:-gymtracker}@postgres:5432/${POSTGRES_DB:-gymtracker}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-gymtracker}:${RABBITMQ_PASSWORD:-gymtracker}@rabbitmq:5672
+    ports:
+      - "${NOTIFY_SERVICE_PORT:-4004}:4004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   # --- API Gateway: unico punto di ingresso per i client (web/Android) ---
   api-gateway:
@@ -108,12 +124,14 @@ services:
       AUTH_SERVICE_URL: http://auth-service:4001
       WORKOUT_SERVICE_URL: http://workout-service:4002
       PROGRESS_SERVICE_URL: http://progress-service:4003
+      NOTIFY_SERVICE_URL: http://notify-service:4004
     ports:
       - "${API_GATEWAY_PORT:-4000}:4000"
     depends_on:
       - auth-service
       - workout-service
       - progress-service
+      - notify-service
 
 volumes:
   postgres-data:

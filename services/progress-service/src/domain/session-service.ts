@@ -56,7 +56,7 @@ export class SessionService {
       suggestions.push(event);
 
       try {
-        await this.publisher.publish(event);
+        await this.publisher.publish({ ...event, ownerId });
       } catch (err) {
         // Best-effort: la sessione e' gia' salvata con successo, un
         // fallimento di publish non deve far fallire la richiesta.

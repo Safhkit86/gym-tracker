@@ -103,3 +103,20 @@ export interface ProgressionEvent {
 export interface CreateSessionResponse extends SessionDetail {
   suggestions: ProgressionEvent[];
 }
+
+/**
+ * Payload pubblicato su RabbitMQ (coda "progression-events"): include
+ * `ownerId`, assente dal DTO di GET /progression perche' li' il chiamante e'
+ * gia' autenticato come proprietario. notify-service (Fase 4) lo usa per
+ * sapere a chi appartiene la notifica.
+ */
+export interface ProgressionEventMessage extends ProgressionEvent {
+  ownerId: string;
+}
+
+/**
+ * Nome della coda RabbitMQ su cui progress-service pubblica e notify-service
+ * consuma: vive qui (non in un solo servizio) perche' e' un contratto tra i
+ * due, non un dettaglio implementativo di uno solo.
+ */
+export const PROGRESSION_EVENTS_QUEUE = "progression-events";

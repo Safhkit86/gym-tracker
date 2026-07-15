@@ -23,9 +23,10 @@ Web app (apps/web) / Android app (futuro)
 
 - **api-gateway** — unico punto di ingresso per i client: inoltra le richieste
   ai servizi (`/auth`, `/me` → auth-service; `/exercises`, `/workouts` →
-  workout-service; `/sessions`, `/progression` → progress-service). Per ora
-  solo reverse-proxy; autenticazione centralizzata e rate limiting
-  arriveranno con l'hardening previsto in Fase 5.
+  workout-service; `/sessions`, `/progression` → progress-service;
+  `/notifications` → notify-service). Per ora solo reverse-proxy;
+  autenticazione centralizzata e rate limiting arriveranno con l'hardening
+  previsto in Fase 5.
 - **auth-service** — utenti, JWT (Fase 1)
 - **workout-service** — schede, esercizi, set/reps/peso/recupero (Fase 2)
 - **progress-service** — storico allenamenti + motore di regole di
@@ -60,10 +61,12 @@ npm run build --workspace=@gym-tracker/shared
 npm run db:migrate --workspace=@gym-tracker/auth-service      # crea le tabelle
 npm run db:migrate --workspace=@gym-tracker/workout-service   # crea le tabelle + seed catalogo
 npm run db:migrate --workspace=@gym-tracker/progress-service  # crea le tabelle
+npm run db:migrate --workspace=@gym-tracker/notify-service    # crea le tabelle
 cd services/auth-service && npm run dev         # avvia auth-service in watch mode
 # in altri terminali:
 #   cd services/workout-service && npm run dev
 #   cd services/progress-service && npm run dev
+#   cd services/notify-service && npm run dev
 #   cd services/api-gateway && npm run dev
 #   cd apps/web && npm run dev             # webapp su http://localhost:5173
 ```
@@ -74,6 +77,50 @@ Oppure avvia tutto containerizzato:
 docker compose up -d --build
 curl http://localhost:4000/health   # api-gateway: unico punto di ingresso
 ```
+
+## Provare la webapp a mano
+
+Se il backend è già attivo (es. `docker compose ps` mostra i servizi
+`healthy`), basta avviare la webapp:
+
+```bash
+cd apps/web
+npm run dev
+```
+
+e aprire **http://localhost:5173**.
+
+Per ripartire da zero (macchina appena riavviata, container fermi):
+
+```bash
+docker compose up -d   # infrastruttura + servizi
+
+# solo la prima volta o dopo un nuovo checkout/pull
+npm run db:migrate --workspace=@gym-tracker/auth-service
+npm run db:migrate --workspace=@gym-tracker/workout-service
+npm run db:migrate --workspace=@gym-tracker/progress-service
+npm run db:migrate --workspace=@gym-tracker/notify-service
+
+cd apps/web && npm run dev   # webapp su http://localhost:5173
+```
+
+Flusso di prova consigliato una volta dentro l'app:
+
+1. Registrati e fai login.
+2. **Schede** → crea una scheda impostando un "Incremento di progressione"
+   su almeno un esercizio.
+3. Apri la scheda → **Registra sessione** due volte di seguito con gli
+   stessi valori (target raggiunto entrambe le volte): al secondo log
+   dovrebbe comparire un suggerimento di progressione, sia nella conferma
+   sia come badge sulla scheda.
+4. **Storico** (nella barra di navigazione) → verifica le sessioni registrate
+   e il loro dettaglio.
+
+Per ispezionare la coda RabbitMQ `progression-events`: http://localhost:15672
+(utente/password di default: `gymtracker`/`gymtracker`). `notify-service` la
+consuma automaticamente e trasforma ogni suggerimento in una notifica in-app;
+non avendo ancora una UI (arriverà in una PR successiva), si consultano via
+API: `curl -H "Authorization: Bearer <token>" http://localhost:4000/notifications`.
 
 ## Comandi principali
 
@@ -91,7 +138,7 @@ Ogni Pull Request verso `master` esegue automaticamente (`.github/workflows/ci.y
 1. Lint su tutti i workspace
 2. Test su tutti i workspace
 3. Build TypeScript su tutti i workspace
-4. Build dell'immagine Docker di ogni servizio implementato (`auth-service`, `workout-service`, `progress-service`, `api-gateway`)
+4. Build dell'immagine Docker di ogni servizio implementato (`auth-service`, `workout-service`, `progress-service`, `notify-service`, `api-gateway`)
 
 La validazione obbligatoria delle PR è **attiva**: su `master` è impostata una
 branch protection rule con il check `CI passed` (il job `ci-status` del workflow)
@@ -114,7 +161,7 @@ entrambi.
   - ✅ Backend
   - ✅ UI (registra sessione, storico, suggerimenti di progressione)
 - **Fase 4** — notify-service
-  - ⬜ Backend
+  - ✅ Backend
   - ⬜ UI
 - ⬜ **Fase 5** — hardening API Gateway (autenticazione centralizzata, rate
   limiting) + rifinitura webapp

@@ -17,6 +17,7 @@ const envSchema = z.object({
   AUTH_SERVICE_URL: z.string().url(),
   WORKOUT_SERVICE_URL: z.string().url(),
   PROGRESS_SERVICE_URL: z.string().url(),
+  NOTIFY_SERVICE_URL: z.string().url(),
 });
 
 export type Config = z.infer<typeof envSchema>;

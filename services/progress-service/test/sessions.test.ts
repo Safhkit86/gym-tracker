@@ -133,8 +133,9 @@ describe("POST /sessions", () => {
       suggestedValue: 82.5,
       source: "rule",
     });
-    const publisher = deps.publisher as { published: unknown[] };
+    const publisher = deps.publisher as { published: Array<{ ownerId: string }> };
     expect(publisher.published).toHaveLength(1);
+    expect(publisher.published[0].ownerId).toBe(OWNER_A);
   });
 
   it("non scatta se il peso cambia tra le due sessioni", async () => {
