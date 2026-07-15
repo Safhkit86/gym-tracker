@@ -97,6 +97,29 @@ describe("routing verso gli upstream", () => {
     expect(ctx.auth.lastRequest).toBeNull();
   });
 
+  it("inoltra GET /notifications a notify-service", async () => {
+    const ctx = await buildTestApp();
+    closeAll = ctx.closeAll;
+
+    await request(ctx.app).get("/notifications").set("Authorization", "Bearer xyz");
+
+    expect(ctx.notify.lastRequest?.url).toBe("/notifications");
+    expect(ctx.progress.lastRequest).toBeNull();
+  });
+
+  it("inoltra PATCH /notifications/:id/read a notify-service", async () => {
+    const ctx = await buildTestApp();
+    closeAll = ctx.closeAll;
+
+    await request(ctx.app)
+      .patch("/notifications/11111111-1111-1111-1111-111111111111/read")
+      .set("Authorization", "Bearer xyz");
+
+    expect(ctx.notify.lastRequest?.url).toBe(
+      "/notifications/11111111-1111-1111-1111-111111111111/read"
+    );
+  });
+
   it("risponde 404 per una rotta non mappata a nessun servizio", async () => {
     const ctx = await buildTestApp();
     closeAll = ctx.closeAll;

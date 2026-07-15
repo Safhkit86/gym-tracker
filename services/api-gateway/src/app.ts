@@ -14,6 +14,7 @@ export interface AppDeps {
   authServiceUrl: string;
   workoutServiceUrl: string;
   progressServiceUrl: string;
+  notifyServiceUrl: string;
 }
 
 /**
@@ -72,6 +73,7 @@ export function createApp(deps: AppDeps): Express {
   app.use("/workouts", proxyTo(deps.workoutServiceUrl));
   app.use("/sessions", proxyTo(deps.progressServiceUrl));
   app.use("/progression", proxyTo(deps.progressServiceUrl));
+  app.use("/notifications", proxyTo(deps.notifyServiceUrl));
 
   app.use((_req, res) => {
     res.status(404).json({ code: "NOT_FOUND", message: "Rotta non trovata." });
