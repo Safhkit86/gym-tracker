@@ -1,20 +1,25 @@
 import express, { type Express, type Request } from "express";
 import cors from "cors";
 import { createProxyMiddleware } from "http-proxy-middleware";
-import { buildHealthStatus } from "@gym-tracker/shared";
+import { buildHealthStatus, type AccessTokenService } from "@gym-tracker/shared";
+import { requireAuth } from "./middleware/authenticate.js";
+import { createRateLimiters, type RateLimitConfig } from "./rate-limit.js";
 
 const SERVICE_NAME = "api-gateway";
 const SERVICE_VERSION = "0.1.0";
 
 /**
- * URL degli upstream a cui il gateway inoltra le richieste. Iniettati cosi'
- * i test possono puntare a server finti invece che ai servizi reali.
+ * URL degli upstream a cui il gateway inoltra le richieste, piu' le
+ * collaboratrici per l'hardening (Fase 5). Iniettati cosi' i test possono
+ * puntare a server finti/config diverse invece che ai servizi reali.
  */
 export interface AppDeps {
   authServiceUrl: string;
   workoutServiceUrl: string;
   progressServiceUrl: string;
   notifyServiceUrl: string;
+  tokens: AccessTokenService;
+  rateLimits?: RateLimitConfig;
 }
 
 /**
@@ -57,17 +62,33 @@ export function createApp(deps: AppDeps): Express {
   // produzione) chiama il gateway via fetch da browser: senza CORS le
   // richieste vengono bloccate lato client prima ancora di arrivare qui.
   // Nessun cookie in gioco (auth via Bearer token), quindi riflettere
-  // l'origin e' sicuro; un allowlist esplicito arrivera' con l'hardening
-  // della Fase 5.
+  // l'origin e' sicuro; un allowlist esplicito resta un possibile
+  // affinamento futuro, non necessario per l'hardening di questa fase.
   app.use(cors());
 
   // Endpoint di health check: verificato dalla pipeline CI e da Docker Compose.
-  // Non proxato: e' del gateway stesso, non di un servizio a monte.
+  // Non proxato/non limitato/non autenticato: e' del gateway stesso, non di
+  // un servizio a monte, e Docker lo interroga ogni 30s.
   app.get("/health", (_req, res) => {
     res.json(buildHealthStatus(SERVICE_NAME, SERVICE_VERSION));
   });
 
-  app.use("/auth", proxyTo(deps.authServiceUrl));
+  const rateLimiters = createRateLimiters(deps.rateLimits);
+  app.use(rateLimiters.global);
+
+  // /auth e' pubblico per intero (nessun token ancora disponibile prima di
+  // login/registrazione): oggi ci vive solo POST /auth/register e
+  // POST /auth/login. Se auth-service guadagnasse in futuro una rotta da
+  // proteggere sotto /auth/*, andrebbe gestita esplicitamente, non assunta
+  // pubblica per prefisso.
+  app.use("/auth", rateLimiters.auth, proxyTo(deps.authServiceUrl));
+
+  // Verifica centralizzata del Bearer JWT: da qui in poi ogni rotta richiede
+  // un token valido, verificato alla porta d'ingresso prima ancora di
+  // raggiungere un servizio a valle (che continua comunque a verificarlo per
+  // conto proprio, vedi middleware/authenticate.ts).
+  app.use(requireAuth(deps.tokens));
+
   app.use("/me", proxyTo(deps.authServiceUrl));
   app.use("/exercises", proxyTo(deps.workoutServiceUrl));
   app.use("/workouts", proxyTo(deps.workoutServiceUrl));

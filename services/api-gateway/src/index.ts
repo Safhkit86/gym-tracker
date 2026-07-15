@@ -1,3 +1,4 @@
+import { createAccessTokenService } from "@gym-tracker/shared";
 import { createApp } from "./app.js";
 import { loadConfig } from "./config.js";
 
@@ -8,6 +9,7 @@ const app = createApp({
   workoutServiceUrl: config.WORKOUT_SERVICE_URL,
   progressServiceUrl: config.PROGRESS_SERVICE_URL,
   notifyServiceUrl: config.NOTIFY_SERVICE_URL,
+  tokens: createAccessTokenService(config.JWT_SECRET),
 });
 
 const server = app.listen(config.PORT, () => {

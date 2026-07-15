@@ -18,6 +18,7 @@ const envSchema = z.object({
   WORKOUT_SERVICE_URL: z.string().url(),
   PROGRESS_SERVICE_URL: z.string().url(),
   NOTIFY_SERVICE_URL: z.string().url(),
+  JWT_SECRET: z.string().min(1, "JWT_SECRET non puo' essere vuoto"),
 });
 
 export type Config = z.infer<typeof envSchema>;

@@ -24,9 +24,11 @@ Web app (apps/web) / Android app (futuro)
 - **api-gateway** — unico punto di ingresso per i client: inoltra le richieste
   ai servizi (`/auth`, `/me` → auth-service; `/exercises`, `/workouts` →
   workout-service; `/sessions`, `/progression` → progress-service;
-  `/notifications` → notify-service). Per ora solo reverse-proxy;
-  autenticazione centralizzata e rate limiting arriveranno con l'hardening
-  previsto in Fase 5.
+  `/notifications` → notify-service). Verifica centralmente il Bearer JWT
+  (401 prima ancora di raggiungere un servizio a valle, tranne su
+  `/auth/register` e `/auth/login`, pubblici) e applica un rate limit per IP
+  (più stringente su `/auth`) — in aggiunta, non in sostituzione, alla
+  verifica che ogni servizio fa comunque per conto proprio.
 - **auth-service** — utenti, JWT (Fase 1)
 - **workout-service** — schede, esercizi, set/reps/peso/recupero (Fase 2)
 - **progress-service** — storico allenamenti + motore di regole di
@@ -164,8 +166,10 @@ entrambi.
 - ✅ **Fase 4** — notify-service
   - ✅ Backend
   - ✅ UI (badge notifiche non lette, elenco, segna come letta/tutte lette)
-- ⬜ **Fase 5** — hardening API Gateway (autenticazione centralizzata, rate
+- **Fase 5** — hardening API Gateway (autenticazione centralizzata, rate
   limiting) + rifinitura webapp
+  - ✅ Hardening API Gateway
+  - ⬜ Rifinitura webapp
 - ⬜ **Fase 6** — osservabilità (log, metriche, tracing)
 - ⬜ **Fase 7** — Kubernetes (opzionale)
 - ⬜ **Fase 8** — app Android
@@ -173,8 +177,9 @@ entrambi.
 L'API Gateway in versione minima (solo reverse-proxy, vedi `services/api-gateway`)
 è stato anticipato rispetto alla Fase 5 originale: serviva da subito per non
 far parlare la webapp direttamente con i singoli servizi (vedi "Cosa NON fare"
-in `CLAUDE.md`). La Fase 5 resta per l'hardening (auth centralizzata, rate
-limiting) quando servirà.
+in `CLAUDE.md`). L'hardening (autenticazione centralizzata, rate limiting) è
+arrivato in Fase 5; la "rifinitura webapp" resta da fare, senza uno scope
+preciso ancora definito.
 
 Vedi `CLAUDE.md` per le convenzioni di codice usate da Claude Code in questo
 repo.
