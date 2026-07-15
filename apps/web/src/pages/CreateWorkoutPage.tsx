@@ -17,6 +17,9 @@ interface ExerciseForm {
   notes: string;
   /** Recupero dopo questo esercizio, prima del successivo. */
   restSeconds: string;
+  /** Incremento (kg o reps) da suggerire quando progress-service rileva che
+   *  e' il momento di progredire su questo esercizio; vuoto = non configurato. */
+  progressionIncrement: string;
   sets: SetForm[];
 }
 
@@ -25,7 +28,13 @@ function emptySet(): SetForm {
 }
 
 function emptyExercise(defaultExerciseId: string): ExerciseForm {
-  return { exerciseId: defaultExerciseId, notes: "", restSeconds: "", sets: [emptySet()] };
+  return {
+    exerciseId: defaultExerciseId,
+    notes: "",
+    restSeconds: "",
+    progressionIncrement: "",
+    sets: [emptySet()],
+  };
 }
 
 /** Raggruppa il catalogo per gruppo muscolare, per una scelta piu' rapida
@@ -52,6 +61,9 @@ function toWorkoutInput(name: string, notes: string, exercises: ExerciseForm[]):
       position: exerciseIndex + 1,
       notes: exercise.notes.trim() || undefined,
       restSeconds: exercise.restSeconds.trim() ? Number(exercise.restSeconds) : undefined,
+      progressionIncrement: exercise.progressionIncrement.trim()
+        ? Number(exercise.progressionIncrement)
+        : undefined,
       sets: exercise.sets.map((set, setIndex) => ({
         setNumber: setIndex + 1,
         targetReps: Number(set.targetReps),
@@ -319,6 +331,19 @@ export function CreateWorkoutPage() {
                   value={exercise.restSeconds}
                   onChange={(event) =>
                     updateExercise(exerciseIndex, { restSeconds: event.target.value })
+                  }
+                />
+              </label>
+
+              <label>
+                Incremento di progressione (kg o reps)
+                <input
+                  type="number"
+                  min={0}
+                  step="0.5"
+                  value={exercise.progressionIncrement}
+                  onChange={(event) =>
+                    updateExercise(exerciseIndex, { progressionIncrement: event.target.value })
                   }
                 />
               </label>

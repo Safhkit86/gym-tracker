@@ -149,4 +149,42 @@ describe("CreateWorkoutPage", () => {
     const body = JSON.parse((postCall?.[1]?.body as string) ?? "{}");
     expect(body.exercises[0].restSeconds).toBe(120);
   });
+
+  it("invia l'incremento di progressione impostato dall'utente", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/exercises") && m === "GET", body: [FAKE_EXERCISE] },
+      {
+        match: (u, m) => u.endsWith("/workouts") && m === "POST",
+        status: 201,
+        body: {
+          id: "w1",
+          name: "Push day",
+          notes: null,
+          exercises: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    ]);
+
+    renderWithProviders(<CreateWorkoutPage />, ["/workouts/new"]);
+
+    await screen.findByLabelText("Esercizio");
+    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Push day" } });
+    fireEvent.change(screen.getByLabelText("Reps"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText(/incremento di progressione/i), {
+      target: { value: "2.5" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /crea scheda/i }));
+
+    await waitFor(() => {
+      const postCall = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+      expect(postCall).toBeDefined();
+    });
+
+    const postCall = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    const body = JSON.parse((postCall?.[1]?.body as string) ?? "{}");
+    expect(body.exercises[0].progressionIncrement).toBe(2.5);
+  });
 });

@@ -13,6 +13,7 @@ export function Layout() {
             gym-tracker
           </Link>
           <Link to="/workouts">Schede</Link>
+          <Link to="/sessions">Storico</Link>
         </div>
         <div className="app-nav__links">
           {user && <span className="app-nav__user">{user.email}</span>}
