@@ -1,9 +1,36 @@
-import { Link, Outlet } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
+import { listNotifications } from "../api/notifications";
 
 /** Shell con barra di navigazione, usata dalle pagine protette. */
 export function Layout() {
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
+  const location = useLocation();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Il conteggio si ricalcola a ogni cambio di rotta (es. dopo aver segnato
+  // una notifica come letta e navigato altrove): Layout resta montato tra le
+  // pagine figlie, quindi senza questa dipendenza il badge resterebbe fermo
+  // al valore del primo caricamento.
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+    let cancelled = false;
+    listNotifications(token, true)
+      .then((result) => {
+        if (!cancelled) {
+          setUnreadCount(result.length);
+        }
+      })
+      .catch(() => {
+        /* il badge e' un'aggiunta secondaria: un fallimento qui non deve rompere la navigazione */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, location.pathname]);
 
   return (
     <>
@@ -14,6 +41,9 @@ export function Layout() {
           </Link>
           <Link to="/workouts">Schede</Link>
           <Link to="/sessions">Storico</Link>
+          <Link to="/notifications">
+            Notifiche{unreadCount > 0 && <span className="badge">{unreadCount}</span>}
+          </Link>
         </div>
         <div className="app-nav__links">
           {user && <span className="app-nav__user">{user.email}</span>}

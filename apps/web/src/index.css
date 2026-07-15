@@ -3,11 +3,7 @@
      l'utente ha chiesto esplicitamente di non far dipendere il tema da
      impostazioni di sistema/browser. */
   color-scheme: dark;
-  font-family:
-    -apple-system,
-    "Segoe UI",
-    system-ui,
-    sans-serif;
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
 
   --color-bg: #0c1420;
   --color-surface: #121d2d;
@@ -228,6 +224,22 @@ button.secondary:hover:not(:disabled) {
   font-size: 0.9rem;
 }
 
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.3rem;
+  margin-left: var(--space-1);
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 /* --- Auth pages --- */
 
 .auth-card {
@@ -267,6 +279,23 @@ button.secondary:hover:not(:disabled) {
   font-size: 1.05rem;
   font-weight: 600;
   color: var(--color-text);
+}
+
+/* --- Notifiche --- */
+
+.notification-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.notification-item--unread {
+  border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+}
+
+.notification-item p {
+  margin: var(--space-1) 0;
 }
 
 .workout-list__meta {

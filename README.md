@@ -115,12 +115,13 @@ Flusso di prova consigliato una volta dentro l'app:
    sia come badge sulla scheda.
 4. **Storico** (nella barra di navigazione) → verifica le sessioni registrate
    e il loro dettaglio.
+5. **Notifiche** (nella barra di navigazione, con il badge del numero di non
+   lette) → il suggerimento del punto 3 dovrebbe comparire qui; segnalo come
+   letto e verifica che il badge si aggiorni.
 
-Per ispezionare la coda RabbitMQ `progression-events`: http://localhost:15672
-(utente/password di default: `gymtracker`/`gymtracker`). `notify-service` la
-consuma automaticamente e trasforma ogni suggerimento in una notifica in-app;
-non avendo ancora una UI (arriverà in una PR successiva), si consultano via
-API: `curl -H "Authorization: Bearer <token>" http://localhost:4000/notifications`.
+Per ispezionare la coda RabbitMQ `progression-events` (consumata
+automaticamente da `notify-service`, che genera la notifica del punto 5):
+http://localhost:15672 (utente/password di default: `gymtracker`/`gymtracker`).
 
 ## Comandi principali
 
@@ -160,9 +161,9 @@ entrambi.
 - ✅ **Fase 3** — progress-service + motore di regole di progressione
   - ✅ Backend
   - ✅ UI (registra sessione, storico, suggerimenti di progressione)
-- **Fase 4** — notify-service
+- ✅ **Fase 4** — notify-service
   - ✅ Backend
-  - ⬜ UI
+  - ✅ UI (badge notifiche non lette, elenco, segna come letta/tutte lette)
 - ⬜ **Fase 5** — hardening API Gateway (autenticazione centralizzata, rate
   limiting) + rifinitura webapp
 - ⬜ **Fase 6** — osservabilità (log, metriche, tracing)
