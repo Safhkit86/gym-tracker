@@ -1,5 +1,15 @@
 import http, { type Server } from "node:http";
+import { createAccessTokenService } from "@gym-tracker/shared";
 import { createApp } from "../src/app.js";
+import type { RateLimitConfig } from "../src/rate-limit.js";
+
+export const TEST_JWT_SECRET = "test-secret-please-change";
+
+/** Genera un Bearer token valido per un utente di test. */
+export async function bearerFor(ownerId: string, email = "test@example.com"): Promise<string> {
+  const tokens = createAccessTokenService(TEST_JWT_SECRET);
+  return tokens.sign({ sub: ownerId, email });
+}
 
 /**
  * Server HTTP minimale usato come finto upstream (auth-service/workout-service)
@@ -50,7 +60,7 @@ export async function startFakeUpstream(
 }
 
 /** Costruisce l'app del gateway puntata su quattro fake upstream. */
-export async function buildTestApp(): Promise<{
+export async function buildTestApp(rateLimits?: RateLimitConfig): Promise<{
   app: ReturnType<typeof createApp>;
   auth: FakeUpstream;
   workout: FakeUpstream;
@@ -67,6 +77,8 @@ export async function buildTestApp(): Promise<{
     workoutServiceUrl: workout.url,
     progressServiceUrl: progress.url,
     notifyServiceUrl: notify.url,
+    tokens: createAccessTokenService(TEST_JWT_SECRET),
+    rateLimits,
   });
   return {
     app,
