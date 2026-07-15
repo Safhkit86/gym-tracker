@@ -110,9 +110,9 @@ entrambi.
 - ✅ **Fase 2** — workout-service (schede, esercizi, set/reps/peso/recupero)
   - ✅ Backend
   - ✅ UI (lista, creazione, dettaglio schede)
-- **Fase 3** — progress-service + motore di regole di progressione
+- ✅ **Fase 3** — progress-service + motore di regole di progressione
   - ✅ Backend
-  - ⬜ UI
+  - ✅ UI (registra sessione, storico, suggerimenti di progressione)
 - **Fase 4** — notify-service
   - ⬜ Backend
   - ⬜ UI
