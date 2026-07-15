@@ -6,11 +6,13 @@ export function DashboardPage() {
 
   return (
     <main>
-      <h1>Ciao{user ? `, ${user.email}` : ""}</h1>
-      {user && <p>Account creato il {new Date(user.createdAt).toLocaleDateString("it-IT")}.</p>}
-      <p>
-        <Link to="/workouts">Vai alle tue schede di allenamento</Link>
-      </p>
+      <div className="card">
+        <h1>Ciao{user ? `, ${user.email}` : ""}</h1>
+        {user && <p>Account creato il {new Date(user.createdAt).toLocaleDateString("it-IT")}.</p>}
+        <p>
+          <Link to="/workouts">Vai alle tue schede di allenamento</Link>
+        </p>
+      </div>
     </main>
   );
 }
