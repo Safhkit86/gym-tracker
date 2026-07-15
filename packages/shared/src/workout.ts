@@ -37,6 +37,14 @@ export interface WorkoutExerciseInput {
   notes?: string | null;
   /** Recupero dopo questo esercizio, prima del successivo (secondi). */
   restSeconds?: number | null;
+  /**
+   * Incremento da applicare quando progress-service rileva che e' il momento
+   * di progredire su questo esercizio (kg se pesato, ripetizioni a corpo
+   * libero): scelto da chi crea la scheda, non un valore fisso uguale per
+   * tutti gli esercizi. null/assente = progressione non configurata (il
+   * motore di progress-service non propone nulla per questo esercizio).
+   */
+  progressionIncrement?: number | null;
   sets: WorkoutSetInput[];
 }
 
@@ -65,6 +73,8 @@ export interface WorkoutExercise {
   notes: string | null;
   /** Recupero dopo questo esercizio, prima del successivo (secondi); null = non specificato. */
   restSeconds: number | null;
+  /** Vedi WorkoutExerciseInput.progressionIncrement; null = non configurato. */
+  progressionIncrement: number | null;
   sets: WorkoutSet[];
 }
 

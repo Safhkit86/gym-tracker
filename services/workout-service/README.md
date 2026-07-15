@@ -11,6 +11,11 @@ con `ownerId` nullo per gli esercizi globali (seed) o valorizzato per quelli
 creati dall'utente. `ownerId` sulle schede/esercizi è il `sub` del JWT: non è
 una foreign key verso `auth-service` (confine tra servizi).
 
+Ogni `WorkoutExercise` può avere un `progressionIncrement` (kg se pesato,
+ripetizioni a corpo libero): è il *quanto* di progressione per quell'esercizio
+in quella scheda, letto da `progress-service` (Fase 3) per i suoi
+suggerimenti — non un valore fisso uguale per tutti gli esercizi.
+
 ## Endpoint
 
 Tutti richiedono `Authorization: Bearer <token>` emesso da `auth-service`.

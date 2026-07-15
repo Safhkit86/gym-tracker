@@ -56,6 +56,7 @@ Content-Type: application/json
     {
       "exerciseId": "{{createExercise.response.body.id}}",
       "position": 1,
+      "progressionIncrement": 2.5,
       "sets": [
         { "setNumber": 1, "targetReps": 10, "targetWeight": 40, "restSeconds": 90 },
         { "setNumber": 2, "targetReps": 8, "targetWeight": 42.5, "restSeconds": 90 }

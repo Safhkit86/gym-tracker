@@ -26,6 +26,8 @@ export interface NormalizedExercise {
   notes: string | null;
   /** Recupero dopo questo esercizio, prima del successivo (secondi). */
   restSeconds: number | null;
+  /** Vedi WorkoutExerciseInput.progressionIncrement in @gym-tracker/shared. */
+  progressionIncrement: number | null;
   sets: NormalizedSet[];
 }
 
@@ -130,6 +132,7 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
         "we.position as position",
         "we.notes as notes",
         "we.rest_seconds as rest_seconds",
+        "we.progression_increment as progression_increment",
         "e.name as exercise_name",
       ])
       .where("we.workout_id", "=", id)
@@ -171,6 +174,8 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
         position: r.position,
         notes: r.notes,
         restSeconds: r.rest_seconds,
+        progressionIncrement:
+          r.progression_increment === null ? null : Number(r.progression_increment),
         sets: setsByExercise.get(r.id) ?? [],
       })),
       createdAt: workout.created_at.toISOString(),
@@ -203,6 +208,7 @@ async function insertChildren(
         position: ex.position,
         notes: ex.notes,
         rest_seconds: ex.restSeconds,
+        progression_increment: ex.progressionIncrement,
       })
       .returning("id")
       .executeTakeFirstOrThrow();
@@ -312,6 +318,7 @@ function buildExercises(exercises: NormalizedExercise[]): WorkoutExercise[] {
     position: ex.position,
     notes: ex.notes,
     restSeconds: ex.restSeconds,
+    progressionIncrement: ex.progressionIncrement,
     sets: ex.sets.map((s) => ({
       id: randomUUID(),
       setNumber: s.setNumber,

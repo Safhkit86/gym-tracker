@@ -49,23 +49,31 @@ export async function startFakeUpstream(
   return state;
 }
 
-/** Costruisce l'app del gateway puntata su due fake upstream. */
+/** Costruisce l'app del gateway puntata su tre fake upstream. */
 export async function buildTestApp(): Promise<{
   app: ReturnType<typeof createApp>;
   auth: FakeUpstream;
   workout: FakeUpstream;
+  progress: FakeUpstream;
   closeAll(): Promise<void>;
 }> {
   const auth = await startFakeUpstream();
   const workout = await startFakeUpstream();
-  const app = createApp({ authServiceUrl: auth.url, workoutServiceUrl: workout.url });
+  const progress = await startFakeUpstream();
+  const app = createApp({
+    authServiceUrl: auth.url,
+    workoutServiceUrl: workout.url,
+    progressServiceUrl: progress.url,
+  });
   return {
     app,
     auth,
     workout,
+    progress,
     closeAll: async () => {
       await auth.close();
       await workout.close();
+      await progress.close();
     },
   };
 }

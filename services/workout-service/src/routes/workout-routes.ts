@@ -18,6 +18,8 @@ const exerciseSchema = z.object({
   notes: z.string().trim().min(1).nullish(),
   /** Recupero dopo questo esercizio, prima del successivo (secondi). */
   restSeconds: z.number().int().nonnegative().nullish(),
+  /** Incremento di progressione (kg o reps a seconda dell'esercizio); vedi @gym-tracker/shared. */
+  progressionIncrement: z.number().positive().nullish(),
   sets: z
     .array(setSchema)
     .min(1, "Ogni esercizio deve avere almeno un set.")
