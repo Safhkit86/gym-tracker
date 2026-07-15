@@ -62,6 +62,11 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   o un dominio statico) lo chiama via fetch da browser: senza CORS le
   richieste vengono bloccate lato client. Nessun altro servizio ne ha bisogno,
   la webapp non li chiama mai direttamente.
+- Un restyling grafico di `apps/web` copre **tutte** le pagine esistenti, non
+  solo quelle toccate dalla feature che lo ha motivato: prima di chiudere una
+  PR di restyling, passa in rassegna ogni file in `src/pages/` e applica le
+  stesse classi/pattern (es. `.card`) usate nelle altre pagine, così l'app non
+  finisce con un mix di pagine vecchie e nuove.
 
 ## Commit e PR
 
