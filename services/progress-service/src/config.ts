@@ -2,21 +2,18 @@ import { fileURLToPath } from "node:url";
 import { config as loadDotenv } from "dotenv";
 import { z } from "zod";
 
-// Carica il .env di root per l'esecuzione sull'host (`npm run dev` fuori da
-// Docker): li' le variabili non arrivano gia' impostate come fa
-// docker-compose. Non sovrascrive variabili gia' presenti in process.env; se
-// il file non esiste (es. dentro l'immagine Docker) non fa nulla.
+// Carica il .env di root (non quello del singolo servizio) per l'esecuzione
+// sull'host (`npm run dev`/`db:migrate` fuori da Docker): li' le variabili
+// non arrivano gia' impostate come fa docker-compose. Non sovrascrive
+// variabili gia' presenti in process.env; se il file non esiste (es. dentro
+// l'immagine Docker, dove .env non viene copiato) non fa nulla.
 loadDotenv({ path: fileURLToPath(new URL("../../../.env", import.meta.url)) });
 
-/**
- * Configurazione da variabili d'ambiente. Usata solo dall'entry point reale
- * (index.ts); i test costruiscono l'app con target di upstream finti.
- */
 const envSchema = z.object({
-  PORT: z.coerce.number().int().positive().default(4000),
-  AUTH_SERVICE_URL: z.string().url(),
-  WORKOUT_SERVICE_URL: z.string().url(),
-  PROGRESS_SERVICE_URL: z.string().url(),
+  PORT: z.coerce.number().int().positive().default(4003),
+  DATABASE_URL: z.string().url(),
+  JWT_SECRET: z.string().min(1, "JWT_SECRET non puo' essere vuoto"),
+  RABBITMQ_URL: z.string().url(),
 });
 
 export type Config = z.infer<typeof envSchema>;

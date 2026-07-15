@@ -6,6 +6,7 @@ const config = loadConfig();
 const app = createApp({
   authServiceUrl: config.AUTH_SERVICE_URL,
   workoutServiceUrl: config.WORKOUT_SERVICE_URL,
+  progressServiceUrl: config.PROGRESS_SERVICE_URL,
 });
 
 const server = app.listen(config.PORT, () => {

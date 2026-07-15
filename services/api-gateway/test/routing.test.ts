@@ -70,6 +70,33 @@ describe("routing verso gli upstream", () => {
     expect(ctx.workout.lastRequest?.url).toBe("/workouts/11111111-1111-1111-1111-111111111111");
   });
 
+  it("inoltra POST /sessions a progress-service preservando il body", async () => {
+    const ctx = await buildTestApp();
+    closeAll = ctx.closeAll;
+
+    await request(ctx.app)
+      .post("/sessions")
+      .set("Authorization", "Bearer xyz")
+      .send({ workoutId: "11111111-1111-1111-1111-111111111111" });
+
+    expect(ctx.progress.lastRequest?.url).toBe("/sessions");
+    expect(JSON.parse(ctx.progress.lastRequest?.body ?? "{}")).toMatchObject({
+      workoutId: "11111111-1111-1111-1111-111111111111",
+    });
+    expect(ctx.workout.lastRequest).toBeNull();
+  });
+
+  it("inoltra GET /progression a progress-service", async () => {
+    const ctx = await buildTestApp();
+    closeAll = ctx.closeAll;
+
+    await request(ctx.app).get("/progression").set("Authorization", "Bearer xyz");
+
+    expect(ctx.progress.lastRequest?.url).toBe("/progression");
+    expect(ctx.workout.lastRequest).toBeNull();
+    expect(ctx.auth.lastRequest).toBeNull();
+  });
+
   it("risponde 404 per una rotta non mappata a nessun servizio", async () => {
     const ctx = await buildTestApp();
     closeAll = ctx.closeAll;

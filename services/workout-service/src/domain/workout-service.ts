@@ -74,6 +74,7 @@ export class WorkoutService {
         position: e.position,
         notes: e.notes ?? null,
         restSeconds: e.restSeconds ?? null,
+        progressionIncrement: e.progressionIncrement ?? null,
         sets: e.sets.map((s) => ({
           setNumber: s.setNumber,
           targetReps: s.targetReps,

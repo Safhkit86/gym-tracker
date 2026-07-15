@@ -37,6 +37,7 @@ export interface WorkoutExercisesTable {
   notes: string | null;
   /** Recupero dopo questo esercizio, prima del successivo (secondi); null = non specificato. */
   rest_seconds: number | null;
+  progression_increment: ColumnType<string | null, number | null, number | null>;
 }
 
 export interface WorkoutSetsTable {

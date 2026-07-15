@@ -13,6 +13,7 @@ const SERVICE_VERSION = "0.1.0";
 export interface AppDeps {
   authServiceUrl: string;
   workoutServiceUrl: string;
+  progressServiceUrl: string;
 }
 
 /**
@@ -69,6 +70,8 @@ export function createApp(deps: AppDeps): Express {
   app.use("/me", proxyTo(deps.authServiceUrl));
   app.use("/exercises", proxyTo(deps.workoutServiceUrl));
   app.use("/workouts", proxyTo(deps.workoutServiceUrl));
+  app.use("/sessions", proxyTo(deps.progressServiceUrl));
+  app.use("/progression", proxyTo(deps.progressServiceUrl));
 
   app.use((_req, res) => {
     res.status(404).json({ code: "NOT_FOUND", message: "Rotta non trovata." });

@@ -1,0 +1,88 @@
+# Richieste manuali per progress-service (Fase 3).
+#
+# Richiede l'estensione VS Code "REST Client" (humao.rest-client).
+# Il token si ottiene da auth-service (login), poi si usa qui: esegui prima
+# "Login (auth-service)", poi gli altri blocchi in ordine.
+#
+# Prerequisiti: infrastruttura + servizi avviati e migrazioni eseguite
+#   docker compose up -d
+#   npm run db:migrate --workspace=@gym-tracker/auth-service
+#   npm run db:migrate --workspace=@gym-tracker/workout-service
+#   npm run db:migrate --workspace=@gym-tracker/progress-service
+
+@authUrl = http://localhost:4001
+@baseUrl = http://localhost:4003
+@email = demo@example.com
+@password = supersegreta
+
+### Health check di progress-service
+GET {{baseUrl}}/health
+
+### Login (auth-service) — cattura il token usato dai blocchi successivi.
+# @name login
+POST {{authUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Registra una sessione (sostituisci workoutId/exerciseId con id reali da workout-service)
+# @name logSession1
+POST {{baseUrl}}/sessions
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "workoutId": "00000000-0000-0000-0000-000000000000",
+  "workoutName": "Push day",
+  "performedAt": "2026-07-01T10:00:00.000Z",
+  "exercises": [
+    {
+      "exerciseId": "00000000-0000-0000-0000-000000000000",
+      "exerciseName": "Panca piana",
+      "progressionIncrement": 2.5,
+      "sets": [{ "setNumber": 1, "targetReps": 10, "actualReps": 10, "actualWeight": 80 }]
+    }
+  ]
+}
+
+### Registra una seconda sessione qualificante: dovrebbe far scattare un suggerimento
+# @name logSession2
+POST {{baseUrl}}/sessions
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "workoutId": "00000000-0000-0000-0000-000000000000",
+  "workoutName": "Push day",
+  "performedAt": "2026-07-08T10:00:00.000Z",
+  "exercises": [
+    {
+      "exerciseId": "00000000-0000-0000-0000-000000000000",
+      "exerciseName": "Panca piana",
+      "progressionIncrement": 2.5,
+      "sets": [{ "setNumber": 1, "targetReps": 10, "actualReps": 10, "actualWeight": 80 }]
+    }
+  ]
+}
+
+### Elenco delle proprie sessioni
+GET {{baseUrl}}/sessions
+Authorization: Bearer {{login.response.body.token}}
+
+### Dettaglio di una sessione
+GET {{baseUrl}}/sessions/{{logSession1.response.body.id}}
+Authorization: Bearer {{login.response.body.token}}
+
+### Suggerimenti di progressione recenti
+GET {{baseUrl}}/progression
+Authorization: Bearer {{login.response.body.token}}
+
+### Elimina una sessione
+DELETE {{baseUrl}}/sessions/{{logSession1.response.body.id}}
+Authorization: Bearer {{login.response.body.token}}
+
+### /sessions senza token -> 401 UNAUTHORIZED
+GET {{baseUrl}}/sessions
