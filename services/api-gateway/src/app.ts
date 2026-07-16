@@ -1,7 +1,12 @@
 import express, { type Express, type Request } from "express";
 import cors from "cors";
 import { createProxyMiddleware } from "http-proxy-middleware";
-import { buildHealthStatus, type AccessTokenService } from "@gym-tracker/shared";
+import {
+  buildHealthStatus,
+  createHttpLogger,
+  type AccessTokenService,
+  type Logger,
+} from "@gym-tracker/shared";
 import { requireAuth } from "./middleware/authenticate.js";
 import { createRateLimiters, type RateLimitConfig } from "./rate-limit.js";
 
@@ -20,6 +25,7 @@ export interface AppDeps {
   notifyServiceUrl: string;
   tokens: AccessTokenService;
   rateLimits?: RateLimitConfig;
+  logger: Logger;
 }
 
 /**
@@ -36,7 +42,8 @@ function proxyTo(target: string) {
     // riceve lo stesso path completo richiesto dal client (es. /auth/login).
     pathRewrite: (_path, req) => req.originalUrl,
     on: {
-      error: (_err, _req, res) => {
+      error: (err, req, res) => {
+        req.log.error({ err }, "servizio a monte non raggiungibile");
         // res e' ServerResponse | net.Socket: sui socket grezzi (es. upgrade
         // websocket fallito) non c'e' nulla di sensato da scrivere come JSON.
         if (!("writeHead" in res)) {
@@ -57,6 +64,18 @@ function proxyTo(target: string) {
 
 export function createApp(deps: AppDeps): Express {
   const app = express();
+
+  // Primissimo middleware: assegna/riusa l'id di correlazione e logga ogni
+  // richiesta. Deve stare prima di tutto il resto (CORS, rate limit, proxy)
+  // cosi' anche le risposte bloccate a monte (401, 429) vengono loggate.
+  app.use(createHttpLogger(deps.logger));
+  // pino-http ha gia' generato/riusato l'id in `req.id`; lo scriviamo anche
+  // sull'header in ingresso cosi' `proxyTo` lo inoltra automaticamente ai
+  // servizi a valle (legge gli header da `req` al momento della richiesta).
+  app.use((req, _res, next) => {
+    req.headers["x-request-id"] = String(req.id);
+    next();
+  });
 
   // La webapp (altra origine: Vite dev su :5173, o un dominio statico in
   // produzione) chiama il gateway via fetch da browser: senza CORS le
@@ -96,7 +115,8 @@ export function createApp(deps: AppDeps): Express {
   app.use("/progression", proxyTo(deps.progressServiceUrl));
   app.use("/notifications", proxyTo(deps.notifyServiceUrl));
 
-  app.use((_req, res) => {
+  app.use((req, res) => {
+    req.log.warn("rotta non trovata");
     res.status(404).json({ code: "NOT_FOUND", message: "Rotta non trovata." });
   });
 

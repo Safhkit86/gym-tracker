@@ -25,8 +25,17 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   (`buildHealthStatus` da `@gym-tracker/shared`).
 - Test con Vitest + Supertest, nella cartella `test/` di ogni servizio.
   Un endpoint nuovo senza test non è considerato completo.
-- Niente `console.log` in produzione salvo il log di avvio del server
-  (l'eslint rule `no-console` è a "warn", non "error", per questo motivo).
+- Niente `console.*`: ogni servizio usa il logger strutturato condiviso
+  (`createLogger`/`createHttpLogger` da `@gym-tracker/shared`, vedi
+  `packages/shared/src/logger.ts` e `http-logger.ts`) — l'eslint rule
+  `no-console` è a "error". Ogni richiesta HTTP viene loggata automaticamente
+  (metodo, path, status, durata, id di correlazione); l'header
+  `X-Request-Id` (generato da `api-gateway` se il client non lo manda,
+  riusato invariato se presente, propagato invariato ai servizi a valle)
+  permette di correlare le righe di log della stessa richiesta tra servizi
+  diversi. Fuori dal ciclo richiesta/risposta (migrazioni, retry di
+  connessione RabbitMQ) usa comunque `createLogger("<service-name>")`, mai
+  `console.*` diretto.
 - Il `Dockerfile` di ogni servizio usa come build context la root del
   monorepo (necessario perché npm workspaces risolva `@gym-tracker/shared`).
   Ogni stage che esegue comandi npm con `--workspace` deve copiare il

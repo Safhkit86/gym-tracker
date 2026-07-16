@@ -17,6 +17,7 @@ describe("GET /health", () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({ service: "api-gateway", status: "ok" });
+    expect(response.headers["x-request-id"]).toBeDefined();
     expect(ctx.auth.lastRequest).toBeNull();
     expect(ctx.workout.lastRequest).toBeNull();
   });

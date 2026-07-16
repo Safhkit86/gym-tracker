@@ -1,4 +1,4 @@
-import { createAccessTokenService } from "@gym-tracker/shared";
+import { createAccessTokenService, createLogger } from "@gym-tracker/shared";
 import { createApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { createDb } from "./db/client.js";
@@ -7,20 +7,21 @@ import { KyselyProgressionEventRepository } from "./repositories/progression-eve
 import { KyselySessionRepository } from "./repositories/session-repository.js";
 
 const config = loadConfig();
+const logger = createLogger("progress-service");
 
 const db = createDb(config.DATABASE_URL);
-const publisher = await AmqpProgressionEventPublisher.connect(config.RABBITMQ_URL);
+const publisher = await AmqpProgressionEventPublisher.connect(config.RABBITMQ_URL, logger);
 
 const app = createApp({
   sessions: new KyselySessionRepository(db),
   progressionEvents: new KyselyProgressionEventRepository(db),
   publisher,
   tokens: createAccessTokenService(config.JWT_SECRET),
+  logger,
 });
 
 const server = app.listen(config.PORT, () => {
-  // eslint-disable-next-line no-console
-  console.log(`[progress-service] listening on port ${config.PORT}`);
+  logger.info({ port: config.PORT }, "listening");
 });
 
 // Chiusura pulita: termina il pool Postgres e la connessione RabbitMQ allo spegnimento.

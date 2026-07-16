@@ -1,4 +1,4 @@
-import { createAccessTokenService } from "@gym-tracker/shared";
+import { createAccessTokenService, createLogger } from "@gym-tracker/shared";
 import { createApp } from "../src/app.js";
 import type { AppDeps } from "../src/app.js";
 import { InMemoryNotificationRepository } from "../src/repositories/notification-repository.js";
@@ -10,6 +10,7 @@ export function buildTestApp(): { app: ReturnType<typeof createApp>; deps: AppDe
   const deps: AppDeps = {
     notifications: new InMemoryNotificationRepository(),
     tokens: createAccessTokenService(TEST_JWT_SECRET),
+    logger: createLogger("notify-service", { level: "silent" }),
   };
   return { app: createApp(deps), deps };
 }

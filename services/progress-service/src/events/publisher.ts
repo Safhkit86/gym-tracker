@@ -1,5 +1,9 @@
 import amqplib, { type ChannelModel } from "amqplib";
-import { PROGRESSION_EVENTS_QUEUE, type ProgressionEventMessage } from "@gym-tracker/shared";
+import {
+  PROGRESSION_EVENTS_QUEUE,
+  type Logger,
+  type ProgressionEventMessage,
+} from "@gym-tracker/shared";
 
 /**
  * Pubblica un evento quando il motore di regole scatta. `notify-service`
@@ -43,7 +47,7 @@ export class AmqpProgressionEventPublisher implements ProgressionEventPublisher 
    * senza compose): riprova con backoff invece di andare subito in
    * crash-loop al primo avvio.
    */
-  static async connect(url: string): Promise<AmqpProgressionEventPublisher> {
+  static async connect(url: string, logger: Logger): Promise<AmqpProgressionEventPublisher> {
     let lastError: unknown;
     for (let attempt = 1; attempt <= MAX_CONNECT_ATTEMPTS; attempt++) {
       try {
@@ -51,8 +55,7 @@ export class AmqpProgressionEventPublisher implements ProgressionEventPublisher 
         const channel = await connection.createChannel();
         await channel.assertQueue(PROGRESSION_EVENTS_QUEUE, { durable: true });
         connection.on("error", (err) => {
-          // eslint-disable-next-line no-console
-          console.error("[progress-service] connessione RabbitMQ interrotta:", err);
+          logger.error({ err }, "connessione RabbitMQ interrotta");
         });
         return new AmqpProgressionEventPublisher(connection, channel);
       } catch (err) {

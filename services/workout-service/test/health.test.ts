@@ -14,5 +14,6 @@ describe("GET /health", () => {
       status: "ok",
     });
     expect(response.body.timestamp).toBeDefined();
+    expect(response.headers["x-request-id"]).toBeDefined();
   });
 });

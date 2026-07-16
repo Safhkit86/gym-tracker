@@ -154,6 +154,40 @@ describe("routing verso gli upstream", () => {
   });
 });
 
+describe("correlation id (X-Request-Id)", () => {
+  let closeAll: (() => Promise<void>) | undefined;
+
+  afterEach(async () => {
+    await closeAll?.();
+  });
+
+  it("genera un id e lo inoltra all'upstream quando il client non ne manda uno", async () => {
+    const ctx = await buildTestApp();
+    closeAll = ctx.closeAll;
+    const token = await bearerFor("u1");
+
+    const response = await request(ctx.app).get("/me").set("Authorization", `Bearer ${token}`);
+
+    const forwardedId = ctx.auth.lastRequest?.headers["x-request-id"];
+    expect(forwardedId).toBeDefined();
+    expect(response.headers["x-request-id"]).toBe(forwardedId);
+  });
+
+  it("riusa invariato un X-Request-Id gia' presente nella richiesta del client", async () => {
+    const ctx = await buildTestApp();
+    closeAll = ctx.closeAll;
+    const token = await bearerFor("u1");
+
+    const response = await request(ctx.app)
+      .get("/me")
+      .set("Authorization", `Bearer ${token}`)
+      .set("X-Request-Id", "client-generated-id");
+
+    expect(ctx.auth.lastRequest?.headers["x-request-id"]).toBe("client-generated-id");
+    expect(response.headers["x-request-id"]).toBe("client-generated-id");
+  });
+});
+
 describe("autenticazione centralizzata", () => {
   let closeAll: (() => Promise<void>) | undefined;
 

@@ -1,5 +1,5 @@
 import http, { type Server } from "node:http";
-import { createAccessTokenService } from "@gym-tracker/shared";
+import { createAccessTokenService, createLogger } from "@gym-tracker/shared";
 import { createApp } from "../src/app.js";
 import type { RateLimitConfig } from "../src/rate-limit.js";
 
@@ -19,7 +19,12 @@ export async function bearerFor(ownerId: string, email = "test@example.com"): Pr
 export interface FakeUpstream {
   server: Server;
   url: string;
-  lastRequest: { method: string; url: string; body: string } | null;
+  lastRequest: {
+    method: string;
+    url: string;
+    body: string;
+    headers: http.IncomingHttpHeaders;
+  } | null;
   close(): Promise<void>;
 }
 
@@ -44,6 +49,7 @@ export async function startFakeUpstream(
         method: req.method ?? "",
         url: req.url ?? "",
         body: Buffer.concat(chunks).toString("utf8"),
+        headers: req.headers,
       };
       respond(req, res);
     });
@@ -79,6 +85,7 @@ export async function buildTestApp(rateLimits?: RateLimitConfig): Promise<{
     notifyServiceUrl: notify.url,
     tokens: createAccessTokenService(TEST_JWT_SECRET),
     rateLimits,
+    logger: createLogger("api-gateway", { level: "silent" }),
   });
   return {
     app,

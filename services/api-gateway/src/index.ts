@@ -1,8 +1,9 @@
-import { createAccessTokenService } from "@gym-tracker/shared";
+import { createAccessTokenService, createLogger } from "@gym-tracker/shared";
 import { createApp } from "./app.js";
 import { loadConfig } from "./config.js";
 
 const config = loadConfig();
+const logger = createLogger("api-gateway");
 
 const app = createApp({
   authServiceUrl: config.AUTH_SERVICE_URL,
@@ -10,11 +11,11 @@ const app = createApp({
   progressServiceUrl: config.PROGRESS_SERVICE_URL,
   notifyServiceUrl: config.NOTIFY_SERVICE_URL,
   tokens: createAccessTokenService(config.JWT_SECRET),
+  logger,
 });
 
 const server = app.listen(config.PORT, () => {
-  // eslint-disable-next-line no-console
-  console.log(`[api-gateway] listening on port ${config.PORT}`);
+  logger.info({ port: config.PORT }, "listening");
 });
 
 for (const signal of ["SIGTERM", "SIGINT"] as const) {

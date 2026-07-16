@@ -1,5 +1,10 @@
 import express, { type Express } from "express";
-import { buildHealthStatus, type AccessTokenService } from "@gym-tracker/shared";
+import {
+  buildHealthStatus,
+  createHttpLogger,
+  type AccessTokenService,
+  type Logger,
+} from "@gym-tracker/shared";
 import { SessionService } from "./domain/session-service.js";
 import type { ProgressionEventPublisher } from "./events/publisher.js";
 import type { ProgressionEventRepository } from "./repositories/progression-event-repository.js";
@@ -20,13 +25,20 @@ export interface AppDeps {
   progressionEvents: ProgressionEventRepository;
   publisher: ProgressionEventPublisher;
   tokens: AccessTokenService;
+  logger: Logger;
 }
 
 export function createApp(deps: AppDeps): Express {
   const app = express();
+  app.use(createHttpLogger(deps.logger));
   app.use(express.json());
 
-  const sessionService = new SessionService(deps.sessions, deps.progressionEvents, deps.publisher);
+  const sessionService = new SessionService(
+    deps.sessions,
+    deps.progressionEvents,
+    deps.publisher,
+    deps.logger
+  );
 
   // Endpoint di health check: verificato dalla pipeline CI e da Docker Compose.
   app.get("/health", (_req, res) => {

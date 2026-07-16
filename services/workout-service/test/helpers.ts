@@ -1,4 +1,4 @@
-import { createAccessTokenService } from "@gym-tracker/shared";
+import { createAccessTokenService, createLogger } from "@gym-tracker/shared";
 import { createApp } from "../src/app.js";
 import type { AppDeps } from "../src/app.js";
 import { InMemoryExerciseRepository } from "../src/repositories/exercise-repository.js";
@@ -17,6 +17,7 @@ export function buildTestApp(): { app: ReturnType<typeof createApp>; deps: AppDe
     exercises: new InMemoryExerciseRepository(SEED_EXERCISES),
     workouts: new InMemoryWorkoutRepository(),
     tokens: createAccessTokenService(TEST_JWT_SECRET),
+    logger: createLogger("workout-service", { level: "silent" }),
   };
   return { app: createApp(deps), deps };
 }

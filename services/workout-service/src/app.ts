@@ -1,5 +1,10 @@
 import express, { type Express } from "express";
-import { buildHealthStatus, type AccessTokenService } from "@gym-tracker/shared";
+import {
+  buildHealthStatus,
+  createHttpLogger,
+  type AccessTokenService,
+  type Logger,
+} from "@gym-tracker/shared";
 import { ExerciseService } from "./domain/exercise-service.js";
 import { WorkoutService } from "./domain/workout-service.js";
 import type { ExerciseRepository } from "./repositories/exercise-repository.js";
@@ -19,10 +24,12 @@ export interface AppDeps {
   exercises: ExerciseRepository;
   workouts: WorkoutRepository;
   tokens: AccessTokenService;
+  logger: Logger;
 }
 
 export function createApp(deps: AppDeps): Express {
   const app = express();
+  app.use(createHttpLogger(deps.logger));
   app.use(express.json());
 
   const exerciseService = new ExerciseService(deps.exercises);
