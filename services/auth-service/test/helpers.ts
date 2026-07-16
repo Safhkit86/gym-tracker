@@ -1,4 +1,4 @@
-import { createAccessTokenService } from "@gym-tracker/shared";
+import { createAccessTokenService, createLogger } from "@gym-tracker/shared";
 import { createApp } from "../src/app.js";
 import type { AppDeps } from "../src/app.js";
 import type { PasswordHasher } from "../src/domain/password.js";
@@ -25,6 +25,7 @@ export function buildTestApp(): { app: ReturnType<typeof createApp>; deps: AppDe
     users: new InMemoryUserRepository(),
     passwords: fakeHasher,
     tokens: createAccessTokenService(TEST_JWT_SECRET),
+    logger: createLogger("auth-service", { level: "silent" }),
   };
   return { app: createApp(deps), deps };
 }

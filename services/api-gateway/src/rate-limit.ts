@@ -29,7 +29,10 @@ export function createRateLimiters(config: RateLimitConfig = {}): RateLimiters {
     limit: config.globalMax ?? 300,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { code: "RATE_LIMITED", message: "Troppe richieste, riprova più tardi." },
+    handler: (req, res) => {
+      req.log.warn("rate limit globale superato");
+      res.status(429).json({ code: "RATE_LIMITED", message: "Troppe richieste, riprova più tardi." });
+    },
   });
 
   const auth = rateLimit({
@@ -37,9 +40,12 @@ export function createRateLimiters(config: RateLimitConfig = {}): RateLimiters {
     limit: config.authMax ?? 10,
     standardHeaders: true,
     legacyHeaders: false,
-    message: {
-      code: "RATE_LIMITED",
-      message: "Troppi tentativi di accesso, riprova più tardi.",
+    handler: (req, res) => {
+      req.log.warn("rate limit login superato");
+      res.status(429).json({
+        code: "RATE_LIMITED",
+        message: "Troppi tentativi di accesso, riprova più tardi.",
+      });
     },
   });
 

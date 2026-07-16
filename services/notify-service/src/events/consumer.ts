@@ -1,5 +1,9 @@
 import amqplib, { type Channel, type ConsumeMessage } from "amqplib";
-import { PROGRESSION_EVENTS_QUEUE, type ProgressionEventMessage } from "@gym-tracker/shared";
+import {
+  PROGRESSION_EVENTS_QUEUE,
+  type Logger,
+  type ProgressionEventMessage,
+} from "@gym-tracker/shared";
 import { z } from "zod";
 import type { NotificationService } from "../domain/notification-service.js";
 
@@ -49,7 +53,11 @@ export interface Consumer {
  * all'infinito un messaggio che non potra' mai essere elaborato bloccherebbe
  * la coda per tutti gli altri (nessun dead-letter exchange in v1).
  */
-export async function startConsumer(url: string, service: NotificationService): Promise<Consumer> {
+export async function startConsumer(
+  url: string,
+  service: NotificationService,
+  logger: Logger
+): Promise<Consumer> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= MAX_CONNECT_ATTEMPTS; attempt++) {
     try {
@@ -58,15 +66,14 @@ export async function startConsumer(url: string, service: NotificationService): 
       await channel.assertQueue(PROGRESSION_EVENTS_QUEUE, { durable: true });
       await channel.prefetch(1);
       connection.on("error", (err) => {
-        // eslint-disable-next-line no-console
-        console.error("[notify-service] connessione RabbitMQ interrotta:", err);
+        logger.error({ err }, "connessione RabbitMQ interrotta");
       });
 
       await channel.consume(PROGRESSION_EVENTS_QUEUE, (msg: ConsumeMessage | null) => {
         if (!msg) {
           return;
         }
-        void handleMessage(channel, msg, service);
+        void handleMessage(channel, msg, service, logger);
       });
 
       return {
@@ -90,15 +97,15 @@ export async function startConsumer(url: string, service: NotificationService): 
 async function handleMessage(
   channel: Channel,
   msg: ConsumeMessage,
-  service: NotificationService
+  service: NotificationService,
+  logger: Logger
 ): Promise<void> {
   try {
     const event = parseProgressionEventMessage(msg.content);
     await service.handleProgressionEvent(event);
     channel.ack(msg);
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error("[notify-service] messaggio scartato (parsing/elaborazione fallita):", err);
+    logger.error({ err }, "messaggio scartato (parsing/elaborazione fallita)");
     channel.ack(msg);
   }
 }

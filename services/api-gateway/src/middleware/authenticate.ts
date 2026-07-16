@@ -14,6 +14,7 @@ export function requireAuth(tokens: AccessTokenService): RequestHandler {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const [scheme, token] = (req.header("authorization") ?? "").split(" ");
     if (scheme !== "Bearer" || !token) {
+      req.log.warn("richiesta senza Bearer token");
       res.status(401).json({
         code: "UNAUTHORIZED",
         message: "Header Authorization Bearer mancante.",
@@ -24,6 +25,7 @@ export function requireAuth(tokens: AccessTokenService): RequestHandler {
       await tokens.verify(token);
       next();
     } catch {
+      req.log.warn("Bearer token non valido o scaduto");
       res.status(401).json({ code: "UNAUTHORIZED", message: "Token non valido o scaduto." });
     }
   };

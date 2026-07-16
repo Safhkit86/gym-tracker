@@ -1,4 +1,4 @@
-import { createAccessTokenService } from "@gym-tracker/shared";
+import { createAccessTokenService, createLogger } from "@gym-tracker/shared";
 import { createApp } from "../src/app.js";
 import type { AppDeps } from "../src/app.js";
 import { InMemoryProgressionEventPublisher } from "../src/events/publisher.js";
@@ -14,6 +14,7 @@ export function buildTestApp(): { app: ReturnType<typeof createApp>; deps: AppDe
     progressionEvents: new InMemoryProgressionEventRepository(),
     publisher: new InMemoryProgressionEventPublisher(),
     tokens: createAccessTokenService(TEST_JWT_SECRET),
+    logger: createLogger("progress-service", { level: "silent" }),
   };
   return { app: createApp(deps), deps };
 }

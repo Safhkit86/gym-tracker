@@ -1,5 +1,6 @@
 import type {
   CreateSessionResponse,
+  Logger,
   ProgressionEvent,
   SessionDetail,
   SessionInput,
@@ -21,7 +22,8 @@ export class SessionService {
   constructor(
     private readonly sessions: SessionRepository,
     private readonly progressionEvents: ProgressionEventRepository,
-    private readonly publisher: ProgressionEventPublisher
+    private readonly publisher: ProgressionEventPublisher,
+    private readonly logger: Logger
   ) {}
 
   async logSession(ownerId: string, input: SessionInput): Promise<CreateSessionResponse> {
@@ -60,8 +62,7 @@ export class SessionService {
       } catch (err) {
         // Best-effort: la sessione e' gia' salvata con successo, un
         // fallimento di publish non deve far fallire la richiesta.
-        // eslint-disable-next-line no-console
-        console.error("[progress-service] pubblicazione evento fallita:", err);
+        this.logger.error({ err }, "pubblicazione evento fallita");
       }
     }
 

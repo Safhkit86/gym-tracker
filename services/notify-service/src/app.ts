@@ -1,5 +1,5 @@
 import express, { type Express } from "express";
-import { buildHealthStatus, type AccessTokenService } from "@gym-tracker/shared";
+import { buildHealthStatus, createHttpLogger, type AccessTokenService, type Logger } from "@gym-tracker/shared";
 import { NotificationService } from "./domain/notification-service.js";
 import type { NotificationRepository } from "./repositories/notification-repository.js";
 import { createNotificationRoutes } from "./routes/notification-routes.js";
@@ -17,10 +17,12 @@ const SERVICE_VERSION = "0.1.0";
 export interface AppDeps {
   notifications: NotificationRepository;
   tokens: AccessTokenService;
+  logger: Logger;
 }
 
 export function createApp(deps: AppDeps): Express {
   const app = express();
+  app.use(createHttpLogger(deps.logger));
   app.use(express.json());
 
   const notificationService = new NotificationService(deps.notifications);

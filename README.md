@@ -39,6 +39,12 @@ Web app (apps/web) / Android app (futuro)
 - **web** (`apps/web`) — React + Vite + TypeScript, CSS semplice, fetch
   nativo. Parla solo con `api-gateway`, mai con i singoli servizi.
 
+Ogni servizio backend logga in JSON strutturato (`pino`, vedi
+`packages/shared/src/logger.ts`) invece di `console.*`; ogni richiesta HTTP
+porta un id di correlazione (`X-Request-Id`, generato da `api-gateway` se
+assente e propagato invariato a valle) che permette di seguire la stessa
+richiesta nei log di più servizi (Fase 6).
+
 Dalla Fase 1 in poi, ogni fase backend include anche la sua parte di
 interfaccia web (dove serve), invece di costruire tutta la webapp in blocco
 alla fine. Fase 1 (login/registrazione) e Fase 2 (schede) sono già coperte;
@@ -170,7 +176,7 @@ entrambi.
   limiting) + rifinitura webapp
   - ✅ Hardening API Gateway
   - ⬜ Rifinitura webapp
-- ⬜ **Fase 6** — osservabilità (log, metriche, tracing)
+- ✅ **Fase 6** — osservabilità leggera (log strutturati + correlation ID)
 - ⬜ **Fase 7** — Kubernetes (opzionale)
 - ⬜ **Fase 8** — app Android
 

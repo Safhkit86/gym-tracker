@@ -1,7 +1,10 @@
 import { Migrator } from "kysely";
+import { createLogger } from "@gym-tracker/shared";
 import { loadConfig } from "../config.js";
 import { createDb } from "./client.js";
 import { migrations } from "./migrations/index.js";
+
+const logger = createLogger("workout-service");
 
 /**
  * Applica tutte le migrazioni pendenti fino all'ultima.
@@ -26,19 +29,16 @@ async function migrateToLatest(): Promise<void> {
 
   for (const result of results ?? []) {
     if (result.status === "Success") {
-      // eslint-disable-next-line no-console
-      console.log(`[migrate] applicata: ${result.migrationName}`);
+      logger.info({ migration: result.migrationName }, "migrazione applicata");
     } else if (result.status === "Error") {
-      // eslint-disable-next-line no-console
-      console.error(`[migrate] fallita: ${result.migrationName}`);
+      logger.error({ migration: result.migrationName }, "migrazione fallita");
     }
   }
 
   await db.destroy();
 
   if (error) {
-    // eslint-disable-next-line no-console
-    console.error("[migrate] errore durante la migrazione:", error);
+    logger.error({ err: error }, "errore durante la migrazione");
     process.exit(1);
   }
 }

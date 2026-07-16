@@ -22,7 +22,7 @@ function fromZodError(err: ZodError): ApiError {
  */
 export const errorHandler: ErrorRequestHandler = (
   err: unknown,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction
 ): void => {
@@ -40,8 +40,7 @@ export const errorHandler: ErrorRequestHandler = (
     return;
   }
 
-  // eslint-disable-next-line no-console
-  console.error("[workout-service] errore non gestito:", err);
+  req.log.error({ err }, "errore non gestito");
   res.status(500).json({
     code: "INTERNAL_ERROR",
     message: "Errore interno del server.",

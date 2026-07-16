@@ -22,7 +22,7 @@ function fromZodError(err: ZodError): ApiError {
  */
 export const errorHandler: ErrorRequestHandler = (
   err: unknown,
-  _req: Request,
+  req: Request,
   res: Response,
   // Express riconosce un error handler dai 4 parametri: `next` va dichiarato.
   _next: NextFunction
@@ -41,8 +41,7 @@ export const errorHandler: ErrorRequestHandler = (
     return;
   }
 
-  // eslint-disable-next-line no-console
-  console.error("[auth-service] errore non gestito:", err);
+  req.log.error({ err }, "errore non gestito");
   res.status(500).json({
     code: "INTERNAL_ERROR",
     message: "Errore interno del server.",
