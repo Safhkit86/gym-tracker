@@ -1,5 +1,9 @@
 import amqplib, { type ChannelModel } from "amqplib";
-import { PROGRESSION_EVENTS_QUEUE, type Logger, type ProgressionEventMessage } from "@gym-tracker/shared";
+import {
+  PROGRESSION_EVENTS_QUEUE,
+  type Logger,
+  type ProgressionEventMessage,
+} from "@gym-tracker/shared";
 
 /**
  * Pubblica un evento quando il motore di regole scatta. `notify-service`

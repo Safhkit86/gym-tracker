@@ -31,7 +31,9 @@ export function createRateLimiters(config: RateLimitConfig = {}): RateLimiters {
     legacyHeaders: false,
     handler: (req, res) => {
       req.log.warn("rate limit globale superato");
-      res.status(429).json({ code: "RATE_LIMITED", message: "Troppe richieste, riprova più tardi." });
+      res
+        .status(429)
+        .json({ code: "RATE_LIMITED", message: "Troppe richieste, riprova più tardi." });
     },
   });
 

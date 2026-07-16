@@ -1,5 +1,10 @@
 import express, { type Express } from "express";
-import { buildHealthStatus, createHttpLogger, type AccessTokenService, type Logger } from "@gym-tracker/shared";
+import {
+  buildHealthStatus,
+  createHttpLogger,
+  type AccessTokenService,
+  type Logger,
+} from "@gym-tracker/shared";
 import { SessionService } from "./domain/session-service.js";
 import type { ProgressionEventPublisher } from "./events/publisher.js";
 import type { ProgressionEventRepository } from "./repositories/progression-event-repository.js";

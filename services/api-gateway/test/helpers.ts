@@ -19,7 +19,12 @@ export async function bearerFor(ownerId: string, email = "test@example.com"): Pr
 export interface FakeUpstream {
   server: Server;
   url: string;
-  lastRequest: { method: string; url: string; body: string; headers: http.IncomingHttpHeaders } | null;
+  lastRequest: {
+    method: string;
+    url: string;
+    body: string;
+    headers: http.IncomingHttpHeaders;
+  } | null;
   close(): Promise<void>;
 }
 

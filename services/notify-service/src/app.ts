@@ -1,5 +1,10 @@
 import express, { type Express } from "express";
-import { buildHealthStatus, createHttpLogger, type AccessTokenService, type Logger } from "@gym-tracker/shared";
+import {
+  buildHealthStatus,
+  createHttpLogger,
+  type AccessTokenService,
+  type Logger,
+} from "@gym-tracker/shared";
 import { NotificationService } from "./domain/notification-service.js";
 import type { NotificationRepository } from "./repositories/notification-repository.js";
 import { createNotificationRoutes } from "./routes/notification-routes.js";
