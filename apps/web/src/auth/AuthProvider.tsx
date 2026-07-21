@@ -1,6 +1,7 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import type { PublicUser } from "@gym-tracker/shared";
 import * as authApi from "../api/auth";
+import { UNAUTHORIZED_EVENT } from "../api/client";
 import { AuthContext, type AuthContextValue } from "./context";
 
 const TOKEN_STORAGE_KEY = "gym-tracker.token";
@@ -67,11 +68,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     persistToken(result.token);
   }
 
-  function logout(): void {
+  const logout = useCallback((): void => {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     setToken(null);
     setUser(null);
-  }
+  }, []);
+
+  // Un 401 su una richiesta autenticata (token scaduto/non valido) fa logout
+  // automatico: senza questo, il token resta "valido" lato client finche' non
+  // si ricarica la pagina, e ogni chiamata continua a fallire mostrando
+  // l'errore grezzo invece di riportare l'utente al login.
+  useEffect(() => {
+    window.addEventListener(UNAUTHORIZED_EVENT, logout);
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, logout);
+  }, [logout]);
 
   const value: AuthContextValue = { token, user, isLoading, login, register, logout };
 

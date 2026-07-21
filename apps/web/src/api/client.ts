@@ -2,6 +2,13 @@ import type { ApiError } from "@gym-tracker/shared";
 
 const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000";
 
+/** Emesso quando una richiesta autenticata (token presente) riceve 401: il
+ * token e' scaduto o non piu' valido. AuthProvider ci fa logout automatico,
+ * cosi' l'utente torna al login invece di restare bloccato su un errore a
+ * schermo. Non emesso per i 401 di login/register (nessun token inviato:
+ * li' significa "credenziali errate", non "sessione scaduta"). */
+export const UNAUTHORIZED_EVENT = "gym-tracker:unauthorized";
+
 /** Errore lanciato quando il gateway risponde con uno status non-2xx. */
 export class ApiRequestError extends Error {
   readonly status: number;
@@ -48,6 +55,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   if (!response.ok) {
     const apiError = data as ApiError | undefined;
+    if (response.status === 401 && options.token) {
+      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    }
     throw new ApiRequestError(
       response.status,
       apiError?.code ?? "UNKNOWN_ERROR",
