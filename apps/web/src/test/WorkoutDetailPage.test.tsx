@@ -74,6 +74,24 @@ describe("WorkoutDetailPage", () => {
     expect(link).toHaveAttribute("href", "/workouts/w1/log");
   });
 
+  it("mostra il link per modificare la scheda", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+      { match: (u, m) => u.includes("/progression") && m === "GET", body: [] },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
+      </Routes>,
+      ["/workouts/w1"]
+    );
+
+    const link = await screen.findByRole("link", { name: /modifica scheda/i });
+    expect(link).toHaveAttribute("href", "/workouts/w1/edit");
+  });
+
   it("mostra un suggerimento di progressione quando presente per un esercizio", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
