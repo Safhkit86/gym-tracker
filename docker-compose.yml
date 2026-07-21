@@ -46,6 +46,29 @@ services:
       timeout: 5s
       retries: 10
 
+  # Cattura le email inviate da auth-service (reset/cambio password) in
+  # locale, senza un vero server SMTP: UI su :8025, nessuna configurazione
+  # necessaria (nessuna autenticazione richiesta lato client SMTP).
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8025/api/v1/info",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   # --- Microservizi ---
   auth-service:
     build:
@@ -56,10 +79,16 @@ services:
       PORT: ${AUTH_SERVICE_PORT:-4001}
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       DATABASE_URL: postgres://${POSTGRES_USER:-gymtracker}:${POSTGRES_PASSWORD:-gymtracker}@postgres:5432/${POSTGRES_DB:-gymtracker}
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_FROM: ${SMTP_FROM:-no-reply@gym-tracker.local}
+      WEB_APP_URL: ${WEB_APP_URL:-http://localhost:5173}
     ports:
       - "${AUTH_SERVICE_PORT:-4001}:4001"
     depends_on:
       postgres:
+        condition: service_healthy
+      mailpit:
         condition: service_healthy
 
   workout-service:

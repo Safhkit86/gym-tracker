@@ -18,7 +18,7 @@ Web app (apps/web) / Android app (futuro)
    │        │        │         │
    └────────┴────────┴─────────┘
                 │
-   PostgreSQL · Redis · RabbitMQ
+   PostgreSQL · Redis · RabbitMQ · Mailpit
 ```
 
 - **api-gateway** — unico punto di ingresso per i client: inoltra le richieste
@@ -26,10 +26,14 @@ Web app (apps/web) / Android app (futuro)
   workout-service; `/sessions`, `/progression` → progress-service;
   `/notifications` → notify-service). Verifica centralmente il Bearer JWT
   (401 prima ancora di raggiungere un servizio a valle, tranne su
-  `/auth/register` e `/auth/login`, pubblici) e applica un rate limit per IP
-  (più stringente su `/auth`) — in aggiunta, non in sostituzione, alla
-  verifica che ogni servizio fa comunque per conto proprio.
-- **auth-service** — utenti, JWT (Fase 1)
+  `/auth/register`, `/auth/login`, `/auth/forgot-password` e
+  `/auth/reset-password`, pubblici) e applica un rate limit per IP
+  (più stringente su `/auth` e su `/me/password`) — in aggiunta, non in
+  sostituzione, alla verifica che ogni servizio fa comunque per conto proprio.
+- **auth-service** — utenti, JWT, reset password via email, cambio password
+  con codice email come secondo fattore (Fase 1). Le email (reset password,
+  conferma cambio password) sono catturate in locale da **Mailpit**
+  (nessun vero SMTP in sviluppo): UI su http://localhost:8025.
 - **workout-service** — schede, esercizi, set/reps/peso/recupero (Fase 2)
 - **progress-service** — storico allenamenti + motore di regole di
   progressione (Fase 3)
@@ -130,6 +134,13 @@ Flusso di prova consigliato una volta dentro l'app:
 Per ispezionare la coda RabbitMQ `progression-events` (consumata
 automaticamente da `notify-service`, che genera la notifica del punto 5):
 http://localhost:15672 (utente/password di default: `gymtracker`/`gymtracker`).
+
+6. **Password dimenticata** (link nella pagina di login) → richiedi il reset,
+   poi apri http://localhost:8025 (Mailpit) per leggere l'email e seguire il
+   link di reset.
+7. **Profilo** (clic sulla tua email nella barra di navigazione) → cambia
+   password: dopo aver inserito password attuale e nuova, il codice di
+   conferma arriva anch'esso su Mailpit.
 
 ## Comandi principali
 

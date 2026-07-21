@@ -44,6 +44,26 @@ describe("rate limiting", () => {
     expect(responses[2].body.code).toBe("RATE_LIMITED");
   });
 
+  it("risponde 429 oltre il limite specifico su /me/password, anche sotto il limite globale", async () => {
+    const ctx = await buildTestApp({ windowMs: 60_000, globalMax: 100, sensitiveMax: 2 });
+    closeAll = ctx.closeAll;
+    const token = await bearerFor("u1");
+
+    const responses = [];
+    for (let i = 0; i < 3; i++) {
+      responses.push(
+        await request(ctx.app)
+          .post("/me/password/change-request")
+          .set("Authorization", `Bearer ${token}`)
+          .send({ currentPassword: "x", newPassword: "supersegreta" })
+      );
+    }
+
+    expect(responses.slice(0, 2).every((r) => r.status !== 429)).toBe(true);
+    expect(responses[2].status).toBe(429);
+    expect(responses[2].body.code).toBe("RATE_LIMITED");
+  });
+
   it("/health non e' soggetto al rate limit", async () => {
     const ctx = await buildTestApp({ windowMs: 60_000, globalMax: 1, authMax: 1 });
     closeAll = ctx.closeAll;

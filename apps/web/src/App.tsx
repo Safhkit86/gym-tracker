@@ -4,6 +4,9 @@ import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { Layout } from "./components/Layout";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
+import { ProfilePage } from "./pages/ProfilePage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { WorkoutsListPage } from "./pages/WorkoutsListPage";
 import { CreateWorkoutPage } from "./pages/CreateWorkoutPage";
@@ -21,9 +24,12 @@ export function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path="/" element={<DashboardPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
               <Route path="/workouts" element={<WorkoutsListPage />} />
               <Route path="/workouts/new" element={<CreateWorkoutPage />} />
               <Route path="/workouts/:id" element={<WorkoutDetailPage />} />

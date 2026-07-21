@@ -1,11 +1,17 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import { ApiRequestError } from "../api/client";
+
+interface LoginLocationState {
+  message?: string;
+}
 
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as LoginLocationState | null;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +35,7 @@ export function LoginPage() {
     <main>
       <div className="card auth-card">
         <h1>Accedi</h1>
+        {locationState?.message && <p role="status">{locationState.message}</p>}
         <form onSubmit={handleSubmit}>
           <label>
             Email
@@ -59,6 +66,9 @@ export function LoginPage() {
             {isSubmitting ? "Accesso in corso…" : "Accedi"}
           </button>
         </form>
+        <p>
+          <Link to="/forgot-password">Password dimenticata?</Link>
+        </p>
         <p>
           Non hai un account? <Link to="/register">Registrati</Link>
         </p>
