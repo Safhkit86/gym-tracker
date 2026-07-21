@@ -13,6 +13,14 @@ export function createWorkout(token: string, body: WorkoutInput): Promise<Workou
   return apiRequest<WorkoutDetail>("/workouts", { method: "POST", body, token });
 }
 
+export function updateWorkout(
+  token: string,
+  id: string,
+  body: WorkoutInput
+): Promise<WorkoutDetail> {
+  return apiRequest<WorkoutDetail>(`/workouts/${id}`, { method: "PUT", body, token });
+}
+
 export function deleteWorkout(token: string, id: string): Promise<void> {
   return apiRequest<void>(`/workouts/${id}`, { method: "DELETE", token });
 }

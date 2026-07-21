@@ -4,6 +4,8 @@ import * as seedExercises from "./002-seed-exercises.js";
 import * as addExerciseMetadataAndRest from "./003-add-exercise-metadata-and-rest.js";
 import * as enrichExerciseCatalog from "./004-enrich-exercise-catalog.js";
 import * as addProgressionIncrement from "./005-add-progression-increment.js";
+import * as addDipPowerTower from "./006-add-dip-power-tower.js";
+import * as addCurlPancaScott from "./007-add-curl-panca-scott.js";
 
 /**
  * Registro statico delle migrazioni (chiavi ordinate). Preferito a
@@ -16,4 +18,6 @@ export const migrations: Record<string, Migration> = {
   "003-add-exercise-metadata-and-rest": addExerciseMetadataAndRest,
   "004-enrich-exercise-catalog": enrichExerciseCatalog,
   "005-add-progression-increment": addProgressionIncrement,
+  "006-add-dip-power-tower": addDipPowerTower,
+  "007-add-curl-panca-scott": addCurlPancaScott,
 };

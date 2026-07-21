@@ -92,6 +92,9 @@ export function WorkoutDetailPage() {
       <p>
         <Link to={`/workouts/${workout.id}/log`}>Registra sessione</Link>
       </p>
+      <p>
+        <Link to={`/workouts/${workout.id}/edit`}>Modifica scheda</Link>
+      </p>
 
       {workout.exercises.map((exercise) => {
         const suggestion = suggestions.find((s) => s.exerciseId === exercise.exerciseId);

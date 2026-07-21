@@ -8,6 +8,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { WorkoutsListPage } from "./pages/WorkoutsListPage";
 import { CreateWorkoutPage } from "./pages/CreateWorkoutPage";
 import { WorkoutDetailPage } from "./pages/WorkoutDetailPage";
+import { EditWorkoutPage } from "./pages/EditWorkoutPage";
 import { LogSessionPage } from "./pages/LogSessionPage";
 import { SessionHistoryPage } from "./pages/SessionHistoryPage";
 import { SessionDetailPage } from "./pages/SessionDetailPage";
@@ -26,6 +27,7 @@ export function App() {
               <Route path="/workouts" element={<WorkoutsListPage />} />
               <Route path="/workouts/new" element={<CreateWorkoutPage />} />
               <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
+              <Route path="/workouts/:id/edit" element={<EditWorkoutPage />} />
               <Route path="/workouts/:id/log" element={<LogSessionPage />} />
               <Route path="/sessions" element={<SessionHistoryPage />} />
               <Route path="/sessions/:id" element={<SessionDetailPage />} />
