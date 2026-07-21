@@ -27,7 +27,9 @@ describe("workoutDetailToFormValues", () => {
             notes: null,
             restSeconds: null,
             progressionIncrement: null,
-            sets: [{ id: "s1", setNumber: 1, targetReps: 10, targetWeight: null, restSeconds: null }],
+            sets: [
+              { id: "s1", setNumber: 1, targetReps: 10, targetWeight: null, restSeconds: null },
+            ],
           },
         ],
       })

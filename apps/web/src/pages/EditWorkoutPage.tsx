@@ -14,9 +14,7 @@ export function EditWorkoutPage() {
   const navigate = useNavigate();
 
   const [catalog, setCatalog] = useState<Exercise[] | null>(null);
-  const [initial, setInitial] = useState<ReturnType<typeof workoutDetailToFormValues> | null>(
-    null
-  );
+  const [initial, setInitial] = useState<ReturnType<typeof workoutDetailToFormValues> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
