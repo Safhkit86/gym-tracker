@@ -187,4 +187,53 @@ describe("CreateWorkoutPage", () => {
     const body = JSON.parse((postCall?.[1]?.body as string) ?? "{}");
     expect(body.exercises[0].progressionIncrement).toBe(2.5);
   });
+
+  it("chiede conferma prima di rimuovere un esercizio e annulla su 'No'", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      {
+        match: (u, m) => u.endsWith("/exercises") && m === "GET",
+        body: [FAKE_EXERCISE, FAKE_EXERCISE_2],
+      },
+    ]);
+
+    renderWithProviders(<CreateWorkoutPage />, ["/workouts/new"]);
+
+    await screen.findByLabelText("Esercizio");
+    fireEvent.click(screen.getByRole("button", { name: /aggiungi esercizio/i }));
+    expect(screen.getAllByText(/^Esercizio \d$/)).toHaveLength(2);
+
+    fireEvent.click(screen.getAllByRole("button", { name: /rimuovi esercizio/i })[0]);
+    expect(
+      await screen.findByText("Sei sicuro di voler eliminare l'esercizio?")
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /^no$/i }));
+
+    expect(
+      screen.queryByText("Sei sicuro di voler eliminare l'esercizio?")
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByText(/^Esercizio \d$/)).toHaveLength(2);
+  });
+
+  it("rimuove l'esercizio dopo la conferma con 'Sì'", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      {
+        match: (u, m) => u.endsWith("/exercises") && m === "GET",
+        body: [FAKE_EXERCISE, FAKE_EXERCISE_2],
+      },
+    ]);
+
+    renderWithProviders(<CreateWorkoutPage />, ["/workouts/new"]);
+
+    await screen.findByLabelText("Esercizio");
+    fireEvent.click(screen.getByRole("button", { name: /aggiungi esercizio/i }));
+    expect(screen.getAllByText(/^Esercizio \d$/)).toHaveLength(2);
+
+    fireEvent.click(screen.getAllByRole("button", { name: /rimuovi esercizio/i })[0]);
+    fireEvent.click(await screen.findByRole("button", { name: /^sì$/i }));
+
+    expect(screen.getAllByText(/^Esercizio \d$/)).toHaveLength(1);
+  });
 });

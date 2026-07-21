@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { renderWithProviders, seedAuthToken, mockFetchResponses } from "./helpers";
 import { WorkoutDetailPage } from "../pages/WorkoutDetailPage";
@@ -124,5 +124,56 @@ describe("WorkoutDetailPage", () => {
     );
 
     expect(await screen.findByText(/aumenta il carico/i)).toBeInTheDocument();
+  });
+
+  it("chiede conferma prima di eliminare la scheda e annulla su 'No'", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+      { match: (u, m) => u.includes("/progression") && m === "GET", body: [] },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
+      </Routes>,
+      ["/workouts/w1"]
+    );
+
+    await screen.findByRole("heading", { name: "Push day" });
+    fireEvent.click(screen.getByRole("button", { name: /elimina scheda/i }));
+
+    expect(await screen.findByText("Sei sicuro di voler eliminare la scheda?")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^no$/i }));
+
+    expect(screen.queryByText("Sei sicuro di voler eliminare la scheda?")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Push day" })).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false);
+  });
+
+  it("elimina la scheda dopo la conferma con 'Sì'", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+      { match: (u, m) => u.includes("/progression") && m === "GET", body: [] },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "DELETE", status: 204 },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
+        <Route path="/workouts" element={<p>Le tue schede</p>} />
+      </Routes>,
+      ["/workouts/w1"]
+    );
+
+    await screen.findByRole("heading", { name: "Push day" });
+    fireEvent.click(screen.getByRole("button", { name: /elimina scheda/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /^sì$/i }));
+
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(true);
+    });
+    expect(await screen.findByText("Le tue schede")).toBeInTheDocument();
   });
 });

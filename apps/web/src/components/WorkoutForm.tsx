@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import type { Exercise, WorkoutInput } from "@gym-tracker/shared";
 import { ApiRequestError } from "../api/client";
+import { ConfirmDialog } from "./ConfirmDialog";
 import {
   emptyExercise,
   emptySet,
@@ -36,6 +37,7 @@ export function WorkoutForm({
   );
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [exerciseToRemove, setExerciseToRemove] = useState<number | null>(null);
 
   function addExercise(): void {
     const defaultId = catalog[0]?.id ?? "";
@@ -262,7 +264,7 @@ export function WorkoutForm({
               <button
                 type="button"
                 className="secondary"
-                onClick={() => removeExercise(exerciseIndex)}
+                onClick={() => setExerciseToRemove(exerciseIndex)}
               >
                 Rimuovi esercizio
               </button>
@@ -284,6 +286,18 @@ export function WorkoutForm({
       <button type="submit" disabled={isSubmitting}>
         {isSubmitting ? submittingLabel : submitLabel}
       </button>
+
+      <ConfirmDialog
+        open={exerciseToRemove !== null}
+        message="Sei sicuro di voler eliminare l'esercizio?"
+        onConfirm={() => {
+          if (exerciseToRemove !== null) {
+            removeExercise(exerciseToRemove);
+          }
+          setExerciseToRemove(null);
+        }}
+        onCancel={() => setExerciseToRemove(null)}
+      />
     </form>
   );
 }

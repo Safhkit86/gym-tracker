@@ -5,6 +5,7 @@ import { useAuth } from "../auth/useAuth";
 import { deleteWorkout, getWorkout } from "../api/workouts";
 import { listProgressionEvents } from "../api/progression";
 import { ApiRequestError } from "../api/client";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 
 export function WorkoutDetailPage() {
   const { token } = useAuth();
@@ -14,6 +15,7 @@ export function WorkoutDetailPage() {
   const [suggestions, setSuggestions] = useState<ProgressionEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (!token || !id) {
@@ -50,6 +52,7 @@ export function WorkoutDetailPage() {
   }, [token, id]);
 
   async function handleDelete(): Promise<void> {
+    setShowDeleteConfirm(false);
     if (!token || !id) {
       return;
     }
@@ -136,9 +139,21 @@ export function WorkoutDetailPage() {
         );
       })}
 
-      <button type="button" className="secondary" onClick={handleDelete} disabled={isDeleting}>
+      <button
+        type="button"
+        className="secondary"
+        onClick={() => setShowDeleteConfirm(true)}
+        disabled={isDeleting}
+      >
         {isDeleting ? "Eliminazione…" : "Elimina scheda"}
       </button>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        message="Sei sicuro di voler eliminare la scheda?"
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </main>
   );
 }
