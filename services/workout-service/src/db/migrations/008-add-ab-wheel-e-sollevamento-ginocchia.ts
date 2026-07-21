@@ -14,7 +14,7 @@ const NEW_EXERCISES: ReadonlyArray<NewExercise> = [
       "In ginocchio, mani sulla ruota davanti a te: rotola in avanti estendendo il corpo il piu' possibile mantenendo l'addome contratto, poi torna alla posizione di partenza tirando con gli addominali, senza inarcare la schiena.",
   },
   {
-    name: "Sollevamento Ginocchia",
+    name: "Sollevamento ginocchia",
     muscleGroup: "Addome",
     description:
       "Appeso alla sbarra (o in appoggio su una power tower), solleva le ginocchia verso il petto contraendo l'addome, poi torna giu' controllando la discesa senza dondolare.",
