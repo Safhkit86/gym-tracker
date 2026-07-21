@@ -6,6 +6,7 @@ import * as enrichExerciseCatalog from "./004-enrich-exercise-catalog.js";
 import * as addProgressionIncrement from "./005-add-progression-increment.js";
 import * as addDipPowerTower from "./006-add-dip-power-tower.js";
 import * as addCurlPancaScott from "./007-add-curl-panca-scott.js";
+import * as addAbWheelESollevamentoGinocchia from "./008-add-ab-wheel-e-sollevamento-ginocchia.js";
 
 /**
  * Registro statico delle migrazioni (chiavi ordinate). Preferito a
@@ -20,4 +21,5 @@ export const migrations: Record<string, Migration> = {
   "005-add-progression-increment": addProgressionIncrement,
   "006-add-dip-power-tower": addDipPowerTower,
   "007-add-curl-panca-scott": addCurlPancaScott,
+  "008-add-ab-wheel-e-sollevamento-ginocchia": addAbWheelESollevamentoGinocchia,
 };

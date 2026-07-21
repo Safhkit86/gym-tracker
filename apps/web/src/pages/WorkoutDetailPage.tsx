@@ -141,7 +141,7 @@ export function WorkoutDetailPage() {
 
       <button
         type="button"
-        className="secondary"
+        className="secondary workout-detail__delete"
         onClick={() => setShowDeleteConfirm(true)}
         disabled={isDeleting}
       >
