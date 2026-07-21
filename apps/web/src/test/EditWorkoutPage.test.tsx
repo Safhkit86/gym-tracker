@@ -200,6 +200,7 @@ describe("EditWorkoutPage", () => {
 
     await screen.findByText("Esercizio 2");
     fireEvent.click(screen.getAllByRole("button", { name: /rimuovi esercizio/i })[0]);
+    fireEvent.click(await screen.findByRole("button", { name: /^sì$/i }));
     fireEvent.click(screen.getByRole("button", { name: /salva modifiche/i }));
 
     await waitFor(() => {
