@@ -8,6 +8,7 @@ import * as addDipPowerTower from "./006-add-dip-power-tower.js";
 import * as addCurlPancaScott from "./007-add-curl-panca-scott.js";
 import * as addAbWheelESollevamentoGinocchia from "./008-add-ab-wheel-e-sollevamento-ginocchia.js";
 import * as fixSollevamentoGinocchiaCase from "./009-fix-sollevamento-ginocchia-case.js";
+import * as addEserciziStoricoImport from "./010-add-esercizi-storico-import.js";
 
 /**
  * Registro statico delle migrazioni (chiavi ordinate). Preferito a
@@ -24,4 +25,5 @@ export const migrations: Record<string, Migration> = {
   "007-add-curl-panca-scott": addCurlPancaScott,
   "008-add-ab-wheel-e-sollevamento-ginocchia": addAbWheelESollevamentoGinocchia,
   "009-fix-sollevamento-ginocchia-case": fixSollevamentoGinocchiaCase,
+  "010-add-esercizi-storico-import": addEserciziStoricoImport,
 };
