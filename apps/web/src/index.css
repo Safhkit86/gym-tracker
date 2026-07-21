@@ -244,6 +244,22 @@ button.secondary:hover:not(:disabled) {
   text-decoration: none;
 }
 
+.app-nav__links a.active {
+  position: relative;
+  color: var(--color-text);
+}
+
+.app-nav__links a.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.65rem;
+  height: 2px;
+  background: var(--color-accent);
+  border-radius: 2px;
+}
+
 .app-nav__user {
   color: var(--color-text-muted);
   font-size: 0.9rem;
@@ -263,6 +279,90 @@ button.secondary:hover:not(:disabled) {
   font-size: 0.7rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+/* --- Pulsanti a icona con tooltip --- */
+
+.toolbar {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.icon-btn:hover:not(:disabled) {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.icon-btn--accent:hover:not(:disabled) {
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  background: transparent;
+}
+
+.icon-btn--danger:hover:not(:disabled) {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border-color: color-mix(in srgb, var(--color-danger) 45%, transparent);
+}
+
+.icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.icon-btn[data-tip]::after,
+.icon-btn[data-tip]::before {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+.icon-btn[data-tip]:hover::after,
+.icon-btn[data-tip]:focus-visible::after {
+  content: attr(data-tip);
+  opacity: 1;
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  padding: 0.3rem 0.55rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 500;
+  white-space: nowrap;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+  z-index: 5;
+}
+
+.icon-btn[data-tip]:hover::before,
+.icon-btn[data-tip]:focus-visible::before {
+  content: "";
+  opacity: 1;
+  position: absolute;
+  bottom: 108%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: var(--color-surface-2);
+  z-index: 5;
 }
 
 /* --- Auth pages --- */
@@ -329,6 +429,24 @@ button.secondary:hover:not(:disabled) {
   white-space: nowrap;
 }
 
+.workout-list__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.workouts-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.workouts-list-head h1 {
+  margin: 0;
+}
+
 /* --- Workout detail --- */
 
 .workout-exercise {
@@ -361,10 +479,6 @@ button.secondary:hover:not(:disabled) {
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--color-border);
   font-variant-numeric: tabular-nums;
-}
-
-.workout-detail__delete {
-  margin-top: var(--space-5);
 }
 
 .workout-exercise__rest {

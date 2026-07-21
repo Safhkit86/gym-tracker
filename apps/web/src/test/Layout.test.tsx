@@ -53,4 +53,25 @@ describe("Layout", () => {
     await screen.findByText("Pagina");
     expect(screen.queryByText("0")).not.toBeInTheDocument();
   });
+
+  it("evidenzia la voce di nav corrispondente alla rotta corrente", async () => {
+    seedAuthToken();
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.includes("/notifications") && m === "GET", body: [] },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/workouts" element={<p>Pagina</p>} />
+        </Route>
+      </Routes>,
+      ["/workouts"]
+    );
+
+    const schede = await screen.findByRole("link", { name: "Schede" });
+    expect(schede.className).toContain("active");
+    expect(screen.getByRole("link", { name: /storico/i }).className).not.toContain("active");
+  });
 });

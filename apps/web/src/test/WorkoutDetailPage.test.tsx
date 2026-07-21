@@ -176,4 +176,76 @@ describe("WorkoutDetailPage", () => {
     });
     expect(await screen.findByText("Le tue schede")).toBeInTheDocument();
   });
+
+  it("chiede il nome prima di duplicare la scheda e annulla su 'No'", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+      { match: (u, m) => u.includes("/progression") && m === "GET", body: [] },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
+      </Routes>,
+      ["/workouts/w1"]
+    );
+
+    await screen.findByRole("heading", { name: "Push day" });
+    fireEvent.click(screen.getByRole("button", { name: /duplica scheda/i }));
+
+    const input = await screen.findByLabelText(/nome della nuova scheda/i);
+    expect(input).toHaveValue("Push day (copia)");
+    fireEvent.click(screen.getByRole("button", { name: /^no$/i }));
+
+    expect(screen.queryByLabelText(/nome della nuova scheda/i)).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  });
+
+  it("duplica la scheda con il nome scelto e naviga alla copia", async () => {
+    const DUPLICATED = { ...WORKOUT_DETAIL, id: "w2", name: "Push day v2" };
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+      { match: (u, m) => u.includes("/progression") && m === "GET", body: [] },
+      { match: (u, m) => u.endsWith("/workouts") && m === "POST", status: 201, body: DUPLICATED },
+      { match: (u, m) => u.endsWith("/workouts/w2") && m === "GET", body: DUPLICATED },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
+      </Routes>,
+      ["/workouts/w1"]
+    );
+
+    await screen.findByRole("heading", { name: "Push day" });
+    fireEvent.click(screen.getByRole("button", { name: /duplica scheda/i }));
+
+    const input = await screen.findByLabelText(/nome della nuova scheda/i);
+    fireEvent.change(input, { target: { value: "Push day v2" } });
+    fireEvent.click(screen.getByRole("button", { name: /^sì$/i }));
+
+    await waitFor(() => {
+      const postCall = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+      expect(postCall).toBeDefined();
+    });
+
+    const postCall = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    const body = JSON.parse((postCall?.[1]?.body as string) ?? "{}");
+    expect(body).toMatchObject({
+      name: "Push day v2",
+      notes: "Focus petto",
+      exercises: [
+        {
+          exerciseId: "e1",
+          position: 1,
+          restSeconds: 120,
+          progressionIncrement: 2.5,
+          sets: [{ setNumber: 1, targetReps: 10, targetWeight: 40, restSeconds: 90 }],
+        },
+      ],
+    });
+    expect(await screen.findByRole("heading", { name: "Push day v2" })).toBeInTheDocument();
+  });
 });
