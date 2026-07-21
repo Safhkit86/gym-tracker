@@ -20,6 +20,8 @@ export interface UserRepository {
   findByEmail(email: string): Promise<UserRecord | null>;
   findById(id: string): Promise<UserRecord | null>;
   create(user: NewUser): Promise<UserRecord>;
+  /** Aggiorna l'hash della password e registra `passwordChangedAt` (solo audit). */
+  updatePassword(id: string, passwordHash: string): Promise<void>;
 }
 
 interface UserRow {
@@ -70,6 +72,18 @@ export class KyselyUserRepository implements UserRepository {
       .executeTakeFirstOrThrow();
     return toRecord(row);
   }
+
+  async updatePassword(id: string, passwordHash: string): Promise<void> {
+    await this.db
+      .updateTable("users")
+      .set({
+        password_hash: passwordHash,
+        password_changed_at: new Date(),
+        updated_at: new Date(),
+      })
+      .where("id", "=", id)
+      .execute();
+  }
 }
 
 /** Implementazione in memoria: usata nei test per evitare un DB reale. */
@@ -100,5 +114,13 @@ export class InMemoryUserRepository implements UserRepository {
     };
     this.byId.set(record.id, record);
     return record;
+  }
+
+  async updatePassword(id: string, passwordHash: string): Promise<void> {
+    const record = this.byId.get(id);
+    if (!record) {
+      return;
+    }
+    this.byId.set(id, { ...record, passwordHash, updatedAt: new Date() });
   }
 }

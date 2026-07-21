@@ -17,6 +17,29 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}
+
+export interface RequestPasswordChangeRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ConfirmPasswordChangeRequest {
+  otp: string;
+}
+
+/** Risposta generica (nessun dato sensibile) per forgot/reset/change password. */
+export interface MessageResponse {
+  message: string;
+}
+
 /** Risposta di register/login: token di accesso + utente pubblico. */
 export interface AuthResponse {
   token: string;

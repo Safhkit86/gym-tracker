@@ -74,4 +74,24 @@ describe("Layout", () => {
     expect(schede.className).toContain("active");
     expect(screen.getByRole("link", { name: /storico/i }).className).not.toContain("active");
   });
+
+  it("mostra l'email come link verso il profilo", async () => {
+    seedAuthToken();
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.includes("/notifications") && m === "GET", body: [] },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<p>Pagina</p>} />
+        </Route>
+      </Routes>,
+      ["/"]
+    );
+
+    const emailLink = await screen.findByRole("link", { name: FAKE_USER.email });
+    expect(emailLink).toHaveAttribute("href", "/profile");
+  });
 });

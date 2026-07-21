@@ -108,6 +108,9 @@ export function createApp(deps: AppDeps): Express {
   // conto proprio, vedi middleware/authenticate.ts).
   app.use(requireAuth(deps.tokens));
 
+  // Piu' stringente del generico /me: azione sensibile sul proprio account.
+  // Montata prima del blanket /me qui sotto, entrambe dopo requireAuth.
+  app.use("/me/password", rateLimiters.sensitive, proxyTo(deps.authServiceUrl));
   app.use("/me", proxyTo(deps.authServiceUrl));
   app.use("/exercises", proxyTo(deps.workoutServiceUrl));
   app.use("/workouts", proxyTo(deps.workoutServiceUrl));

@@ -7,11 +7,14 @@ export interface RateLimitConfig {
   globalMax?: number;
   /** Richieste massime nella finestra, per IP, sulle rotte /auth (login/registrazione). Default: 10. */
   authMax?: number;
+  /** Richieste massime nella finestra, per IP, su /me/password (cambio password). Default: 20. */
+  sensitiveMax?: number;
 }
 
 export interface RateLimiters {
   global: RateLimitRequestHandler;
   auth: RateLimitRequestHandler;
+  sensitive: RateLimitRequestHandler;
 }
 
 /**
@@ -51,5 +54,22 @@ export function createRateLimiters(config: RateLimitConfig = {}): RateLimiters {
     },
   });
 
-  return { global, auth };
+  // Piu' stringente del generico: protegge le azioni sensibili sul proprio
+  // account (cambio password) da tentativi ripetuti, oltre al blocco per
+  // troppi OTP falliti gia' applicato lato auth-service.
+  const sensitive = rateLimit({
+    windowMs,
+    limit: config.sensitiveMax ?? 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => {
+      req.log.warn("rate limit azione sensibile superato");
+      res.status(429).json({
+        code: "RATE_LIMITED",
+        message: "Troppi tentativi, riprova più tardi.",
+      });
+    },
+  });
+
+  return { global, auth, sensitive };
 }

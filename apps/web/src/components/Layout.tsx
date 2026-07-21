@@ -46,7 +46,11 @@ export function Layout() {
           </NavLink>
         </div>
         <div className="app-nav__links">
-          {user && <span className="app-nav__user">{user.email}</span>}
+          {user && (
+            <Link to="/profile" className="app-nav__user">
+              {user.email}
+            </Link>
+          )}
           <button type="button" className="secondary" onClick={logout}>
             Esci
           </button>

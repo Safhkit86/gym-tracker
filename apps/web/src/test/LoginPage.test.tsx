@@ -34,4 +34,11 @@ describe("LoginPage", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Email o password non validi.");
   });
+
+  it("mostra il link 'Password dimenticata?' verso /forgot-password", async () => {
+    renderWithProviders(<LoginPage />, ["/login"]);
+
+    const link = screen.getByRole("link", { name: /password dimenticata/i });
+    expect(link).toHaveAttribute("href", "/forgot-password");
+  });
 });

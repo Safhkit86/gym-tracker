@@ -37,6 +37,19 @@ describe("routing verso gli upstream", () => {
     expect(ctx.auth.lastRequest?.url).toBe("/me");
   });
 
+  it("inoltra POST /me/password/change-request ad auth-service", async () => {
+    const ctx = await buildTestApp();
+    closeAll = ctx.closeAll;
+    const token = await bearerFor("u1");
+
+    await request(ctx.app)
+      .post("/me/password/change-request")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ currentPassword: "x", newPassword: "supersegreta" });
+
+    expect(ctx.auth.lastRequest?.url).toBe("/me/password/change-request");
+  });
+
   it("inoltra GET /exercises a workout-service", async () => {
     const ctx = await buildTestApp();
     closeAll = ctx.closeAll;
@@ -216,6 +229,18 @@ describe("autenticazione centralizzata", () => {
 
     expect(response.status).toBe(401);
     expect(ctx.workout.lastRequest).toBeNull();
+  });
+
+  it("risponde 401 su /me/password senza token", async () => {
+    const ctx = await buildTestApp();
+    closeAll = ctx.closeAll;
+
+    const response = await request(ctx.app)
+      .post("/me/password/change-request")
+      .send({ currentPassword: "x", newPassword: "supersegreta" });
+
+    expect(response.status).toBe(401);
+    expect(ctx.auth.lastRequest).toBeNull();
   });
 
   it("permette POST /auth/login e /auth/register senza token", async () => {

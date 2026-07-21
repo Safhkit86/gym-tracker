@@ -18,6 +18,10 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4001),
   DATABASE_URL: z.string().url(),
   JWT_SECRET: z.string().min(1, "JWT_SECRET non puo' essere vuoto"),
+  SMTP_HOST: z.string().min(1).default("localhost"),
+  SMTP_PORT: z.coerce.number().int().positive().default(1025),
+  SMTP_FROM: z.string().min(1).default("no-reply@gym-tracker.local"),
+  WEB_APP_URL: z.string().url().default("http://localhost:5173"),
 });
 
 export type Config = z.infer<typeof envSchema>;
