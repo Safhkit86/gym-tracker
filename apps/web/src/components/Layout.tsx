@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import { listNotifications } from "../api/notifications";
 
@@ -39,11 +39,11 @@ export function Layout() {
           <Link to="/" className="app-nav__brand">
             gym-tracker
           </Link>
-          <Link to="/workouts">Schede</Link>
-          <Link to="/sessions">Storico</Link>
-          <Link to="/notifications">
+          <NavLink to="/workouts">Schede</NavLink>
+          <NavLink to="/sessions">Storico</NavLink>
+          <NavLink to="/notifications">
             Notifiche{unreadCount > 0 && <span className="badge">{unreadCount}</span>}
-          </Link>
+          </NavLink>
         </div>
         <div className="app-nav__links">
           {user && <span className="app-nav__user">{user.email}</span>}

@@ -98,3 +98,12 @@ export function workoutDetailToFormValues(workout: WorkoutDetail): {
     }));
   return { name: workout.name, notes: workout.notes ?? "", exercises };
 }
+
+/** Costruisce il WorkoutInput per una scheda duplicata: stesso contenuto
+ * della scheda di partenza (notes/esercizi/set) con un nome nuovo. Passando
+ * per toWorkoutInput/createWorkout, la copia ottiene id nuovi per ogni
+ * workout_exercise/workout_set: nessun riferimento condiviso con l'originale. */
+export function duplicateWorkoutInput(workout: WorkoutDetail, newName: string): WorkoutInput {
+  const { notes, exercises } = workoutDetailToFormValues(workout);
+  return toWorkoutInput(newName, notes, exercises);
+}

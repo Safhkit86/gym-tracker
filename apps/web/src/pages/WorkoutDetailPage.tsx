@@ -2,10 +2,14 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { ProgressionEvent, WorkoutDetail } from "@gym-tracker/shared";
 import { useAuth } from "../auth/useAuth";
-import { deleteWorkout, getWorkout } from "../api/workouts";
+import { createWorkout, deleteWorkout, getWorkout } from "../api/workouts";
 import { listProgressionEvents } from "../api/progression";
 import { ApiRequestError } from "../api/client";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { PromptDialog } from "../components/PromptDialog";
+import { IconButton } from "../components/IconButton";
+import { CopyIcon, PencilIcon, PlayIcon, TrashIcon } from "../components/icons";
+import { duplicateWorkoutInput } from "../components/workout-form-utils";
 
 export function WorkoutDetailPage() {
   const { token } = useAuth();
@@ -16,6 +20,8 @@ export function WorkoutDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
 
   useEffect(() => {
     if (!token || !id) {
@@ -66,6 +72,21 @@ export function WorkoutDetailPage() {
     }
   }
 
+  async function handleDuplicate(newName: string): Promise<void> {
+    setShowDuplicateDialog(false);
+    if (!token || !workout) {
+      return;
+    }
+    setIsDuplicating(true);
+    try {
+      const result = await createWorkout(token, duplicateWorkoutInput(workout, newName));
+      navigate(`/workouts/${result.id}`);
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Impossibile duplicare la scheda.");
+      setIsDuplicating(false);
+    }
+  }
+
   if (error) {
     return (
       <main>
@@ -92,12 +113,33 @@ export function WorkoutDetailPage() {
       </p>
       <h1>{workout.name}</h1>
       {workout.notes && <p>{workout.notes}</p>}
-      <p>
-        <Link to={`/workouts/${workout.id}/log`}>Registra sessione</Link>
-      </p>
-      <p>
-        <Link to={`/workouts/${workout.id}/edit`}>Modifica scheda</Link>
-      </p>
+
+      <div className="toolbar">
+        <IconButton
+          to={`/workouts/${workout.id}/log`}
+          icon={<PlayIcon />}
+          label="Registra sessione"
+          variant="accent"
+        />
+        <IconButton
+          to={`/workouts/${workout.id}/edit`}
+          icon={<PencilIcon />}
+          label="Modifica scheda"
+        />
+        <IconButton
+          onClick={() => setShowDuplicateDialog(true)}
+          icon={<CopyIcon />}
+          label="Duplica scheda"
+          disabled={isDuplicating}
+        />
+        <IconButton
+          onClick={() => setShowDeleteConfirm(true)}
+          icon={<TrashIcon />}
+          label="Elimina scheda"
+          variant="danger"
+          disabled={isDeleting}
+        />
+      </div>
 
       {workout.exercises.map((exercise) => {
         const suggestion = suggestions.find((s) => s.exerciseId === exercise.exerciseId);
@@ -139,20 +181,20 @@ export function WorkoutDetailPage() {
         );
       })}
 
-      <button
-        type="button"
-        className="secondary workout-detail__delete"
-        onClick={() => setShowDeleteConfirm(true)}
-        disabled={isDeleting}
-      >
-        {isDeleting ? "Eliminazione…" : "Elimina scheda"}
-      </button>
-
       <ConfirmDialog
         open={showDeleteConfirm}
         message="Sei sicuro di voler eliminare la scheda?"
         onConfirm={handleDelete}
         onCancel={() => setShowDeleteConfirm(false)}
+      />
+
+      <PromptDialog
+        open={showDuplicateDialog}
+        message={`Duplica "${workout.name}"`}
+        label="Nome della nuova scheda"
+        initialValue={`${workout.name} (copia)`}
+        onConfirm={handleDuplicate}
+        onCancel={() => setShowDuplicateDialog(false)}
       />
     </main>
   );
