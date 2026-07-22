@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -55,11 +55,31 @@ export function WorkoutForm({
   const [fieldErrors, setFieldErrors] = useState<Set<string>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [exerciseToRemove, setExerciseToRemove] = useState<number | null>(null);
+  const [scrollToFormId, setScrollToFormId] = useState<string | null>(null);
 
   function addExercise(): void {
     const defaultId = catalog[0]?.id ?? "";
-    setExercises((current) => [...current, emptyExercise(defaultId)]);
+    const newExercise = emptyExercise(defaultId);
+    setExercises((current) => [...current, newExercise]);
+    setScrollToFormId(newExercise.formId);
   }
+
+  /** Dopo "Aggiungi esercizio", porta in vista il nuovo riquadro (in fondo
+   *  alla pagina) e mette il fuoco sul suo select esercizio, cosi' si puo'
+   *  iniziare a compilarlo subito senza scorrere manualmente. */
+  useEffect(() => {
+    if (!scrollToFormId) {
+      return;
+    }
+    const fieldset = document.querySelector(`[data-form-id="${scrollToFormId}"]`);
+    // jsdom (usato dai test) non implementa scrollIntoView: guardia per non
+    // far fallire i test che aggiungono un esercizio senza montare un vero browser.
+    if (typeof fieldset?.scrollIntoView === "function") {
+      fieldset.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    fieldset?.querySelector("select")?.focus();
+    setScrollToFormId(null);
+  }, [scrollToFormId]);
 
   function removeExercise(index: number): void {
     setExercises((current) => current.filter((_, i) => i !== index));

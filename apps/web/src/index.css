@@ -572,6 +572,9 @@ button.secondary:hover:not(:disabled) {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  /* Cosi' scrollIntoView (vedi "Aggiungi esercizio" in WorkoutForm.tsx) non
+     lo nasconde dietro la toolbar sticky in cima alla pagina. */
+  scroll-margin-top: calc(var(--nav-height) + 5rem);
 }
 
 .exercise-form--dragging {
