@@ -61,6 +61,7 @@ export function ExerciseFieldset({
     <fieldset
       ref={setNodeRef}
       style={style}
+      data-form-id={exercise.formId}
       className={`exercise-form${isDragging ? " exercise-form--dragging" : ""}`}
     >
       <legend>Esercizio {exerciseIndex + 1}</legend>
