@@ -6,6 +6,7 @@ import type {
   WorkoutSet,
   WorkoutSummary,
 } from "@gym-tracker/shared";
+import { NotFoundError } from "../errors.js";
 import type { Database } from "../db/types.js";
 
 // --- Input normalizzato dal domain (owner gia' validato, esercizi risolti) ---
@@ -44,6 +45,9 @@ export interface WorkoutRepository {
   /** null se la scheda non esiste o non e' dell'utente. */
   replace(ownerId: string, id: string, input: NormalizedWorkout): Promise<WorkoutDetail | null>;
   delete(ownerId: string, id: string): Promise<boolean>;
+  /** Riassegna position = index+1 secondo orderedIds. Lancia NotFoundError se
+   *  orderedIds non corrisponde esattamente all'insieme delle schede di ownerId. */
+  reorder(ownerId: string, orderedIds: string[]): Promise<void>;
 }
 
 export class KyselyWorkoutRepository implements WorkoutRepository {
@@ -51,9 +55,19 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
 
   async create(ownerId: string, input: NormalizedWorkout): Promise<WorkoutDetail> {
     const id = await this.db.transaction().execute(async (trx) => {
+      const nextPosition = await trx
+        .selectFrom("workouts")
+        .select((eb) => eb.fn.coalesce(eb.fn.max("position"), eb.lit(0)).as("max_position"))
+        .where("owner_id", "=", ownerId)
+        .executeTakeFirstOrThrow();
       const workout = await trx
         .insertInto("workouts")
-        .values({ owner_id: ownerId, name: input.name, notes: input.notes })
+        .values({
+          owner_id: ownerId,
+          name: input.name,
+          notes: input.notes,
+          position: Number(nextPosition.max_position) + 1,
+        })
         .returning("id")
         .executeTakeFirstOrThrow();
       await insertChildren(trx, workout.id, input.exercises);
@@ -99,7 +113,7 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
       .select((eb) => eb.fn.count("we.id").as("exercise_count"))
       .where("w.owner_id", "=", ownerId)
       .groupBy("w.id")
-      .orderBy("w.created_at", "desc")
+      .orderBy("w.position", "asc")
       .execute();
 
     return rows.map((r) => ({
@@ -191,6 +205,42 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
       .execute();
     return (result[0]?.numDeletedRows ?? 0n) > 0n;
   }
+
+  async reorder(ownerId: string, orderedIds: string[]): Promise<void> {
+    await this.db.transaction().execute(async (trx) => {
+      const owned = await trx
+        .selectFrom("workouts")
+        .select("id")
+        .where("owner_id", "=", ownerId)
+        .execute();
+      assertSameIdSet(
+        owned.map((r) => r.id),
+        orderedIds
+      );
+
+      for (const [index, id] of orderedIds.entries()) {
+        await trx
+          .updateTable("workouts")
+          .set({ position: index + 1 })
+          .where("id", "=", id)
+          .where("owner_id", "=", ownerId)
+          .execute();
+      }
+    });
+  }
+}
+
+/** Lancia NotFoundError se orderedIds non e' esattamente l'insieme di ownedIds
+ *  (stessa cardinalita', stessi elementi): usato da reorder per rifiutare sia
+ *  id di un altro utente sia una lista incompleta rispetto alle schede reali. */
+function assertSameIdSet(ownedIds: string[], orderedIds: string[]): void {
+  const owned = new Set(ownedIds);
+  const ordered = new Set(orderedIds);
+  const sameSize = owned.size === ordered.size && ordered.size === orderedIds.length;
+  const sameMembers = sameSize && [...owned].every((id) => ordered.has(id));
+  if (!sameSize || !sameMembers) {
+    throw new NotFoundError("Una o piu' schede non esistono o non sono dell'utente.");
+  }
 }
 
 /** Inserisce esercizi e set di una scheda (dentro una transazione). */
@@ -234,6 +284,7 @@ interface StoredWorkout {
   ownerId: string;
   name: string;
   notes: string | null;
+  position: number;
   exercises: WorkoutExercise[];
   createdAt: Date;
   updatedAt: Date;
@@ -244,11 +295,15 @@ export class InMemoryWorkoutRepository implements WorkoutRepository {
 
   async create(ownerId: string, input: NormalizedWorkout): Promise<WorkoutDetail> {
     const now = new Date();
+    const maxPosition = [...this.byId.values()]
+      .filter((w) => w.ownerId === ownerId)
+      .reduce((max, w) => Math.max(max, w.position), 0);
     const stored: StoredWorkout = {
       id: randomUUID(),
       ownerId,
       name: input.name,
       notes: input.notes,
+      position: maxPosition + 1,
       exercises: buildExercises(input.exercises),
       createdAt: now,
       updatedAt: now,
@@ -280,7 +335,7 @@ export class InMemoryWorkoutRepository implements WorkoutRepository {
   async listByOwner(ownerId: string): Promise<WorkoutSummary[]> {
     return [...this.byId.values()]
       .filter((w) => w.ownerId === ownerId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .sort((a, b) => a.position - b.position)
       .map((w) => ({
         id: w.id,
         name: w.name,
@@ -306,6 +361,18 @@ export class InMemoryWorkoutRepository implements WorkoutRepository {
     }
     this.byId.delete(id);
     return true;
+  }
+
+  async reorder(ownerId: string, orderedIds: string[]): Promise<void> {
+    const ownedIds = [...this.byId.values()].filter((w) => w.ownerId === ownerId).map((w) => w.id);
+    assertSameIdSet(ownedIds, orderedIds);
+
+    orderedIds.forEach((id, index) => {
+      const stored = this.byId.get(id);
+      if (stored) {
+        this.byId.set(id, { ...stored, position: index + 1 });
+      }
+    });
   }
 }
 

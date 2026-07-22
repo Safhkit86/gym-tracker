@@ -25,6 +25,7 @@ export interface WorkoutsTable {
   owner_id: string;
   name: string;
   notes: string | null;
+  position: number;
   created_at: Generated<Date>;
   updated_at: ColumnType<Date, Date | undefined, Date>;
 }

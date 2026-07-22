@@ -54,6 +54,11 @@ export interface WorkoutInput {
   exercises: WorkoutExerciseInput[];
 }
 
+/** Body di PUT /workouts/reorder: id delle schede dell'utente nel nuovo ordine. */
+export interface ReorderWorkoutsRequest {
+  workoutIds: string[];
+}
+
 // --- Output ---
 
 export interface WorkoutSet {

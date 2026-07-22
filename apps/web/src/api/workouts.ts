@@ -1,4 +1,9 @@
-import type { WorkoutDetail, WorkoutInput, WorkoutSummary } from "@gym-tracker/shared";
+import type {
+  ReorderWorkoutsRequest,
+  WorkoutDetail,
+  WorkoutInput,
+  WorkoutSummary,
+} from "@gym-tracker/shared";
 import { apiRequest } from "./client";
 
 export function listWorkouts(token: string): Promise<WorkoutSummary[]> {
@@ -23,4 +28,9 @@ export function updateWorkout(
 
 export function deleteWorkout(token: string, id: string): Promise<void> {
   return apiRequest<void>(`/workouts/${id}`, { method: "DELETE", token });
+}
+
+export function reorderWorkouts(token: string, workoutIds: string[]): Promise<void> {
+  const body: ReorderWorkoutsRequest = { workoutIds };
+  return apiRequest<void>("/workouts/reorder", { method: "PUT", body, token });
 }
