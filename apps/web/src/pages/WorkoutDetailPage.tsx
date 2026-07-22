@@ -108,38 +108,40 @@ export function WorkoutDetailPage() {
 
   return (
     <main>
-      <p>
-        <Link to="/workouts">← Le tue schede</Link>
-      </p>
+      <div className="detail-sticky-toolbar">
+        <Link to="/workouts" className="detail-sticky-toolbar__back">
+          ← Le tue schede
+        </Link>
+        <div className="toolbar">
+          <IconButton
+            to={`/workouts/${workout.id}/log`}
+            icon={<PlayIcon />}
+            label="Registra sessione"
+            variant="accent"
+          />
+          <IconButton
+            to={`/workouts/${workout.id}/edit`}
+            icon={<PencilIcon />}
+            label="Modifica scheda"
+          />
+          <IconButton
+            onClick={() => setShowDuplicateDialog(true)}
+            icon={<CopyIcon />}
+            label="Duplica scheda"
+            disabled={isDuplicating}
+          />
+          <IconButton
+            onClick={() => setShowDeleteConfirm(true)}
+            icon={<TrashIcon />}
+            label="Elimina scheda"
+            variant="danger"
+            disabled={isDeleting}
+          />
+        </div>
+      </div>
+
       <h1>{workout.name}</h1>
       {workout.notes && <p>{workout.notes}</p>}
-
-      <div className="toolbar">
-        <IconButton
-          to={`/workouts/${workout.id}/log`}
-          icon={<PlayIcon />}
-          label="Registra sessione"
-          variant="accent"
-        />
-        <IconButton
-          to={`/workouts/${workout.id}/edit`}
-          icon={<PencilIcon />}
-          label="Modifica scheda"
-        />
-        <IconButton
-          onClick={() => setShowDuplicateDialog(true)}
-          icon={<CopyIcon />}
-          label="Duplica scheda"
-          disabled={isDuplicating}
-        />
-        <IconButton
-          onClick={() => setShowDeleteConfirm(true)}
-          icon={<TrashIcon />}
-          label="Elimina scheda"
-          variant="danger"
-          disabled={isDeleting}
-        />
-      </div>
 
       {workout.exercises.map((exercise) => {
         const suggestion = suggestions.find((s) => s.exerciseId === exercise.exerciseId);

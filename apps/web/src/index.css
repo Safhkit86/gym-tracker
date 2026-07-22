@@ -253,6 +253,26 @@ button.secondary:hover:not(:disabled) {
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Stesso pattern di .form-sticky-toolbar, per la pagina di dettaglio scheda:
+   link "Le tue schede" e azioni (registra/modifica/duplica/elimina) restano
+   raggiungibili senza risalire la pagina anche con molti esercizi. */
+.detail-sticky-toolbar {
+  position: sticky;
+  top: var(--nav-height);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5) 0 var(--space-3);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.detail-sticky-toolbar .toolbar {
+  margin-bottom: 0;
+}
+
 .app-nav__brand {
   font-weight: 700;
   font-size: 1.05rem;
