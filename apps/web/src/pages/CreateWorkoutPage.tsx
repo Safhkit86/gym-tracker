@@ -64,7 +64,7 @@ export function CreateWorkoutPage() {
   }
 
   return (
-    <main>
+    <main className="main-wide">
       <h1>Nuova scheda</h1>
       <WorkoutForm
         catalog={catalog}
