@@ -20,6 +20,7 @@ import { ExerciseFieldset } from "./ExerciseFieldset";
 import {
   emptyExercise,
   emptySet,
+  extractFieldErrorPaths,
   groupByMuscle,
   toWorkoutInput,
   type ExerciseForm,
@@ -51,6 +52,7 @@ export function WorkoutForm({
     initialExercises ?? [emptyExercise(catalog[0]?.id ?? "")]
   );
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Set<string>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [exerciseToRemove, setExerciseToRemove] = useState<number | null>(null);
 
@@ -132,6 +134,7 @@ export function WorkoutForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setError(null);
+    setFieldErrors(new Set());
 
     if (exercises.length === 0) {
       setError("Aggiungi almeno un esercizio.");
@@ -142,7 +145,12 @@ export function WorkoutForm({
     try {
       await onSubmit(toWorkoutInput(name, notes, exercises));
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : "Errore imprevisto. Riprova.");
+      if (err instanceof ApiRequestError) {
+        setError(err.message);
+        setFieldErrors(extractFieldErrorPaths(err.details));
+      } else {
+        setError("Errore imprevisto. Riprova.");
+      }
       setIsSubmitting(false);
     }
   }
@@ -173,11 +181,20 @@ export function WorkoutForm({
 
       <label>
         Nome
-        <input value={name} onChange={(event) => setName(event.target.value)} required />
+        <input
+          className={fieldErrors.has("name") ? "invalid" : undefined}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          required
+        />
       </label>
       <label>
         Note
-        <input value={notes} onChange={(event) => setNotes(event.target.value)} />
+        <input
+          className={fieldErrors.has("notes") ? "invalid" : undefined}
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
+        />
       </label>
 
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
@@ -192,6 +209,7 @@ export function WorkoutForm({
               exerciseIndex={exerciseIndex}
               selected={catalogById.get(exercise.exerciseId)}
               groupedCatalog={groupedCatalog}
+              fieldErrors={fieldErrors}
               canRemove={exercises.length > 1}
               onUpdateExercise={(patch) => updateExercise(exerciseIndex, patch)}
               onAddSet={() => addSet(exerciseIndex)}

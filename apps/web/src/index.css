@@ -129,6 +129,21 @@ a:focus-visible {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
 }
 
+/* Campo segnalato come non valido dal server (vedi ApiRequestError.details
+   in apps/web/src/api/client.ts): bordo rosso per farlo individuare subito
+   in un form lungo con molti campi, invece del solo messaggio d'errore in
+   cima alla pagina. */
+input.invalid,
+select.invalid {
+  border-color: var(--color-danger);
+}
+
+input.invalid:focus-visible,
+select.invalid:focus-visible {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 25%, transparent);
+}
+
 button {
   padding: 0.6rem 1.1rem;
   font-size: 0.95rem;

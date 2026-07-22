@@ -2,13 +2,21 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Exercise } from "@gym-tracker/shared";
 import { GripIcon } from "./icons";
-import type { ExerciseForm, SetForm } from "./workout-form-utils";
+import {
+  setMaxRepsHasError,
+  setMinRepsHasError,
+  type ExerciseForm,
+  type SetForm,
+} from "./workout-form-utils";
 
 interface ExerciseFieldsetProps {
   exercise: ExerciseForm;
   exerciseIndex: number;
   selected: Exercise | undefined;
   groupedCatalog: Array<[string, Exercise[]]>;
+  /** Path zod (es. "exercises.0.sets.0.targetMinReps") dei campi segnalati
+   *  non validi dal server: usato per bordare di rosso il campo incriminato. */
+  fieldErrors: Set<string>;
   canRemove: boolean;
   onUpdateExercise: (patch: Partial<ExerciseForm>) => void;
   onAddSet: () => void;
@@ -18,6 +26,10 @@ interface ExerciseFieldsetProps {
   onRequestRemove: () => void;
 }
 
+function invalidClass(hasError: boolean): string | undefined {
+  return hasError ? "invalid" : undefined;
+}
+
 /** Estratto da WorkoutForm perche' useSortable (un hook) non puo' essere
  *  chiamato dentro la callback di un .map(). */
 export function ExerciseFieldset({
@@ -25,6 +37,7 @@ export function ExerciseFieldset({
   exerciseIndex,
   selected,
   groupedCatalog,
+  fieldErrors,
   canRemove,
   onUpdateExercise,
   onAddSet,
@@ -95,53 +108,60 @@ export function ExerciseFieldset({
         </p>
       )}
 
-      {exercise.sets.map((set, setIndex) => (
-        <div key={setIndex} className="set-form-row">
-          <label>
-            Rep minime
-            <input
-              type="number"
-              min={1}
-              value={set.targetMinReps}
-              onChange={(event) => onUpdateSet(setIndex, { targetMinReps: event.target.value })}
-              required
-            />
-          </label>
-          <label>
-            Rep massime (opzionale)
-            <input
-              type="number"
-              min={1}
-              value={set.targetMaxReps}
-              onChange={(event) => onUpdateSet(setIndex, { targetMaxReps: event.target.value })}
-            />
-          </label>
-          <label>
-            Peso (kg)
-            <input
-              type="number"
-              min={0}
-              step="0.5"
-              value={set.targetWeight}
-              onChange={(event) => onUpdateSet(setIndex, { targetWeight: event.target.value })}
-            />
-          </label>
-          <label>
-            Recupero (s)
-            <input
-              type="number"
-              min={0}
-              value={set.restSeconds}
-              onChange={(event) => onUpdateSet(setIndex, { restSeconds: event.target.value })}
-            />
-          </label>
-          {exercise.sets.length > 1 && (
-            <button type="button" className="secondary" onClick={() => onRemoveSet(setIndex)}>
-              Rimuovi set
-            </button>
-          )}
-        </div>
-      ))}
+      {exercise.sets.map((set, setIndex) => {
+        const setPath = `exercises.${exerciseIndex}.sets.${setIndex}`;
+        return (
+          <div key={setIndex} className="set-form-row">
+            <label>
+              Rep minime
+              <input
+                type="number"
+                min={1}
+                className={invalidClass(setMinRepsHasError(fieldErrors, exerciseIndex, setIndex))}
+                value={set.targetMinReps}
+                onChange={(event) => onUpdateSet(setIndex, { targetMinReps: event.target.value })}
+                required
+              />
+            </label>
+            <label>
+              Rep massime (opzionale)
+              <input
+                type="number"
+                min={1}
+                className={invalidClass(setMaxRepsHasError(fieldErrors, exerciseIndex, setIndex))}
+                value={set.targetMaxReps}
+                onChange={(event) => onUpdateSet(setIndex, { targetMaxReps: event.target.value })}
+              />
+            </label>
+            <label>
+              Peso (kg)
+              <input
+                type="number"
+                min={0}
+                step="0.5"
+                className={invalidClass(fieldErrors.has(`${setPath}.targetWeight`))}
+                value={set.targetWeight}
+                onChange={(event) => onUpdateSet(setIndex, { targetWeight: event.target.value })}
+              />
+            </label>
+            <label>
+              Recupero (s)
+              <input
+                type="number"
+                min={0}
+                className={invalidClass(fieldErrors.has(`${setPath}.restSeconds`))}
+                value={set.restSeconds}
+                onChange={(event) => onUpdateSet(setIndex, { restSeconds: event.target.value })}
+              />
+            </label>
+            {exercise.sets.length > 1 && (
+              <button type="button" className="secondary" onClick={() => onRemoveSet(setIndex)}>
+                Rimuovi set
+              </button>
+            )}
+          </div>
+        );
+      })}
       <div className="exercise-form__actions">
         <button type="button" className="secondary" onClick={onAddSet}>
           Aggiungi set
@@ -156,6 +176,7 @@ export function ExerciseFieldset({
         <input
           type="number"
           min={0}
+          className={invalidClass(fieldErrors.has(`exercises.${exerciseIndex}.restSeconds`))}
           value={exercise.restSeconds}
           onChange={(event) => onUpdateExercise({ restSeconds: event.target.value })}
         />
@@ -167,6 +188,9 @@ export function ExerciseFieldset({
           type="number"
           min={0}
           step="0.5"
+          className={invalidClass(
+            fieldErrors.has(`exercises.${exerciseIndex}.progressionIncrement`)
+          )}
           value={exercise.progressionIncrement}
           onChange={(event) => onUpdateExercise({ progressionIncrement: event.target.value })}
         />

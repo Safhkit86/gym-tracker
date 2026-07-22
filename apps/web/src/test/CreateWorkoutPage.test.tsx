@@ -75,6 +75,42 @@ describe("CreateWorkoutPage", () => {
     });
   });
 
+  it("bordare di rosso solo i campi rep minime/massime segnalati dal server come non validi", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/exercises") && m === "GET", body: [FAKE_EXERCISE] },
+      {
+        match: (u, m) => u.endsWith("/workouts") && m === "POST",
+        status: 400,
+        body: {
+          code: "VALIDATION_ERROR",
+          message: "Le rep massime devono essere maggiori o uguali alle rep minime.",
+          details: {
+            issues: [{ path: "exercises.0.sets.0", message: "Le rep massime..." }],
+          },
+        },
+      },
+    ]);
+
+    renderWithProviders(<CreateWorkoutPage />, ["/workouts/new"]);
+
+    await screen.findByLabelText("Esercizio");
+    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Push day" } });
+    fireEvent.change(screen.getByLabelText("Rep minime"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("Rep massime (opzionale)"), {
+      target: { value: "5" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /crea scheda/i }));
+
+    expect(
+      await screen.findByText("Le rep massime devono essere maggiori o uguali alle rep minime.")
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Rep minime")).toHaveClass("invalid");
+    expect(screen.getByLabelText("Rep massime (opzionale)")).toHaveClass("invalid");
+    expect(screen.getByLabelText("Nome")).not.toHaveClass("invalid");
+    expect(screen.getByLabelText("Peso (kg)")).not.toHaveClass("invalid");
+  });
+
   it("mostra la descrizione dell'esercizio selezionato e raggruppa il catalogo per gruppo muscolare", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
