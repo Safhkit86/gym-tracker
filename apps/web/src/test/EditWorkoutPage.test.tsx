@@ -42,7 +42,8 @@ const WORKOUT_DETAIL = {
           targetMinReps: 10,
           targetMaxReps: null,
           targetWeight: 40,
-          restSeconds: 90,
+          restMinSeconds: 60,
+          restMaxSeconds: 90,
         },
       ],
     },
@@ -83,7 +84,8 @@ describe("EditWorkoutPage", () => {
     expect(screen.getByLabelText("Note")).toHaveValue("Focus petto");
     expect(screen.getByLabelText("Rep minime")).toHaveValue(10);
     expect(screen.getByLabelText("Peso (kg)")).toHaveValue(40);
-    expect(screen.getByLabelText("Recupero (s)")).toHaveValue(90);
+    expect(screen.getByLabelText("Recupero minimo (s)")).toHaveValue(60);
+    expect(screen.getByLabelText("Recupero massimo (s) (opzionale)")).toHaveValue(90);
     expect(screen.getByLabelText(/recupero prima del prossimo esercizio/i)).toHaveValue(120);
     expect(screen.getByLabelText(/incremento di progressione/i)).toHaveValue(2.5);
   });
@@ -103,7 +105,8 @@ describe("EditWorkoutPage", () => {
               targetMinReps: 10,
               targetMaxReps: null,
               targetWeight: null,
-              restSeconds: null,
+              restMinSeconds: null,
+              restMaxSeconds: null,
             },
           ],
         },
@@ -119,7 +122,8 @@ describe("EditWorkoutPage", () => {
 
     await screen.findByLabelText("Nome");
     expect(screen.getByLabelText("Peso (kg)")).toHaveValue(null);
-    expect(screen.getByLabelText("Recupero (s)")).toHaveValue(null);
+    expect(screen.getByLabelText("Recupero minimo (s)")).toHaveValue(null);
+    expect(screen.getByLabelText("Recupero massimo (s) (opzionale)")).toHaveValue(null);
     expect(screen.getByLabelText(/recupero prima del prossimo esercizio/i)).toHaveValue(null);
     expect(screen.getByLabelText(/incremento di progressione/i)).toHaveValue(null);
   });
@@ -156,7 +160,15 @@ describe("EditWorkoutPage", () => {
           position: 1,
           restSeconds: 120,
           progressionIncrement: 2.5,
-          sets: [{ setNumber: 1, targetMinReps: 10, targetWeight: 40, restSeconds: 90 }],
+          sets: [
+            {
+              setNumber: 1,
+              targetMinReps: 10,
+              targetWeight: 40,
+              restMinSeconds: 60,
+              restMaxSeconds: 90,
+            },
+          ],
         },
       ],
     });
@@ -207,7 +219,8 @@ describe("EditWorkoutPage", () => {
               targetMinReps: 8,
               targetMaxReps: null,
               targetWeight: 60,
-              restSeconds: null,
+              restMinSeconds: null,
+              restMaxSeconds: null,
             },
           ],
         },
@@ -265,7 +278,7 @@ describe("EditWorkoutPage", () => {
     const putCall = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
     const body = JSON.parse((putCall?.[1]?.body as string) ?? "{}");
     expect(body.exercises[0].sets).toEqual([
-      { setNumber: 1, targetMinReps: 10, targetWeight: 40, restSeconds: 90 },
+      { setNumber: 1, targetMinReps: 10, targetWeight: 40, restMinSeconds: 60, restMaxSeconds: 90 },
       { setNumber: 2, targetMinReps: 8 },
     ]);
   });

@@ -26,13 +26,14 @@ function workoutPayload(exerciseId: string) {
         restSeconds: 120,
         progressionIncrement: 2.5,
         sets: [
-          { setNumber: 1, targetMinReps: 10, targetWeight: 40, restSeconds: 90 },
+          { setNumber: 1, targetMinReps: 10, targetWeight: 40, restMinSeconds: 60 },
           {
             setNumber: 2,
             targetMinReps: 8,
             targetMaxReps: 12,
             targetWeight: 42.5,
-            restSeconds: 90,
+            restMinSeconds: 60,
+            restMaxSeconds: 90,
           },
         ],
       },
@@ -73,7 +74,8 @@ describe("POST /workouts", () => {
       targetMinReps: 8,
       targetMaxReps: 12,
       targetWeight: 42.5,
-      restSeconds: 90,
+      restMinSeconds: 60,
+      restMaxSeconds: 90,
     });
   });
 
@@ -148,7 +150,51 @@ describe("POST /workouts", () => {
 
     const payload = workoutPayload(exerciseId);
     payload.exercises[0].sets = [
-      { setNumber: 1, targetMinReps: 10, targetMaxReps: 8, targetWeight: 40, restSeconds: 90 },
+      { setNumber: 1, targetMinReps: 10, targetMaxReps: 8, targetWeight: 40, restMinSeconds: 90 },
+    ];
+
+    const response = await request(app)
+      .post("/workouts")
+      .set("Authorization", `Bearer ${token}`)
+      .send(payload);
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("rifiuta un recupero massimo inferiore al minimo con 400", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const exerciseId = await getExerciseId(app, token, "Panca piana");
+
+    const payload = workoutPayload(exerciseId);
+    payload.exercises[0].sets = [
+      {
+        setNumber: 1,
+        targetMinReps: 10,
+        targetWeight: 40,
+        restMinSeconds: 90,
+        restMaxSeconds: 60,
+      },
+    ];
+
+    const response = await request(app)
+      .post("/workouts")
+      .set("Authorization", `Bearer ${token}`)
+      .send(payload);
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("rifiuta un recupero massimo senza il minimo con 400", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const exerciseId = await getExerciseId(app, token, "Panca piana");
+
+    const payload = workoutPayload(exerciseId);
+    payload.exercises[0].sets = [
+      { setNumber: 1, targetMinReps: 10, targetWeight: 40, restMaxSeconds: 90 },
     ];
 
     const response = await request(app)

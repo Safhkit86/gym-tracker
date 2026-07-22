@@ -86,7 +86,7 @@ describe("CreateWorkoutPage", () => {
           code: "VALIDATION_ERROR",
           message: "Le rep massime devono essere maggiori o uguali alle rep minime.",
           details: {
-            issues: [{ path: "exercises.0.sets.0", message: "Le rep massime..." }],
+            issues: [{ path: "exercises.0.sets.0._repsRange", message: "Le rep massime..." }],
           },
         },
       },
@@ -109,6 +109,48 @@ describe("CreateWorkoutPage", () => {
     expect(screen.getByLabelText("Rep massime (opzionale)")).toHaveClass("invalid");
     expect(screen.getByLabelText("Nome")).not.toHaveClass("invalid");
     expect(screen.getByLabelText("Peso (kg)")).not.toHaveClass("invalid");
+    expect(screen.getByLabelText("Recupero minimo (s)")).not.toHaveClass("invalid");
+    expect(screen.getByLabelText("Recupero massimo (s) (opzionale)")).not.toHaveClass("invalid");
+  });
+
+  it("bordare di rosso solo i campi recupero minimo/massimo segnalati dal server come non validi", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/exercises") && m === "GET", body: [FAKE_EXERCISE] },
+      {
+        match: (u, m) => u.endsWith("/workouts") && m === "POST",
+        status: 400,
+        body: {
+          code: "VALIDATION_ERROR",
+          message:
+            "Il recupero massimo richiede anche il minimo, e deve essere maggiore o uguale ad esso.",
+          details: {
+            issues: [{ path: "exercises.0.sets.0._restRange", message: "Il recupero massimo..." }],
+          },
+        },
+      },
+    ]);
+
+    renderWithProviders(<CreateWorkoutPage />, ["/workouts/new"]);
+
+    await screen.findByLabelText("Esercizio");
+    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Push day" } });
+    fireEvent.change(screen.getByLabelText("Rep minime"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("Recupero minimo (s)"), { target: { value: "90" } });
+    fireEvent.change(screen.getByLabelText("Recupero massimo (s) (opzionale)"), {
+      target: { value: "60" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /crea scheda/i }));
+
+    expect(
+      await screen.findByText(
+        "Il recupero massimo richiede anche il minimo, e deve essere maggiore o uguale ad esso."
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Recupero minimo (s)")).toHaveClass("invalid");
+    expect(screen.getByLabelText("Recupero massimo (s) (opzionale)")).toHaveClass("invalid");
+    expect(screen.getByLabelText("Rep minime")).not.toHaveClass("invalid");
+    expect(screen.getByLabelText("Nome")).not.toHaveClass("invalid");
   });
 
   it("mostra la descrizione dell'esercizio selezionato e raggruppa il catalogo per gruppo muscolare", async () => {

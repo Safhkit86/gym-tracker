@@ -172,7 +172,13 @@ export function WorkoutDetailPage() {
                       <td>
                         {set.targetWeight !== null ? `${set.targetWeight} kg` : "corpo libero"}
                       </td>
-                      <td>{set.restSeconds !== null ? `${set.restSeconds}s` : "—"}</td>
+                      <td>
+                        {set.restMinSeconds === null
+                          ? "—"
+                          : set.restMaxSeconds !== null
+                            ? `${set.restMinSeconds}-${set.restMaxSeconds}s`
+                            : `${set.restMinSeconds}s`}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

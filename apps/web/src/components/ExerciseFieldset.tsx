@@ -5,6 +5,8 @@ import { GripIcon } from "./icons";
 import {
   setMaxRepsHasError,
   setMinRepsHasError,
+  setRestMaxSecondsHasError,
+  setRestMinSecondsHasError,
   type ExerciseForm,
   type SetForm,
 } from "./workout-form-utils";
@@ -145,13 +147,27 @@ export function ExerciseFieldset({
               />
             </label>
             <label>
-              Recupero (s)
+              Recupero minimo (s)
               <input
                 type="number"
                 min={0}
-                className={invalidClass(fieldErrors.has(`${setPath}.restSeconds`))}
-                value={set.restSeconds}
-                onChange={(event) => onUpdateSet(setIndex, { restSeconds: event.target.value })}
+                className={invalidClass(
+                  setRestMinSecondsHasError(fieldErrors, exerciseIndex, setIndex)
+                )}
+                value={set.restMinSeconds}
+                onChange={(event) => onUpdateSet(setIndex, { restMinSeconds: event.target.value })}
+              />
+            </label>
+            <label>
+              Recupero massimo (s) (opzionale)
+              <input
+                type="number"
+                min={0}
+                className={invalidClass(
+                  setRestMaxSecondsHasError(fieldErrors, exerciseIndex, setIndex)
+                )}
+                value={set.restMaxSeconds}
+                onChange={(event) => onUpdateSet(setIndex, { restMaxSeconds: event.target.value })}
               />
             </label>
             {exercise.sets.length > 1 && (

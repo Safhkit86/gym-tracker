@@ -49,7 +49,11 @@ export interface WorkoutSetsTable {
   /** null = nessun range: l'obiettivo e' il singolo valore target_min_reps. */
   target_max_reps: number | null;
   target_weight: ColumnType<string | null, number | null, number | null>;
-  rest_seconds: number | null;
+  /** null = recupero non specificato. */
+  rest_min_seconds: number | null;
+  /** null = nessun range: il recupero e' il singolo valore rest_min_seconds
+   *  (o non specificato se anche rest_min_seconds e' null). */
+  rest_max_seconds: number | null;
 }
 
 export interface Database {

@@ -16,7 +16,8 @@ export interface NormalizedSet {
   targetMinReps: number;
   targetMaxReps: number | null;
   targetWeight: number | null;
-  restSeconds: number | null;
+  restMinSeconds: number | null;
+  restMaxSeconds: number | null;
 }
 
 export interface NormalizedExercise {
@@ -174,7 +175,8 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
         targetMinReps: s.target_min_reps,
         targetMaxReps: s.target_max_reps,
         targetWeight: s.target_weight === null ? null : Number(s.target_weight),
-        restSeconds: s.rest_seconds,
+        restMinSeconds: s.rest_min_seconds,
+        restMaxSeconds: s.rest_max_seconds,
       });
       setsByExercise.set(s.workout_exercise_id, list);
     }
@@ -273,7 +275,8 @@ async function insertChildren(
           target_min_reps: s.targetMinReps,
           target_max_reps: s.targetMaxReps,
           target_weight: s.targetWeight,
-          rest_seconds: s.restSeconds,
+          rest_min_seconds: s.restMinSeconds,
+          rest_max_seconds: s.restMaxSeconds,
         })
         .execute();
     }
@@ -395,7 +398,8 @@ function buildExercises(exercises: NormalizedExercise[]): WorkoutExercise[] {
       targetMinReps: s.targetMinReps,
       targetMaxReps: s.targetMaxReps,
       targetWeight: s.targetWeight,
-      restSeconds: s.restSeconds,
+      restMinSeconds: s.restMinSeconds,
+      restMaxSeconds: s.restMaxSeconds,
     })),
   }));
 }

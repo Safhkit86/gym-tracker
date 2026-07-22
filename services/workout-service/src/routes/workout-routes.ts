@@ -12,11 +12,28 @@ const setSchema = z
     /** Se presente, deve essere >= targetMinReps (range di ripetizioni). */
     targetMaxReps: z.number().int().positive().nullish(),
     targetWeight: z.number().positive().nullish(),
-    restSeconds: z.number().int().nonnegative().nullish(),
+    /** Recupero tra una serie e l'altra; null/assente = non specificato. */
+    restMinSeconds: z.number().int().nonnegative().nullish(),
+    /** Se presente, richiede restMinSeconds e deve essere >= restMinSeconds
+     *  (range di recupero, es. "60-90s"). */
+    restMaxSeconds: z.number().int().nonnegative().nullish(),
+  })
+  .refine((set) => set.targetMaxReps == null || set.targetMaxReps >= set.targetMinReps, {
+    message: "Le rep massime devono essere maggiori o uguali alle rep minime.",
+    // Path dedicato (non un campo reale) per non far scattare anche
+    // l'evidenziazione dei campi di recupero nel form: le due coppie
+    // min/max (rep, recupero) sono indipendenti.
+    path: ["_repsRange"],
   })
   .refine(
-    (set) => set.targetMaxReps == null || set.targetMaxReps >= set.targetMinReps,
-    "Le rep massime devono essere maggiori o uguali alle rep minime."
+    (set) =>
+      set.restMaxSeconds == null ||
+      (set.restMinSeconds != null && set.restMaxSeconds >= set.restMinSeconds),
+    {
+      message:
+        "Il recupero massimo richiede anche il minimo, e deve essere maggiore o uguale ad esso.",
+      path: ["_restRange"],
+    }
   );
 
 const exerciseSchema = z.object({
