@@ -122,6 +122,21 @@ export function WorkoutForm({
 
   return (
     <form onSubmit={handleSubmit}>
+      <div className="form-sticky-toolbar">
+        <button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? submittingLabel : submitLabel}
+        </button>
+        <button type="button" className="secondary" onClick={addExercise}>
+          Aggiungi esercizio
+        </button>
+      </div>
+
+      {error && (
+        <p role="alert" className="form-error">
+          {error}
+        </p>
+      )}
+
       <label>
         Nome
         <input value={name} onChange={(event) => setName(event.target.value)} required />
@@ -272,20 +287,6 @@ export function WorkoutForm({
           </fieldset>
         );
       })}
-
-      <button type="button" className="secondary" onClick={addExercise}>
-        Aggiungi esercizio
-      </button>
-
-      {error && (
-        <p role="alert" className="form-error">
-          {error}
-        </p>
-      )}
-
-      <button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? submittingLabel : submitLabel}
-      </button>
 
       <ConfirmDialog
         open={exerciseToRemove !== null}
