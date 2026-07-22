@@ -13,12 +13,16 @@ export const UNAUTHORIZED_EVENT = "gym-tracker:unauthorized";
 export class ApiRequestError extends Error {
   readonly status: number;
   readonly code: string;
+  /** Es. { issues: [{ path, message }] } per VALIDATION_ERROR: usato dai
+   *  form per evidenziare il campo incriminato, non solo il messaggio. */
+  readonly details?: Record<string, unknown>;
 
-  constructor(status: number, code: string, message: string) {
+  constructor(status: number, code: string, message: string, details?: Record<string, unknown>) {
     super(message);
     this.name = "ApiRequestError";
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -61,7 +65,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     throw new ApiRequestError(
       response.status,
       apiError?.code ?? "UNKNOWN_ERROR",
-      apiError?.message ?? "Errore imprevisto. Riprova."
+      apiError?.message ?? "Errore imprevisto. Riprova.",
+      apiError?.details
     );
   }
 

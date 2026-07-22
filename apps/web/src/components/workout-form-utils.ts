@@ -116,3 +116,44 @@ export function duplicateWorkoutInput(workout: WorkoutDetail, newName: string): 
   const { notes, exercises } = workoutDetailToFormValues(workout);
   return toWorkoutInput(newName, notes, exercises);
 }
+
+/** Estrae i path dei campi (formato zod, es. "exercises.0.sets.0.targetMinReps"
+ *  oppure "exercises.0.sets.0" per un refine cross-campo come min<=max) da
+ *  ApiRequestError.details di un 400 VALIDATION_ERROR: usato per evidenziare
+ *  il campo incriminato nel form invece del solo messaggio generico in cima. */
+export function extractFieldErrorPaths(details: Record<string, unknown> | undefined): Set<string> {
+  const issues = details?.issues;
+  if (!Array.isArray(issues)) {
+    return new Set();
+  }
+  const paths = new Set<string>();
+  for (const issue of issues) {
+    const path = (issue as { path?: unknown } | null)?.path;
+    if (typeof path === "string") {
+      paths.add(path);
+    }
+  }
+  return paths;
+}
+
+/** True se il set alla posizione data ha un errore sulle rep minime: match
+ *  esatto sul campo, oppure sull'intero set (refine cross-campo min<=max,
+ *  che non punta a un singolo campo — in quel caso si evidenziano entrambi). */
+export function setMinRepsHasError(
+  fieldErrors: Set<string>,
+  exerciseIndex: number,
+  setIndex: number
+): boolean {
+  const rowPath = `exercises.${exerciseIndex}.sets.${setIndex}`;
+  return fieldErrors.has(rowPath) || fieldErrors.has(`${rowPath}.targetMinReps`);
+}
+
+/** Vedi setMinRepsHasError: stessa logica per le rep massime. */
+export function setMaxRepsHasError(
+  fieldErrors: Set<string>,
+  exerciseIndex: number,
+  setIndex: number
+): boolean {
+  const rowPath = `exercises.${exerciseIndex}.sets.${setIndex}`;
+  return fieldErrors.has(rowPath) || fieldErrors.has(`${rowPath}.targetMaxReps`);
+}
