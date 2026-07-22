@@ -233,7 +233,7 @@ button.secondary:hover:not(:disabled) {
   z-index: 5;
   display: flex;
   gap: var(--space-3);
-  padding: var(--space-3) 0;
+  padding: var(--space-4) 0 var(--space-3);
   background: var(--color-bg);
   border-bottom: 1px solid var(--color-border);
 }
@@ -553,6 +553,13 @@ button.secondary:hover:not(:disabled) {
 
 .exercise-form__drag-handle:active {
   cursor: grabbing;
+}
+
+/* La maniglia di trascinamento e' posizionata in assoluto sopra il primo
+   campo (select esercizio): un margine dedicato evita che il menu a tendina
+   sembri incollato sotto la maniglia. */
+.exercise-form > .field {
+  margin-top: var(--space-4);
 }
 
 .exercise-form legend {
