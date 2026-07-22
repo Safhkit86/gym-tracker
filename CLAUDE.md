@@ -114,6 +114,12 @@ docker compose up -d postgres redis rabbitmq   # solo infrastruttura
 
 ## Dove salvare quello che impari
 
+Ogni volta che inizi a lavorare su questo progetto, leggi questo file
+(`CLAUDE.md`), il `README.md` e la memoria automatica prima di agire: sono
+la fonte di contesto aggiornato su convenzioni, stato del progetto e
+preferenze dell'utente, e vanno riletti a ogni sessione perché possono
+essere cambiati dall'ultima volta.
+
 Quando durante il lavoro emerge qualcosa che vale la pena ricordare per il
 futuro, salvalo nel posto giusto invece di lasciarlo solo nella
 conversazione corrente:
