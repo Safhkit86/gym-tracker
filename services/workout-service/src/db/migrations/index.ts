@@ -12,6 +12,7 @@ import * as addEserciziStoricoImport from "./010-add-esercizi-storico-import.js"
 import * as addWorkoutPosition from "./011-add-workout-position.js";
 import * as addMinMaxReps from "./012-add-min-max-reps.js";
 import * as addRestMinMaxSeconds from "./013-add-rest-min-max-seconds.js";
+import * as addVariantiPetto from "./014-add-varianti-petto.js";
 
 /**
  * Registro statico delle migrazioni (chiavi ordinate). Preferito a
@@ -32,4 +33,5 @@ export const migrations: Record<string, Migration> = {
   "011-add-workout-position": addWorkoutPosition,
   "012-add-min-max-reps": addMinMaxReps,
   "013-add-rest-min-max-seconds": addRestMinMaxSeconds,
+  "014-add-varianti-petto": addVariantiPetto,
 };
