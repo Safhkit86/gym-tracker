@@ -34,7 +34,8 @@ describe("workoutDetailToFormValues", () => {
                 targetMinReps: 10,
                 targetMaxReps: null,
                 targetWeight: null,
-                restSeconds: null,
+                restMinSeconds: null,
+                restMaxSeconds: null,
               },
             ],
           },
@@ -45,7 +46,7 @@ describe("workoutDetailToFormValues", () => {
     expect(result.exercises[0].restSeconds).toBe("");
     expect(result.exercises[0].progressionIncrement).toBe("");
     expect(result.exercises[0].sets[0].targetWeight).toBe("");
-    expect(result.exercises[0].sets[0].restSeconds).toBe("");
+    expect(result.exercises[0].sets[0].restMinSeconds).toBe("");
     expect(result.exercises[0].sets[0].targetMinReps).toBe("10");
   });
 
@@ -68,7 +69,8 @@ describe("workoutDetailToFormValues", () => {
                 targetMinReps: 8,
                 targetMaxReps: null,
                 targetWeight: 60,
-                restSeconds: null,
+                restMinSeconds: null,
+                restMaxSeconds: null,
               },
               {
                 id: "s2a",
@@ -76,7 +78,8 @@ describe("workoutDetailToFormValues", () => {
                 targetMinReps: 10,
                 targetMaxReps: null,
                 targetWeight: 50,
-                restSeconds: null,
+                restMinSeconds: null,
+                restMaxSeconds: null,
               },
             ],
           },
@@ -95,7 +98,8 @@ describe("workoutDetailToFormValues", () => {
                 targetMinReps: 10,
                 targetMaxReps: null,
                 targetWeight: 40,
-                restSeconds: null,
+                restMinSeconds: null,
+                restMaxSeconds: null,
               },
             ],
           },
@@ -131,7 +135,8 @@ describe("workoutDetailToFormValues", () => {
                 targetMinReps: 8,
                 targetMaxReps: 12,
                 targetWeight: null,
-                restSeconds: null,
+                restMinSeconds: null,
+                restMaxSeconds: null,
               },
               {
                 id: "s2",
@@ -139,7 +144,8 @@ describe("workoutDetailToFormValues", () => {
                 targetMinReps: 10,
                 targetMaxReps: null,
                 targetWeight: null,
-                restSeconds: null,
+                restMinSeconds: null,
+                restMaxSeconds: null,
               },
             ],
           },
@@ -149,5 +155,48 @@ describe("workoutDetailToFormValues", () => {
 
     expect(result.exercises[0].sets[0].targetMaxReps).toBe("12");
     expect(result.exercises[0].sets[1].targetMaxReps).toBe("");
+  });
+
+  it("converte restMinSeconds/restMaxSeconds null in stringa vuota e i valori impostati nella loro stringa", () => {
+    const result = workoutDetailToFormValues(
+      workout({
+        exercises: [
+          {
+            id: "we1",
+            exerciseId: "e1",
+            exerciseName: "Panca piana",
+            position: 1,
+            notes: null,
+            restSeconds: null,
+            progressionIncrement: null,
+            sets: [
+              {
+                id: "s1",
+                setNumber: 1,
+                targetMinReps: 8,
+                targetMaxReps: null,
+                targetWeight: null,
+                restMinSeconds: 60,
+                restMaxSeconds: 90,
+              },
+              {
+                id: "s2",
+                setNumber: 2,
+                targetMinReps: 8,
+                targetMaxReps: null,
+                targetWeight: null,
+                restMinSeconds: null,
+                restMaxSeconds: null,
+              },
+            ],
+          },
+        ],
+      })
+    );
+
+    expect(result.exercises[0].sets[0].restMinSeconds).toBe("60");
+    expect(result.exercises[0].sets[0].restMaxSeconds).toBe("90");
+    expect(result.exercises[0].sets[1].restMinSeconds).toBe("");
+    expect(result.exercises[0].sets[1].restMaxSeconds).toBe("");
   });
 });

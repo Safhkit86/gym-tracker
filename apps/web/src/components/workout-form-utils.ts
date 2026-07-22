@@ -5,7 +5,11 @@ export interface SetForm {
   /** Vuoto = nessun range: l'obiettivo e' il singolo valore targetMinReps. */
   targetMaxReps: string;
   targetWeight: string;
-  restSeconds: string;
+  /** Vuoto = recupero non specificato. */
+  restMinSeconds: string;
+  /** Vuoto = nessun range: il recupero e' il singolo valore restMinSeconds
+   *  (o non specificato se anche restMinSeconds e' vuoto). Richiede restMinSeconds. */
+  restMaxSeconds: string;
 }
 
 export interface ExerciseForm {
@@ -23,7 +27,13 @@ export interface ExerciseForm {
 }
 
 export function emptySet(): SetForm {
-  return { targetMinReps: "", targetMaxReps: "", targetWeight: "", restSeconds: "" };
+  return {
+    targetMinReps: "",
+    targetMaxReps: "",
+    targetWeight: "",
+    restMinSeconds: "",
+    restMaxSeconds: "",
+  };
 }
 
 export function emptyExercise(defaultExerciseId: string): ExerciseForm {
@@ -73,7 +83,8 @@ export function toWorkoutInput(
         targetMinReps: Number(set.targetMinReps),
         targetMaxReps: set.targetMaxReps.trim() ? Number(set.targetMaxReps) : undefined,
         targetWeight: set.targetWeight.trim() ? Number(set.targetWeight) : undefined,
-        restSeconds: set.restSeconds.trim() ? Number(set.restSeconds) : undefined,
+        restMinSeconds: set.restMinSeconds.trim() ? Number(set.restMinSeconds) : undefined,
+        restMaxSeconds: set.restMaxSeconds.trim() ? Number(set.restMaxSeconds) : undefined,
       })),
     })),
   };
@@ -102,7 +113,8 @@ export function workoutDetailToFormValues(workout: WorkoutDetail): {
           targetMinReps: String(set.targetMinReps),
           targetMaxReps: set.targetMaxReps !== null ? String(set.targetMaxReps) : "",
           targetWeight: set.targetWeight !== null ? String(set.targetWeight) : "",
-          restSeconds: set.restSeconds !== null ? String(set.restSeconds) : "",
+          restMinSeconds: set.restMinSeconds !== null ? String(set.restMinSeconds) : "",
+          restMaxSeconds: set.restMaxSeconds !== null ? String(set.restMaxSeconds) : "",
         })),
     }));
   return { name: workout.name, notes: workout.notes ?? "", exercises };
@@ -137,15 +149,17 @@ export function extractFieldErrorPaths(details: Record<string, unknown> | undefi
 }
 
 /** True se il set alla posizione data ha un errore sulle rep minime: match
- *  esatto sul campo, oppure sull'intero set (refine cross-campo min<=max,
- *  che non punta a un singolo campo — in quel caso si evidenziano entrambi). */
+ *  esatto sul campo, oppure sul path dedicato del refine cross-campo
+ *  min<=max ("_repsRange", vedi setSchema in workout-routes.ts) — quel
+ *  refine non punta a un singolo campo, quindi si evidenziano entrambi
+ *  (min e max) senza toccare la coppia indipendente di recupero. */
 export function setMinRepsHasError(
   fieldErrors: Set<string>,
   exerciseIndex: number,
   setIndex: number
 ): boolean {
   const rowPath = `exercises.${exerciseIndex}.sets.${setIndex}`;
-  return fieldErrors.has(rowPath) || fieldErrors.has(`${rowPath}.targetMinReps`);
+  return fieldErrors.has(`${rowPath}._repsRange`) || fieldErrors.has(`${rowPath}.targetMinReps`);
 }
 
 /** Vedi setMinRepsHasError: stessa logica per le rep massime. */
@@ -155,5 +169,27 @@ export function setMaxRepsHasError(
   setIndex: number
 ): boolean {
   const rowPath = `exercises.${exerciseIndex}.sets.${setIndex}`;
-  return fieldErrors.has(rowPath) || fieldErrors.has(`${rowPath}.targetMaxReps`);
+  return fieldErrors.has(`${rowPath}._repsRange`) || fieldErrors.has(`${rowPath}.targetMaxReps`);
+}
+
+/** Vedi setMinRepsHasError: stessa logica per il recupero minimo tra le
+ *  serie, con il proprio path dedicato ("_restRange") indipendente da
+ *  "_repsRange". */
+export function setRestMinSecondsHasError(
+  fieldErrors: Set<string>,
+  exerciseIndex: number,
+  setIndex: number
+): boolean {
+  const rowPath = `exercises.${exerciseIndex}.sets.${setIndex}`;
+  return fieldErrors.has(`${rowPath}._restRange`) || fieldErrors.has(`${rowPath}.restMinSeconds`);
+}
+
+/** Vedi setMinRepsHasError: stessa logica per il recupero massimo tra le serie. */
+export function setRestMaxSecondsHasError(
+  fieldErrors: Set<string>,
+  exerciseIndex: number,
+  setIndex: number
+): boolean {
+  const rowPath = `exercises.${exerciseIndex}.sets.${setIndex}`;
+  return fieldErrors.has(`${rowPath}._restRange`) || fieldErrors.has(`${rowPath}.restMaxSeconds`);
 }

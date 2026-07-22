@@ -36,7 +36,8 @@ describe("WorkoutDetailPage", () => {
             targetMinReps: 10,
             targetMaxReps: null,
             targetWeight: 40,
-            restSeconds: 90,
+            restMinSeconds: 60,
+            restMaxSeconds: 90,
           },
         ],
       },
@@ -63,6 +64,7 @@ describe("WorkoutDetailPage", () => {
     expect(screen.getByText("Panca piana")).toBeInTheDocument();
     expect(screen.getByText("40 kg")).toBeInTheDocument();
     expect(screen.getByText("10")).toBeInTheDocument();
+    expect(screen.getByText("60-90s")).toBeInTheDocument();
     expect(screen.getByText(/recupero prima del prossimo esercizio: 120s/i)).toBeInTheDocument();
   });
 
@@ -79,7 +81,8 @@ describe("WorkoutDetailPage", () => {
               targetMinReps: 8,
               targetMaxReps: 12,
               targetWeight: 40,
-              restSeconds: 90,
+              restMinSeconds: 60,
+              restMaxSeconds: 90,
             },
           ],
         },
@@ -287,7 +290,15 @@ describe("WorkoutDetailPage", () => {
           position: 1,
           restSeconds: 120,
           progressionIncrement: 2.5,
-          sets: [{ setNumber: 1, targetMinReps: 10, targetWeight: 40, restSeconds: 90 }],
+          sets: [
+            {
+              setNumber: 1,
+              targetMinReps: 10,
+              targetWeight: 40,
+              restMinSeconds: 60,
+              restMaxSeconds: 90,
+            },
+          ],
         },
       ],
     });

@@ -30,7 +30,11 @@ export interface WorkoutSetInput {
   targetMaxReps?: number | null;
   /** kg; null = a corpo libero */
   targetWeight?: number | null;
-  restSeconds?: number | null;
+  /** Recupero tra una serie e l'altra; null/assente = non specificato. */
+  restMinSeconds?: number | null;
+  /** Se assente/null e restMinSeconds e' impostato, il recupero e' il singolo
+   *  valore restMinSeconds (nessun range). Richiede restMinSeconds. */
+  restMaxSeconds?: number | null;
 }
 
 export interface WorkoutExerciseInput {
@@ -70,7 +74,11 @@ export interface WorkoutSet {
   /** null = nessun range: l'obiettivo e' il singolo valore targetMinReps. */
   targetMaxReps: number | null;
   targetWeight: number | null;
-  restSeconds: number | null;
+  /** null = recupero non specificato. */
+  restMinSeconds: number | null;
+  /** null = nessun range: il recupero e' il singolo valore restMinSeconds
+   *  (o non specificato se anche restMinSeconds e' null). */
+  restMaxSeconds: number | null;
 }
 
 export interface WorkoutExercise {

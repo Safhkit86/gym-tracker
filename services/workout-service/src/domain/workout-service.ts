@@ -84,7 +84,8 @@ export class WorkoutService {
           targetMinReps: s.targetMinReps,
           targetMaxReps: s.targetMaxReps ?? null,
           targetWeight: s.targetWeight ?? null,
-          restSeconds: s.restSeconds ?? null,
+          restMinSeconds: s.restMinSeconds ?? null,
+          restMaxSeconds: s.restMaxSeconds ?? null,
         })),
       })),
     };
