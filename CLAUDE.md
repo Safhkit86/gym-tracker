@@ -112,6 +112,27 @@ docker compose up -d               # avvia infrastruttura + servizi
 docker compose up -d postgres redis rabbitmq   # solo infrastruttura
 ```
 
+## Dove salvare quello che impari
+
+Quando durante il lavoro emerge qualcosa che vale la pena ricordare per il
+futuro, salvalo nel posto giusto invece di lasciarlo solo nella
+conversazione corrente:
+
+- **Questo file (`CLAUDE.md`)**: convenzioni di codice, pattern
+  architetturali, regole di processo (commit/PR/CI) che valgono per
+  chiunque lavori su questo repo, a prescindere da chi lo usa o quando —
+  es. una nuova gotcha scoperta su un servizio, un pattern da seguire per i
+  nuovi servizi, una regola su cosa non fare.
+- **`README.md`**: stato del progetto che riguarda chi legge il repo
+  (roadmap delle fasi, architettura, istruzioni di setup) — contenuto
+  pubblico del progetto, non istruzioni per l'assistente.
+- **Memoria automatica** (fuori dal repo, persistente tra conversazioni):
+  preferenze dell'utente su come collaborare, feedback su approcci
+  corretti o sbagliati, contesto di progetto con una scadenza o legato a un
+  momento preciso (es. "il deploy è previsto per la settimana prossima"),
+  riferimenti a sistemi esterni (dashboard, tracker). Non duplicare lì
+  quello che si può già dedurre leggendo il codice o la git history.
+
 ## Cosa NON fare
 
 - Non far comunicare i client (web/Android) direttamente con un servizio:
