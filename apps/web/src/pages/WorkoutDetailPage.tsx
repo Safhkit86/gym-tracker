@@ -165,9 +165,11 @@ export function WorkoutDetailPage() {
                     <tr key={set.id}>
                       <td>{set.setNumber}</td>
                       <td>
-                        {set.targetMaxReps !== null
-                          ? `${set.targetMinReps}-${set.targetMaxReps}`
-                          : set.targetMinReps}
+                        {set.isMaxEffort
+                          ? "Max"
+                          : set.targetMaxReps !== null
+                            ? `${set.targetMinReps}-${set.targetMaxReps}`
+                            : set.targetMinReps}
                       </td>
                       <td>
                         {set.targetWeight !== null ? `${set.targetWeight} kg` : "corpo libero"}

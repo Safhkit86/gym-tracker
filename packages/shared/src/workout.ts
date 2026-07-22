@@ -25,7 +25,9 @@ export interface CreateExerciseRequest {
 
 export interface WorkoutSetInput {
   setNumber: number;
-  targetMinReps: number;
+  /** Obbligatorio a meno che isMaxEffort sia true (sforzo massimo/AMRAP,
+   *  nessun obiettivo numerico). */
+  targetMinReps?: number | null;
   /** Se assente/null, l'obiettivo e' il singolo valore targetMinReps (nessun range). */
   targetMaxReps?: number | null;
   /** kg; null = a corpo libero */
@@ -35,6 +37,10 @@ export interface WorkoutSetInput {
   /** Se assente/null e restMinSeconds e' impostato, il recupero e' il singolo
    *  valore restMinSeconds (nessun range). Richiede restMinSeconds. */
   restMaxSeconds?: number | null;
+  /** true = l'obiettivo e' "il piu' possibile" (AMRAP), non un numero fisso:
+   *  in quel caso targetMinReps/targetMaxReps vanno lasciati assenti/null.
+   *  Assente/false = comportamento invariato (obiettivo numerico). */
+  isMaxEffort?: boolean;
 }
 
 export interface WorkoutExerciseInput {
@@ -70,7 +76,9 @@ export interface ReorderWorkoutsRequest {
 export interface WorkoutSet {
   id: string;
   setNumber: number;
-  targetMinReps: number;
+  /** null quando isMaxEffort e' true: uno sforzo massimo (AMRAP) non ha un
+   *  obiettivo numerico di ripetizioni. */
+  targetMinReps: number | null;
   /** null = nessun range: l'obiettivo e' il singolo valore targetMinReps. */
   targetMaxReps: number | null;
   targetWeight: number | null;
@@ -79,6 +87,9 @@ export interface WorkoutSet {
   /** null = nessun range: il recupero e' il singolo valore restMinSeconds
    *  (o non specificato se anche restMinSeconds e' null). */
   restMaxSeconds: number | null;
+  /** true = l'obiettivo e' "il piu' possibile" (AMRAP), non un numero fisso;
+   *  in quel caso targetMinReps/targetMaxReps sono null. */
+  isMaxEffort: boolean;
 }
 
 export interface WorkoutExercise {

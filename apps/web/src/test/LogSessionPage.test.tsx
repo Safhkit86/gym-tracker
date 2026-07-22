@@ -130,4 +130,42 @@ describe("LogSessionPage", () => {
 
     expect(await screen.findByText(/aumenta il carico/i)).toBeInTheDocument();
   });
+
+  it("per un set a sforzo massimo mostra 'AMRAP' e parte con reps effettive vuote", async () => {
+    const amrapWorkout = {
+      ...WORKOUT_DETAIL,
+      exercises: [
+        {
+          ...WORKOUT_DETAIL.exercises[0],
+          sets: [
+            {
+              id: "s1",
+              setNumber: 1,
+              targetMinReps: null,
+              targetMaxReps: null,
+              targetWeight: 80,
+              restMinSeconds: null,
+              restMaxSeconds: null,
+              isMaxEffort: true,
+            },
+          ],
+        },
+      ],
+    };
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: amrapWorkout },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+      </Routes>,
+      ["/workouts/w1/log"]
+    );
+
+    expect(await screen.findByText(/il piu' possibile \(AMRAP\)/i)).toBeInTheDocument();
+    const reps = screen.getByLabelText(/reps effettive/i) as HTMLInputElement;
+    expect(reps.value).toBe("");
+  });
 });

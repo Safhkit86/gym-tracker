@@ -11,6 +11,10 @@ interface SessionSetForm {
   targetMinReps: number | null;
   targetMaxReps: number | null;
   targetWeight: number | null;
+  /** Snapshot locale (mai inviato a progress-service, che continua a
+   *  ricevere solo targetMinReps/targetMaxReps): usato solo per mostrare
+   *  "Max sforzo" invece di "—" nel testo dell'obiettivo. */
+  isMaxEffort: boolean;
   actualReps: string;
   actualWeight: string;
   actualRpe: string;
@@ -41,9 +45,11 @@ function buildInitialExercises(workout: WorkoutDetail): SessionExerciseForm[] {
       targetMinReps: set.targetMinReps,
       targetMaxReps: set.targetMaxReps,
       targetWeight: set.targetWeight,
+      isMaxEffort: set.isMaxEffort,
       // Precompilato con le rep minime: e' il valore prescritto sempre presente,
-      // le massime sono solo l'estremo superiore di un range opzionale.
-      actualReps: String(set.targetMinReps),
+      // le massime sono solo l'estremo superiore di un range opzionale. Per
+      // uno sforzo massimo non c'e' un numero da precompilare: campo vuoto.
+      actualReps: set.isMaxEffort ? "" : String(set.targetMinReps),
       actualWeight: set.targetWeight !== null ? String(set.targetWeight) : "",
       actualRpe: "",
     })),
@@ -204,12 +210,15 @@ export function LogSessionPage() {
               <div key={setIndex} className="set-form-row">
                 <span>
                   Set {set.setNumber} — obiettivo:{" "}
-                  {set.targetMinReps === null
-                    ? "—"
-                    : set.targetMaxReps !== null
-                      ? `${set.targetMinReps}-${set.targetMaxReps}`
-                      : set.targetMinReps}{" "}
-                  reps
+                  {set.isMaxEffort
+                    ? "il piu' possibile (AMRAP)"
+                    : `${
+                        set.targetMinReps === null
+                          ? "—"
+                          : set.targetMaxReps !== null
+                            ? `${set.targetMinReps}-${set.targetMaxReps}`
+                            : set.targetMinReps
+                      } reps`}
                   {set.targetWeight !== null ? ` a ${set.targetWeight} kg` : " a corpo libero"}
                 </span>
                 <label>

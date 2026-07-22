@@ -10,6 +10,9 @@ export interface SetForm {
   /** Vuoto = nessun range: il recupero e' il singolo valore restMinSeconds
    *  (o non specificato se anche restMinSeconds e' vuoto). Richiede restMinSeconds. */
   restMaxSeconds: string;
+  /** true = sforzo massimo (AMRAP): targetMinReps/targetMaxReps vengono
+   *  ignorati e non inviati al server. */
+  isMaxEffort: boolean;
 }
 
 export interface ExerciseForm {
@@ -33,6 +36,7 @@ export function emptySet(): SetForm {
     targetWeight: "",
     restMinSeconds: "",
     restMaxSeconds: "",
+    isMaxEffort: false,
   };
 }
 
@@ -80,11 +84,17 @@ export function toWorkoutInput(
         : undefined,
       sets: exercise.sets.map((set, setIndex) => ({
         setNumber: setIndex + 1,
-        targetMinReps: Number(set.targetMinReps),
-        targetMaxReps: set.targetMaxReps.trim() ? Number(set.targetMaxReps) : undefined,
+        targetMinReps: set.isMaxEffort
+          ? undefined
+          : set.targetMinReps.trim()
+            ? Number(set.targetMinReps)
+            : undefined,
+        targetMaxReps:
+          set.isMaxEffort || !set.targetMaxReps.trim() ? undefined : Number(set.targetMaxReps),
         targetWeight: set.targetWeight.trim() ? Number(set.targetWeight) : undefined,
         restMinSeconds: set.restMinSeconds.trim() ? Number(set.restMinSeconds) : undefined,
         restMaxSeconds: set.restMaxSeconds.trim() ? Number(set.restMaxSeconds) : undefined,
+        isMaxEffort: set.isMaxEffort,
       })),
     })),
   };
@@ -110,11 +120,12 @@ export function workoutDetailToFormValues(workout: WorkoutDetail): {
       sets: [...exercise.sets]
         .sort((a, b) => a.setNumber - b.setNumber)
         .map((set) => ({
-          targetMinReps: String(set.targetMinReps),
+          targetMinReps: set.targetMinReps !== null ? String(set.targetMinReps) : "",
           targetMaxReps: set.targetMaxReps !== null ? String(set.targetMaxReps) : "",
           targetWeight: set.targetWeight !== null ? String(set.targetWeight) : "",
           restMinSeconds: set.restMinSeconds !== null ? String(set.restMinSeconds) : "",
           restMaxSeconds: set.restMaxSeconds !== null ? String(set.restMaxSeconds) : "",
+          isMaxEffort: set.isMaxEffort ?? false,
         })),
     }));
   return { name: workout.name, notes: workout.notes ?? "", exercises };

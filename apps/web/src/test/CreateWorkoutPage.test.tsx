@@ -153,6 +153,49 @@ describe("CreateWorkoutPage", () => {
     expect(screen.getByLabelText("Nome")).not.toHaveClass("invalid");
   });
 
+  it("selezionando 'Max sforzo (AMRAP)' nasconde rep minime/massime e non le invia", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/exercises") && m === "GET", body: [FAKE_EXERCISE] },
+      {
+        match: (u, m) => u.endsWith("/workouts") && m === "POST",
+        status: 201,
+        body: {
+          id: "w1",
+          name: "Push day",
+          notes: null,
+          exercises: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    ]);
+
+    renderWithProviders(<CreateWorkoutPage />, ["/workouts/new"]);
+
+    await screen.findByLabelText("Esercizio");
+    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Trazioni day" } });
+    expect(screen.getByLabelText("Rep minime")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Max sforzo (AMRAP)"));
+    expect(screen.queryByLabelText("Rep minime")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Rep massime (opzionale)")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /crea scheda/i }));
+
+    await waitFor(() => {
+      const postCall = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+      expect(postCall).toBeDefined();
+    });
+
+    const postCall = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    const body = JSON.parse((postCall?.[1]?.body as string) ?? "{}");
+    const sentSet = body.exercises[0].sets[0];
+    expect(sentSet.isMaxEffort).toBe(true);
+    expect(sentSet.targetMinReps).toBeUndefined();
+    expect(sentSet.targetMaxReps).toBeUndefined();
+  });
+
   it("mostra la descrizione dell'esercizio selezionato e raggruppa il catalogo per gruppo muscolare", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },

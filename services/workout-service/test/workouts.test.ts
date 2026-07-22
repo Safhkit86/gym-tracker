@@ -205,6 +205,63 @@ describe("POST /workouts", () => {
     expect(response.status).toBe(400);
     expect(response.body.code).toBe("VALIDATION_ERROR");
   });
+
+  it("crea un set a sforzo massimo (AMRAP) senza rep minime/massime", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const exerciseId = await getExerciseId(app, token, "Panca piana");
+
+    const payload = workoutPayload(exerciseId);
+    payload.exercises[0].sets = [{ setNumber: 1, isMaxEffort: true, targetWeight: 40 }];
+
+    const response = await request(app)
+      .post("/workouts")
+      .set("Authorization", `Bearer ${token}`)
+      .send(payload);
+
+    expect(response.status).toBe(201);
+    expect(response.body.exercises[0].sets[0]).toMatchObject({
+      isMaxEffort: true,
+      targetMinReps: null,
+      targetMaxReps: null,
+    });
+  });
+
+  it("rifiuta un set senza rep minime quando non e' a sforzo massimo con 400", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const exerciseId = await getExerciseId(app, token, "Panca piana");
+
+    const payload = workoutPayload(exerciseId);
+    payload.exercises[0].sets = [{ setNumber: 1, targetWeight: 40 }];
+
+    const response = await request(app)
+      .post("/workouts")
+      .set("Authorization", `Bearer ${token}`)
+      .send(payload);
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("rifiuta rep massime su un set a sforzo massimo con 400", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const exerciseId = await getExerciseId(app, token, "Panca piana");
+
+    const payload = workoutPayload(exerciseId);
+    payload.exercises[0].sets = [
+      { setNumber: 1, isMaxEffort: true, targetMaxReps: 12, targetWeight: 40 },
+    ];
+
+    const response = await request(app)
+      .post("/workouts")
+      .set("Authorization", `Bearer ${token}`)
+      .send(payload);
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe("VALIDATION_ERROR");
+  });
 });
 
 describe("GET /workouts e /workouts/:id", () => {
