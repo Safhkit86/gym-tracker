@@ -5,14 +5,24 @@ import { authenticate } from "../middleware/authenticate.js";
 import { UnauthorizedError } from "../errors.js";
 import type { SessionService } from "../domain/session-service.js";
 
-const setSchema = z.object({
-  setNumber: z.number().int().positive(),
-  /** Snapshot della prescrizione al momento del log; assente per log liberi. */
-  targetReps: z.number().int().positive().nullish(),
-  actualReps: z.number().int().nonnegative(),
-  actualWeight: z.number().positive().nullish(),
-  actualRpe: z.number().int().min(1).max(10).nullish(),
-});
+const setSchema = z
+  .object({
+    setNumber: z.number().int().positive(),
+    /** Snapshot della prescrizione al momento del log; assente per log liberi. */
+    targetMinReps: z.number().int().positive().nullish(),
+    /** Snapshot della prescrizione al momento del log; assente se non era un range. */
+    targetMaxReps: z.number().int().positive().nullish(),
+    actualReps: z.number().int().nonnegative(),
+    actualWeight: z.number().positive().nullish(),
+    actualRpe: z.number().int().min(1).max(10).nullish(),
+  })
+  .refine(
+    (set) =>
+      set.targetMaxReps == null ||
+      set.targetMinReps == null ||
+      set.targetMaxReps >= set.targetMinReps,
+    "Le rep massime devono essere maggiori o uguali alle rep minime."
+  );
 
 const exerciseSchema = z.object({
   exerciseId: z.string().uuid(),

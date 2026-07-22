@@ -1,7 +1,9 @@
 import type { Exercise, WorkoutDetail, WorkoutInput } from "@gym-tracker/shared";
 
 export interface SetForm {
-  targetReps: string;
+  targetMinReps: string;
+  /** Vuoto = nessun range: l'obiettivo e' il singolo valore targetMinReps. */
+  targetMaxReps: string;
   targetWeight: string;
   restSeconds: string;
 }
@@ -21,7 +23,7 @@ export interface ExerciseForm {
 }
 
 export function emptySet(): SetForm {
-  return { targetReps: "", targetWeight: "", restSeconds: "" };
+  return { targetMinReps: "", targetMaxReps: "", targetWeight: "", restSeconds: "" };
 }
 
 export function emptyExercise(defaultExerciseId: string): ExerciseForm {
@@ -68,7 +70,8 @@ export function toWorkoutInput(
         : undefined,
       sets: exercise.sets.map((set, setIndex) => ({
         setNumber: setIndex + 1,
-        targetReps: Number(set.targetReps),
+        targetMinReps: Number(set.targetMinReps),
+        targetMaxReps: set.targetMaxReps.trim() ? Number(set.targetMaxReps) : undefined,
         targetWeight: set.targetWeight.trim() ? Number(set.targetWeight) : undefined,
         restSeconds: set.restSeconds.trim() ? Number(set.restSeconds) : undefined,
       })),
@@ -96,7 +99,8 @@ export function workoutDetailToFormValues(workout: WorkoutDetail): {
       sets: [...exercise.sets]
         .sort((a, b) => a.setNumber - b.setNumber)
         .map((set) => ({
-          targetReps: String(set.targetReps),
+          targetMinReps: String(set.targetMinReps),
+          targetMaxReps: set.targetMaxReps !== null ? String(set.targetMaxReps) : "",
           targetWeight: set.targetWeight !== null ? String(set.targetWeight) : "",
           restSeconds: set.restSeconds !== null ? String(set.restSeconds) : "",
         })),

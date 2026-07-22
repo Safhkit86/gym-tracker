@@ -12,7 +12,9 @@
 export interface SessionSetInput {
   setNumber: number;
   /** Snapshot della prescrizione al momento del log; null per log liberi. */
-  targetReps?: number | null;
+  targetMinReps?: number | null;
+  /** Snapshot della prescrizione al momento del log; null se non era un range. */
+  targetMaxReps?: number | null;
   actualReps: number;
   /** kg; null = a corpo libero. */
   actualWeight?: number | null;
@@ -42,7 +44,8 @@ export interface SessionInput {
 export interface SessionSet {
   id: string;
   setNumber: number;
-  targetReps: number | null;
+  targetMinReps: number | null;
+  targetMaxReps: number | null;
   actualReps: number;
   actualWeight: number | null;
   actualRpe: number | null;

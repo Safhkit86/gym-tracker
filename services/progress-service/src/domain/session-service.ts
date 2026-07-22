@@ -102,7 +102,8 @@ function normalize(input: SessionInput): NormalizedSession {
       progressionIncrement: e.progressionIncrement ?? null,
       sets: e.sets.map((s) => ({
         setNumber: s.setNumber,
-        targetReps: s.targetReps ?? null,
+        targetMinReps: s.targetMinReps ?? null,
+        targetMaxReps: s.targetMaxReps ?? null,
         actualReps: s.actualReps,
         actualWeight: s.actualWeight ?? null,
         actualRpe: s.actualRpe ?? null,

@@ -17,7 +17,7 @@ function sessionPayload(performedAt: string) {
         exerciseId: EXERCISE_ID,
         exerciseName: "Panca piana",
         progressionIncrement: 2.5,
-        sets: [{ setNumber: 1, targetReps: 10, actualReps: 10, actualWeight: 80 }],
+        sets: [{ setNumber: 1, targetMinReps: 10, actualReps: 10, actualWeight: 80 }],
       },
     ],
   };

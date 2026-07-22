@@ -5,12 +5,19 @@ import { authenticate } from "../middleware/authenticate.js";
 import { UnauthorizedError } from "../errors.js";
 import type { WorkoutService } from "../domain/workout-service.js";
 
-const setSchema = z.object({
-  setNumber: z.number().int().positive(),
-  targetReps: z.number().int().positive(),
-  targetWeight: z.number().positive().nullish(),
-  restSeconds: z.number().int().nonnegative().nullish(),
-});
+const setSchema = z
+  .object({
+    setNumber: z.number().int().positive(),
+    targetMinReps: z.number().int().positive(),
+    /** Se presente, deve essere >= targetMinReps (range di ripetizioni). */
+    targetMaxReps: z.number().int().positive().nullish(),
+    targetWeight: z.number().positive().nullish(),
+    restSeconds: z.number().int().nonnegative().nullish(),
+  })
+  .refine(
+    (set) => set.targetMaxReps == null || set.targetMaxReps >= set.targetMinReps,
+    "Le rep massime devono essere maggiori o uguali alle rep minime."
+  );
 
 const exerciseSchema = z.object({
   exerciseId: z.string().uuid(),

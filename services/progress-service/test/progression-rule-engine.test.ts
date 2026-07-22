@@ -7,22 +7,27 @@ function session(
   performedAt: string,
   sets: Array<{
     setNumber: number;
-    targetReps: number | null;
+    targetMinReps: number | null;
+    targetMaxReps?: number | null;
     actualReps: number;
     actualWeight: number | null;
   }>
 ): ExerciseSessionSnapshot {
-  return { sessionId, performedAt, sets };
+  return {
+    sessionId,
+    performedAt,
+    sets: sets.map((s) => ({ ...s, targetMaxReps: s.targetMaxReps ?? null })),
+  };
 }
 
 const QUALIFYING_WEIGHTED = [
-  { setNumber: 1, targetReps: 10, actualReps: 10, actualWeight: 80 },
-  { setNumber: 2, targetReps: 10, actualReps: 12, actualWeight: 80 },
+  { setNumber: 1, targetMinReps: 10, actualReps: 10, actualWeight: 80 },
+  { setNumber: 2, targetMinReps: 10, actualReps: 12, actualWeight: 80 },
 ];
 
 const QUALIFYING_BODYWEIGHT = [
-  { setNumber: 1, targetReps: 8, actualReps: 9, actualWeight: null },
-  { setNumber: 2, targetReps: 8, actualReps: 8, actualWeight: null },
+  { setNumber: 1, targetMinReps: 8, actualReps: 9, actualWeight: null },
+  { setNumber: 2, targetMinReps: 8, actualReps: 8, actualWeight: null },
 ];
 
 describe("evaluateProgression", () => {
@@ -67,8 +72,8 @@ describe("evaluateProgression", () => {
 
   it("non propone nulla se il peso non e' uniforme tra i set di una sessione", () => {
     const nonUniform = [
-      { setNumber: 1, targetReps: 10, actualReps: 10, actualWeight: 80 },
-      { setNumber: 2, targetReps: 10, actualReps: 10, actualWeight: 82.5 },
+      { setNumber: 1, targetMinReps: 10, actualReps: 10, actualWeight: 80 },
+      { setNumber: 2, targetMinReps: 10, actualReps: 10, actualWeight: 82.5 },
     ];
     const history = [
       session("s2", "2026-07-10", nonUniform),
@@ -90,7 +95,7 @@ describe("evaluateProgression", () => {
     const history = [
       session("s2", "2026-07-10", [
         ...QUALIFYING_WEIGHTED,
-        { setNumber: 3, targetReps: 10, actualReps: 10, actualWeight: 80 },
+        { setNumber: 3, targetMinReps: 10, actualReps: 10, actualWeight: 80 },
       ]),
       session("s1", "2026-07-03", QUALIFYING_WEIGHTED),
     ];
@@ -99,8 +104,8 @@ describe("evaluateProgression", () => {
 
   it("non propone nulla se un set non ha raggiunto l'obiettivo di ripetizioni", () => {
     const shortfall = [
-      { setNumber: 1, targetReps: 10, actualReps: 8, actualWeight: 80 },
-      { setNumber: 2, targetReps: 10, actualReps: 10, actualWeight: 80 },
+      { setNumber: 1, targetMinReps: 10, actualReps: 8, actualWeight: 80 },
+      { setNumber: 2, targetMinReps: 10, actualReps: 10, actualWeight: 80 },
     ];
     const history = [
       session("s2", "2026-07-10", shortfall),
@@ -110,8 +115,34 @@ describe("evaluateProgression", () => {
   });
 
   it("non propone nulla se nessun set ha un obiettivo di ripetizioni (log libero)", () => {
-    const freeform = [{ setNumber: 1, targetReps: null, actualReps: 10, actualWeight: 80 }];
+    const freeform = [{ setNumber: 1, targetMinReps: null, actualReps: 10, actualWeight: 80 }];
     const history = [session("s2", "2026-07-10", freeform), session("s1", "2026-07-03", freeform)];
     expect(evaluateProgression(history, 2.5)).toBeNull();
+  });
+
+  it("con un range, suggerisce solo se si raggiungono le rep massime (non basta il minimo)", () => {
+    const onlyMinimumMet = [
+      { setNumber: 1, targetMinReps: 8, targetMaxReps: 12, actualReps: 8, actualWeight: 80 },
+      { setNumber: 2, targetMinReps: 8, targetMaxReps: 12, actualReps: 8, actualWeight: 80 },
+    ];
+    const history = [
+      session("s2", "2026-07-10", onlyMinimumMet),
+      session("s1", "2026-07-03", onlyMinimumMet),
+    ];
+    expect(evaluateProgression(history, 2.5)).toBeNull();
+  });
+
+  it("con un range, suggerisce increase_weight quando si raggiungono le rep massime", () => {
+    const maxMet = [
+      { setNumber: 1, targetMinReps: 8, targetMaxReps: 12, actualReps: 12, actualWeight: 80 },
+      { setNumber: 2, targetMinReps: 8, targetMaxReps: 12, actualReps: 12, actualWeight: 80 },
+    ];
+    const history = [session("s2", "2026-07-10", maxMet), session("s1", "2026-07-03", maxMet)];
+    const result = evaluateProgression(history, 2.5);
+    expect(result).toMatchObject({
+      suggestionType: "increase_weight",
+      previousValue: 80,
+      suggestedValue: 82.5,
+    });
   });
 });

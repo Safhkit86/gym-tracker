@@ -12,7 +12,8 @@ import type { Database } from "../db/types.js";
 
 export interface NormalizedSessionSet {
   setNumber: number;
-  targetReps: number | null;
+  targetMinReps: number | null;
+  targetMaxReps: number | null;
   actualReps: number;
   actualWeight: number | null;
   actualRpe: number | null;
@@ -37,7 +38,8 @@ export interface NormalizedSession {
 /** Un set eseguito, per il motore di regole (senza il nome esercizio: gia' noto al chiamante). */
 export interface HistoricalSet {
   setNumber: number;
-  targetReps: number | null;
+  targetMinReps: number | null;
+  targetMaxReps: number | null;
   actualReps: number;
   actualWeight: number | null;
 }
@@ -95,7 +97,8 @@ export class KyselySessionRepository implements SessionRepository {
               exercise_name: ex.exerciseName,
               workout_exercise_id: ex.workoutExerciseId,
               set_number: s.setNumber,
-              target_reps: s.targetReps,
+              target_min_reps: s.targetMinReps,
+              target_max_reps: s.targetMaxReps,
               progression_increment: ex.progressionIncrement,
               actual_reps: s.actualReps,
               actual_weight: s.actualWeight,
@@ -168,7 +171,8 @@ export class KyselySessionRepository implements SessionRepository {
       const set: SessionSet = {
         id: s.id,
         setNumber: s.set_number,
-        targetReps: s.target_reps,
+        targetMinReps: s.target_min_reps,
+        targetMaxReps: s.target_max_reps,
         actualReps: s.actual_reps,
         actualWeight: s.actual_weight === null ? null : Number(s.actual_weight),
         actualRpe: s.actual_rpe,
@@ -228,7 +232,14 @@ export class KyselySessionRepository implements SessionRepository {
     const sessionIds = sessions.map((s) => s.id);
     const setRows = await this.db
       .selectFrom("session_sets")
-      .select(["session_id", "set_number", "target_reps", "actual_reps", "actual_weight"])
+      .select([
+        "session_id",
+        "set_number",
+        "target_min_reps",
+        "target_max_reps",
+        "actual_reps",
+        "actual_weight",
+      ])
       .where("session_id", "in", sessionIds)
       .where("exercise_id", "=", exerciseId)
       .orderBy("set_number")
@@ -239,7 +250,8 @@ export class KyselySessionRepository implements SessionRepository {
       const list = setsBySession.get(s.session_id) ?? [];
       list.push({
         setNumber: s.set_number,
-        targetReps: s.target_reps,
+        targetMinReps: s.target_min_reps,
+        targetMaxReps: s.target_max_reps,
         actualReps: s.actual_reps,
         actualWeight: s.actual_weight === null ? null : Number(s.actual_weight),
       });
@@ -286,7 +298,8 @@ export class InMemorySessionRepository implements SessionRepository {
         sets: ex.sets.map((s) => ({
           id: randomUUID(),
           setNumber: s.setNumber,
-          targetReps: s.targetReps,
+          targetMinReps: s.targetMinReps,
+          targetMaxReps: s.targetMaxReps,
           actualReps: s.actualReps,
           actualWeight: s.actualWeight,
           actualRpe: s.actualRpe,
@@ -353,7 +366,8 @@ export class InMemorySessionRepository implements SessionRepository {
           performedAt: s.performedAt,
           sets: (exercise?.sets ?? []).map((set) => ({
             setNumber: set.setNumber,
-            targetReps: set.targetReps,
+            targetMinReps: set.targetMinReps,
+            targetMaxReps: set.targetMaxReps,
             actualReps: set.actualReps,
             actualWeight: set.actualWeight,
           })),

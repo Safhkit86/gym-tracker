@@ -109,7 +109,16 @@ describe("WorkoutsListPage", () => {
           notes: null,
           restSeconds: null,
           progressionIncrement: null,
-          sets: [{ id: "s1", setNumber: 1, targetReps: 10, targetWeight: 40, restSeconds: null }],
+          sets: [
+            {
+              id: "s1",
+              setNumber: 1,
+              targetMinReps: 10,
+              targetMaxReps: null,
+              targetWeight: 40,
+              restSeconds: null,
+            },
+          ],
         },
       ],
       createdAt: new Date().toISOString(),

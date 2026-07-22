@@ -13,7 +13,8 @@ import type { Database } from "../db/types.js";
 
 export interface NormalizedSet {
   setNumber: number;
-  targetReps: number;
+  targetMinReps: number;
+  targetMaxReps: number | null;
   targetWeight: number | null;
   restSeconds: number | null;
 }
@@ -170,7 +171,8 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
       list.push({
         id: s.id,
         setNumber: s.set_number,
-        targetReps: s.target_reps,
+        targetMinReps: s.target_min_reps,
+        targetMaxReps: s.target_max_reps,
         targetWeight: s.target_weight === null ? null : Number(s.target_weight),
         restSeconds: s.rest_seconds,
       });
@@ -268,7 +270,8 @@ async function insertChildren(
         .values({
           workout_exercise_id: we.id,
           set_number: s.setNumber,
-          target_reps: s.targetReps,
+          target_min_reps: s.targetMinReps,
+          target_max_reps: s.targetMaxReps,
           target_weight: s.targetWeight,
           rest_seconds: s.restSeconds,
         })
@@ -389,7 +392,8 @@ function buildExercises(exercises: NormalizedExercise[]): WorkoutExercise[] {
     sets: ex.sets.map((s) => ({
       id: randomUUID(),
       setNumber: s.setNumber,
-      targetReps: s.targetReps,
+      targetMinReps: s.targetMinReps,
+      targetMaxReps: s.targetMaxReps,
       targetWeight: s.targetWeight,
       restSeconds: s.restSeconds,
     })),

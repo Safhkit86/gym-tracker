@@ -25,7 +25,9 @@ export interface CreateExerciseRequest {
 
 export interface WorkoutSetInput {
   setNumber: number;
-  targetReps: number;
+  targetMinReps: number;
+  /** Se assente/null, l'obiettivo e' il singolo valore targetMinReps (nessun range). */
+  targetMaxReps?: number | null;
   /** kg; null = a corpo libero */
   targetWeight?: number | null;
   restSeconds?: number | null;
@@ -64,7 +66,9 @@ export interface ReorderWorkoutsRequest {
 export interface WorkoutSet {
   id: string;
   setNumber: number;
-  targetReps: number;
+  targetMinReps: number;
+  /** null = nessun range: l'obiettivo e' il singolo valore targetMinReps. */
+  targetMaxReps: number | null;
   targetWeight: number | null;
   restSeconds: number | null;
 }

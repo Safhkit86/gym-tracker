@@ -19,7 +19,15 @@ const SESSION_DETAIL = {
       workoutExerciseId: "we1",
       progressionIncrement: 2.5,
       sets: [
-        { id: "s1", setNumber: 1, targetReps: 10, actualReps: 10, actualWeight: 80, actualRpe: 8 },
+        {
+          id: "s1",
+          setNumber: 1,
+          targetMinReps: 10,
+          targetMaxReps: null,
+          actualReps: 10,
+          actualWeight: 80,
+          actualRpe: 8,
+        },
       ],
     },
   ],

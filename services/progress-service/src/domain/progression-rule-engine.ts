@@ -41,11 +41,16 @@ export function evaluateProgression(
   const perSession: Array<{ weight: number | null; count: number; minReps: number }> = [];
 
   for (const session of recent) {
-    const qualifying = session.sets.filter((s) => s.targetReps !== null);
+    const qualifying = session.sets.filter((s) => s.targetMinReps !== null);
     if (qualifying.length === 0) {
       return null; // niente obiettivo da valutare in questa sessione
     }
-    const metAll = qualifying.every((s) => s.actualReps >= (s.targetReps as number));
+    // L'obiettivo effettivo e' il massimo se e' stato impostato un range,
+    // altrimenti il minimo (che e' l'unico valore prescritto).
+    const metAll = qualifying.every((s) => {
+      const effectiveTarget = s.targetMaxReps ?? (s.targetMinReps as number);
+      return s.actualReps >= effectiveTarget;
+    });
     if (!metAll) {
       return null;
     }

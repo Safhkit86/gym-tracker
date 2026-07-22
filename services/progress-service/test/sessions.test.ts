@@ -14,7 +14,7 @@ function sessionPayload(overrides: {
   progressionIncrement?: number | null;
   actualWeight?: number | null;
   actualReps?: number;
-  targetReps?: number | null;
+  targetMinReps?: number | null;
 }) {
   return {
     workoutId: overrides.workoutId ?? WORKOUT_ID,
@@ -30,7 +30,7 @@ function sessionPayload(overrides: {
         sets: [
           {
             setNumber: 1,
-            targetReps: overrides.targetReps ?? 10,
+            targetMinReps: overrides.targetMinReps ?? 10,
             actualReps: overrides.actualReps ?? 10,
             actualWeight: overrides.actualWeight ?? 80,
           },

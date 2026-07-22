@@ -29,7 +29,16 @@ describe("WorkoutDetailPage", () => {
         notes: null,
         restSeconds: 120,
         progressionIncrement: 2.5,
-        sets: [{ id: "s1", setNumber: 1, targetReps: 10, targetWeight: 40, restSeconds: 90 }],
+        sets: [
+          {
+            id: "s1",
+            setNumber: 1,
+            targetMinReps: 10,
+            targetMaxReps: null,
+            targetWeight: 40,
+            restSeconds: 90,
+          },
+        ],
       },
     ],
     createdAt: new Date().toISOString(),
@@ -53,7 +62,43 @@ describe("WorkoutDetailPage", () => {
     expect(await screen.findByRole("heading", { name: "Push day" })).toBeInTheDocument();
     expect(screen.getByText("Panca piana")).toBeInTheDocument();
     expect(screen.getByText("40 kg")).toBeInTheDocument();
+    expect(screen.getByText("10")).toBeInTheDocument();
     expect(screen.getByText(/recupero prima del prossimo esercizio: 120s/i)).toBeInTheDocument();
+  });
+
+  it("mostra un range 'min-max' quando le rep massime sono impostate", async () => {
+    const rangeWorkout = {
+      ...WORKOUT_DETAIL,
+      exercises: [
+        {
+          ...WORKOUT_DETAIL.exercises[0],
+          sets: [
+            {
+              id: "s1",
+              setNumber: 1,
+              targetMinReps: 8,
+              targetMaxReps: 12,
+              targetWeight: 40,
+              restSeconds: 90,
+            },
+          ],
+        },
+      ],
+    };
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: rangeWorkout },
+      { match: (u, m) => u.includes("/progression") && m === "GET", body: [] },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
+      </Routes>,
+      ["/workouts/w1"]
+    );
+
+    expect(await screen.findByText("8-12")).toBeInTheDocument();
   });
 
   it("mostra il link per registrare una sessione", async () => {
@@ -242,7 +287,7 @@ describe("WorkoutDetailPage", () => {
           position: 1,
           restSeconds: 120,
           progressionIncrement: 2.5,
-          sets: [{ setNumber: 1, targetReps: 10, targetWeight: 40, restSeconds: 90 }],
+          sets: [{ setNumber: 1, targetMinReps: 10, targetWeight: 40, restSeconds: 90 }],
         },
       ],
     });

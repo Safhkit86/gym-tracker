@@ -45,7 +45,9 @@ export interface WorkoutSetsTable {
   id: Generated<string>;
   workout_exercise_id: string;
   set_number: number;
-  target_reps: number;
+  target_min_reps: number;
+  /** null = nessun range: l'obiettivo e' il singolo valore target_min_reps. */
+  target_max_reps: number | null;
   target_weight: ColumnType<string | null, number | null, number | null>;
   rest_seconds: number | null;
 }
