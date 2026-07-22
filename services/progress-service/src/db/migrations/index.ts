@@ -1,6 +1,7 @@
 import type { Migration } from "kysely";
 import * as createProgressTables from "./001-create-progress-tables.js";
 import * as addMinMaxReps from "./002-add-min-max-reps.js";
+import * as addRestSecondsSnapshot from "./003-add-rest-seconds-snapshot.js";
 
 /**
  * Registro statico delle migrazioni (chiavi ordinate). Preferito a
@@ -10,4 +11,5 @@ import * as addMinMaxReps from "./002-add-min-max-reps.js";
 export const migrations: Record<string, Migration> = {
   "001-create-progress-tables": createProgressTables,
   "002-add-min-max-reps": addMinMaxReps,
+  "003-add-rest-seconds-snapshot": addRestSecondsSnapshot,
 };

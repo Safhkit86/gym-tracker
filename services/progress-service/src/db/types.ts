@@ -35,6 +35,8 @@ export interface SessionSetsTable {
   target_max_reps: number | null;
   /** Snapshot di WorkoutExercise.progressionIncrement al momento del log. */
   progression_increment: ColumnType<string | null, number | null, number | null>;
+  /** Snapshot di WorkoutExercise.restSeconds al momento del log. */
+  rest_seconds: number | null;
   actual_reps: number;
   actual_weight: ColumnType<string | null, number | null, number | null>;
   actual_rpe: number | null;

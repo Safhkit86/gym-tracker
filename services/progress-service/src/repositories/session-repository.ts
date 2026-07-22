@@ -1,11 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Kysely } from "kysely";
-import type {
-  SessionDetail,
-  SessionExercise,
-  SessionSet,
-  SessionSummary,
-} from "@gym-tracker/shared";
+import type { SessionDetail, SessionExercise, SessionSet } from "@gym-tracker/shared";
 import type { Database } from "../db/types.js";
 
 // --- Input normalizzato dal domain (owner gia' noto, nessuna validazione DB) ---
@@ -24,6 +19,7 @@ export interface NormalizedSessionExercise {
   exerciseName: string;
   workoutExerciseId: string | null;
   progressionIncrement: number | null;
+  restSeconds: number | null;
   sets: NormalizedSessionSet[];
 }
 
@@ -53,7 +49,9 @@ export interface ExerciseSessionSnapshot {
 
 export interface SessionRepository {
   create(ownerId: string, input: NormalizedSession): Promise<SessionDetail>;
-  listByOwner(ownerId: string): Promise<SessionSummary[]>;
+  /** Storico completo (esercizi + set), non solo un riepilogo: la pagina
+   *  storico li mostra gia' espansi, senza un secondo giro per i dettagli. */
+  listByOwner(ownerId: string): Promise<SessionDetail[]>;
   findDetail(ownerId: string, id: string): Promise<SessionDetail | null>;
   delete(ownerId: string, id: string): Promise<boolean>;
   /**
@@ -100,6 +98,7 @@ export class KyselySessionRepository implements SessionRepository {
               target_min_reps: s.targetMinReps,
               target_max_reps: s.targetMaxReps,
               progression_increment: ex.progressionIncrement,
+              rest_seconds: ex.restSeconds,
               actual_reps: s.actualReps,
               actual_weight: s.actualWeight,
               actual_rpe: s.actualRpe,
@@ -113,25 +112,69 @@ export class KyselySessionRepository implements SessionRepository {
     return (await this.findDetail(ownerId, id)) as SessionDetail;
   }
 
-  async listByOwner(ownerId: string): Promise<SessionSummary[]> {
-    const rows = await this.db
-      .selectFrom("workout_sessions as ws")
-      .leftJoin("session_sets as ss", "ss.session_id", "ws.id")
-      .select(["ws.id", "ws.workout_id", "ws.workout_name", "ws.performed_at", "ws.created_at"])
-      .select((eb) => eb.fn.count("ss.exercise_id").distinct().as("exercise_count"))
-      .where("ws.owner_id", "=", ownerId)
-      .groupBy("ws.id")
-      .orderBy("ws.performed_at", "desc")
-      .orderBy("ws.created_at", "desc")
+  async listByOwner(ownerId: string): Promise<SessionDetail[]> {
+    const sessions = await this.db
+      .selectFrom("workout_sessions")
+      .selectAll()
+      .where("owner_id", "=", ownerId)
+      .orderBy("performed_at", "desc")
+      .orderBy("created_at", "desc")
+      .execute();
+    if (sessions.length === 0) {
+      return [];
+    }
+
+    const setRows = await this.db
+      .selectFrom("session_sets")
+      .selectAll()
+      .where(
+        "session_id",
+        "in",
+        sessions.map((s) => s.id)
+      )
+      .orderBy("created_at")
+      .orderBy("set_number")
       .execute();
 
-    return rows.map((r) => ({
-      id: r.id,
-      workoutId: r.workout_id,
-      workoutName: r.workout_name,
-      performedAt: r.performed_at.toISOString(),
-      exerciseCount: Number(r.exercise_count),
-      createdAt: r.created_at.toISOString(),
+    const exercisesBySession = new Map<string, Map<string, SessionExercise>>();
+    for (const s of setRows) {
+      let exercisesByExerciseId = exercisesBySession.get(s.session_id);
+      if (!exercisesByExerciseId) {
+        exercisesByExerciseId = new Map();
+        exercisesBySession.set(s.session_id, exercisesByExerciseId);
+      }
+      let exercise = exercisesByExerciseId.get(s.exercise_id);
+      if (!exercise) {
+        exercise = {
+          exerciseId: s.exercise_id,
+          exerciseName: s.exercise_name,
+          workoutExerciseId: s.workout_exercise_id,
+          progressionIncrement:
+            s.progression_increment === null ? null : Number(s.progression_increment),
+          restSeconds: s.rest_seconds,
+          sets: [],
+        };
+        exercisesByExerciseId.set(s.exercise_id, exercise);
+      }
+      exercise.sets.push({
+        id: s.id,
+        setNumber: s.set_number,
+        targetMinReps: s.target_min_reps,
+        targetMaxReps: s.target_max_reps,
+        actualReps: s.actual_reps,
+        actualWeight: s.actual_weight === null ? null : Number(s.actual_weight),
+        actualRpe: s.actual_rpe,
+      });
+    }
+
+    return sessions.map((session) => ({
+      id: session.id,
+      workoutId: session.workout_id,
+      workoutName: session.workout_name,
+      performedAt: session.performed_at.toISOString(),
+      notes: session.notes,
+      exercises: [...(exercisesBySession.get(session.id)?.values() ?? [])],
+      createdAt: session.created_at.toISOString(),
     }));
   }
 
@@ -164,6 +207,7 @@ export class KyselySessionRepository implements SessionRepository {
           workoutExerciseId: s.workout_exercise_id,
           progressionIncrement:
             s.progression_increment === null ? null : Number(s.progression_increment),
+          restSeconds: s.rest_seconds,
           sets: [],
         };
         exercisesByExerciseId.set(s.exercise_id, exercise);
@@ -295,6 +339,7 @@ export class InMemorySessionRepository implements SessionRepository {
         exerciseName: ex.exerciseName,
         workoutExerciseId: ex.workoutExerciseId,
         progressionIncrement: ex.progressionIncrement,
+        restSeconds: ex.restSeconds,
         sets: ex.sets.map((s) => ({
           id: randomUUID(),
           setNumber: s.setNumber,
@@ -311,21 +356,14 @@ export class InMemorySessionRepository implements SessionRepository {
     return toDetail(stored);
   }
 
-  async listByOwner(ownerId: string): Promise<SessionSummary[]> {
+  async listByOwner(ownerId: string): Promise<SessionDetail[]> {
     return [...this.byId.values()]
       .filter((s) => s.ownerId === ownerId)
       .sort((a, b) => {
         const byPerformed = b.performedAt.localeCompare(a.performedAt);
         return byPerformed !== 0 ? byPerformed : b.createdAt.getTime() - a.createdAt.getTime();
       })
-      .map((s) => ({
-        id: s.id,
-        workoutId: s.workoutId,
-        workoutName: s.workoutName,
-        performedAt: s.performedAt,
-        exerciseCount: s.exercises.length,
-        createdAt: s.createdAt.toISOString(),
-      }));
+      .map(toDetail);
   }
 
   async findDetail(ownerId: string, id: string): Promise<SessionDetail | null> {

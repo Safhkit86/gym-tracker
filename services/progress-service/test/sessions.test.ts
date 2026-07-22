@@ -12,6 +12,7 @@ function sessionPayload(overrides: {
   workoutId?: string;
   performedAt: string;
   progressionIncrement?: number | null;
+  restSeconds?: number | null;
   actualWeight?: number | null;
   actualReps?: number;
   targetMinReps?: number | null;
@@ -27,6 +28,7 @@ function sessionPayload(overrides: {
         exerciseName: "Panca piana",
         progressionIncrement:
           overrides.progressionIncrement === undefined ? 2.5 : overrides.progressionIncrement,
+        restSeconds: overrides.restSeconds === undefined ? 90 : overrides.restSeconds,
         sets: [
           {
             setNumber: 1,
@@ -213,11 +215,19 @@ describe("GET /sessions e /sessions/:id", () => {
     sessionId = created.body.id;
   });
 
-  it("elenca solo le sessioni dell'utente, con exerciseCount", async () => {
+  it("elenca solo le sessioni dell'utente, gia' con esercizi e set", async () => {
     const response = await request(app).get("/sessions").set("Authorization", `Bearer ${tokenA}`);
     expect(response.status).toBe(200);
     expect(response.body).toHaveLength(1);
-    expect(response.body[0]).toMatchObject({ workoutName: "Push day", exerciseCount: 1 });
+    expect(response.body[0]).toMatchObject({ workoutName: "Push day" });
+    expect(response.body[0].exercises[0]).toMatchObject({
+      exerciseName: "Panca piana",
+      restSeconds: 90,
+    });
+    expect(response.body[0].exercises[0].sets[0]).toMatchObject({
+      actualReps: 10,
+      actualWeight: 80,
+    });
 
     const responseB = await request(app).get("/sessions").set("Authorization", `Bearer ${tokenB}`);
     expect(responseB.body).toHaveLength(0);
