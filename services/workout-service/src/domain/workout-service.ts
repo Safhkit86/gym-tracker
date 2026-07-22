@@ -48,6 +48,10 @@ export class WorkoutService {
     }
   }
 
+  async reorder(ownerId: string, workoutIds: string[]): Promise<void> {
+    await this.workouts.reorder(ownerId, workoutIds);
+  }
+
   /** Verifica gli esercizi referenziati e risolve i loro nomi dal catalogo. */
   private async normalize(ownerId: string, input: WorkoutInput): Promise<NormalizedWorkout> {
     const exercises = input.exercises ?? [];

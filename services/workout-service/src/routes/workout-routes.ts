@@ -40,6 +40,10 @@ const workoutSchema = z.object({
     ),
 });
 
+const reorderSchema = z.object({
+  workoutIds: z.array(z.string().uuid()).min(1, "Serve almeno un id di scheda."),
+});
+
 /** Rotte delle schede, trattate come aggregato (POST/PUT dell'intera scheda). */
 export function createWorkoutRoutes(workouts: WorkoutService, tokens: AccessTokenService): Router {
   const router = Router();
@@ -76,6 +80,18 @@ export function createWorkoutRoutes(workouts: WorkoutService, tokens: AccessToke
     try {
       const detail = await workouts.get(ownerId(req), req.params.id);
       res.status(200).json(detail);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Registrata prima di PUT /workouts/:id: altrimenti Express interpreterebbe
+  // "reorder" come valore del param :id.
+  router.put("/workouts/reorder", async (req, res, next) => {
+    try {
+      const body = reorderSchema.parse(req.body);
+      await workouts.reorder(ownerId(req), body.workoutIds);
+      res.status(204).send();
     } catch (err) {
       next(err);
     }

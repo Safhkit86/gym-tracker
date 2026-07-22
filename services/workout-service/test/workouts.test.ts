@@ -229,6 +229,75 @@ describe("PUT /workouts/:id", () => {
   });
 });
 
+describe("PUT /workouts/reorder", () => {
+  async function createThreeWorkouts(
+    app: ReturnType<typeof buildTestApp>["app"],
+    token: string
+  ): Promise<string[]> {
+    const exerciseId = await getExerciseId(app, token, "Panca piana");
+    const ids: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const created = await request(app)
+        .post("/workouts")
+        .set("Authorization", `Bearer ${token}`)
+        .send(workoutPayload(exerciseId));
+      ids.push(created.body.id);
+    }
+    return ids;
+  }
+
+  it("riordina le schede secondo l'array fornito", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const [first, second, third] = await createThreeWorkouts(app, token);
+
+    const reordered = await request(app)
+      .put("/workouts/reorder")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ workoutIds: [third, first, second] });
+    expect(reordered.status).toBe(204);
+
+    const list = await request(app).get("/workouts").set("Authorization", `Bearer ${token}`);
+    expect(list.body.map((w: { id: string }) => w.id)).toEqual([third, first, second]);
+  });
+
+  it("risponde 404 se un id non e' del richiedente", async () => {
+    const { app } = buildTestApp();
+    const tokenA = await bearerFor(OWNER_A);
+    const tokenB = await bearerFor(OWNER_B);
+    const [first, second] = await createThreeWorkouts(app, tokenA);
+
+    const response = await request(app)
+      .put("/workouts/reorder")
+      .set("Authorization", `Bearer ${tokenB}`)
+      .send({ workoutIds: [first, second] });
+    expect(response.status).toBe(404);
+  });
+
+  it("risponde 404 se manca uno degli id delle schede dell'utente", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const [first, second] = await createThreeWorkouts(app, token);
+
+    const response = await request(app)
+      .put("/workouts/reorder")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ workoutIds: [first, second] });
+    expect(response.status).toBe(404);
+  });
+
+  it("rifiuta un array vuoto con 400", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+
+    const response = await request(app)
+      .put("/workouts/reorder")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ workoutIds: [] });
+    expect(response.status).toBe(400);
+  });
+});
+
 describe("DELETE /workouts/:id", () => {
   it("elimina la scheda del proprietario", async () => {
     const { app } = buildTestApp();
