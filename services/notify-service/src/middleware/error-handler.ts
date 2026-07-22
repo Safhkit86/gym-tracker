@@ -4,15 +4,18 @@ import { ZodError } from "zod";
 import { AppError } from "../errors.js";
 
 function fromZodError(err: ZodError): ApiError {
+  const issues = err.issues.map((issue) => ({
+    path: issue.path.join("."),
+    message: issue.message,
+  }));
   return {
     code: "VALIDATION_ERROR",
-    message: "Dati della richiesta non validi.",
-    details: {
-      issues: err.issues.map((issue) => ({
-        path: issue.path.join("."),
-        message: issue.message,
-      })),
-    },
+    // Il messaggio del primo issue e' gia' scritto per l'utente (vedi i
+    // messaggi custom nelle zod schema delle rotte): mostrarlo com'e' invece
+    // di un generico "dati non validi" e' l'unico modo per far arrivare
+    // all'utente QUALE campo non va bene.
+    message: issues[0]?.message ?? "Dati della richiesta non validi.",
+    details: { issues },
   };
 }
 
