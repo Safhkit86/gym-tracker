@@ -49,6 +49,14 @@ main {
   padding: var(--space-6) var(--space-5) var(--space-8);
 }
 
+/* Il form scheda ha righe con piu' campi affiancati (checkbox AMRAP, rep
+   min/max, peso, recupero min/max): 44rem li spezze su piu' righe anche su
+   schermi larghi. Una main piu' ampia solo qui lascia all'auto-fit del grid
+   dei set piu' spazio per stare su una riga sola. */
+main.main-wide {
+  max-width: 64rem;
+}
+
 h1 {
   font-size: 1.75rem;
   font-weight: 700;
@@ -647,7 +655,7 @@ button.secondary:hover:not(:disabled) {
    dello schermo, senza media query dedicate. */
 .set-form-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
   gap: var(--space-3);
   align-items: end;
   padding: var(--space-3);

@@ -67,7 +67,7 @@ export function EditWorkoutPage() {
   }
 
   return (
-    <main>
+    <main className="main-wide">
       <h1>Modifica scheda</h1>
       <WorkoutForm
         catalog={catalog}
