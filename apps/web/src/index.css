@@ -120,6 +120,22 @@ select {
     box-shadow 0.15s ease;
 }
 
+input[type="checkbox"] {
+  width: 1.05rem;
+  height: 1.05rem;
+  padding: 0;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+/* Checkbox e testo affiancati, invece dello stack verticale di un <label>
+   normale (testo sopra, campo sotto): vedi "Max sforzo (AMRAP)". */
+.checkbox-field {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 input:focus-visible,
 select:focus-visible,
 button:focus-visible,

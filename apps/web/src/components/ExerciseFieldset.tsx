@@ -115,27 +115,47 @@ export function ExerciseFieldset({
         const setPath = `exercises.${exerciseIndex}.sets.${setIndex}`;
         return (
           <div key={setIndex} className="set-form-row">
-            <label>
-              Rep minime
+            <label className="checkbox-field">
               <input
-                type="number"
-                min={1}
-                className={invalidClass(setMinRepsHasError(fieldErrors, exerciseIndex, setIndex))}
-                value={set.targetMinReps}
-                onChange={(event) => onUpdateSet(setIndex, { targetMinReps: event.target.value })}
-                required
+                type="checkbox"
+                checked={set.isMaxEffort}
+                onChange={(event) => onUpdateSet(setIndex, { isMaxEffort: event.target.checked })}
               />
+              Max sforzo (AMRAP)
             </label>
-            <label>
-              Rep massime (opzionale)
-              <input
-                type="number"
-                min={1}
-                className={invalidClass(setMaxRepsHasError(fieldErrors, exerciseIndex, setIndex))}
-                value={set.targetMaxReps}
-                onChange={(event) => onUpdateSet(setIndex, { targetMaxReps: event.target.value })}
-              />
-            </label>
+            {!set.isMaxEffort && (
+              <>
+                <label>
+                  Rep minime
+                  <input
+                    type="number"
+                    min={1}
+                    className={invalidClass(
+                      setMinRepsHasError(fieldErrors, exerciseIndex, setIndex)
+                    )}
+                    value={set.targetMinReps}
+                    onChange={(event) =>
+                      onUpdateSet(setIndex, { targetMinReps: event.target.value })
+                    }
+                    required
+                  />
+                </label>
+                <label>
+                  Rep massime (opzionale)
+                  <input
+                    type="number"
+                    min={1}
+                    className={invalidClass(
+                      setMaxRepsHasError(fieldErrors, exerciseIndex, setIndex)
+                    )}
+                    value={set.targetMaxReps}
+                    onChange={(event) =>
+                      onUpdateSet(setIndex, { targetMaxReps: event.target.value })
+                    }
+                  />
+                </label>
+              </>
+            )}
             <label>
               Peso (kg)
               <input

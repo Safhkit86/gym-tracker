@@ -278,8 +278,15 @@ describe("EditWorkoutPage", () => {
     const putCall = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
     const body = JSON.parse((putCall?.[1]?.body as string) ?? "{}");
     expect(body.exercises[0].sets).toEqual([
-      { setNumber: 1, targetMinReps: 10, targetWeight: 40, restMinSeconds: 60, restMaxSeconds: 90 },
-      { setNumber: 2, targetMinReps: 8 },
+      {
+        setNumber: 1,
+        targetMinReps: 10,
+        targetWeight: 40,
+        restMinSeconds: 60,
+        restMaxSeconds: 90,
+        isMaxEffort: false,
+      },
+      { setNumber: 2, targetMinReps: 8, isMaxEffort: false },
     ]);
   });
 });

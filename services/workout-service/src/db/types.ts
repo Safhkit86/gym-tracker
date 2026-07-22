@@ -45,7 +45,9 @@ export interface WorkoutSetsTable {
   id: Generated<string>;
   workout_exercise_id: string;
   set_number: number;
-  target_min_reps: number;
+  /** null quando is_max_effort e' true: uno sforzo massimo (AMRAP) non ha
+   *  un obiettivo numerico di ripetizioni. */
+  target_min_reps: number | null;
   /** null = nessun range: l'obiettivo e' il singolo valore target_min_reps. */
   target_max_reps: number | null;
   target_weight: ColumnType<string | null, number | null, number | null>;
@@ -54,6 +56,9 @@ export interface WorkoutSetsTable {
   /** null = nessun range: il recupero e' il singolo valore rest_min_seconds
    *  (o non specificato se anche rest_min_seconds e' null). */
   rest_max_seconds: number | null;
+  /** true = l'obiettivo e' "il piu' possibile" (AMRAP), non un numero fisso;
+   *  in quel caso target_min_reps/target_max_reps sono null. */
+  is_max_effort: boolean;
 }
 
 export interface Database {

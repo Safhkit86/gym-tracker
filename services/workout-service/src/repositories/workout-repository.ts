@@ -13,11 +13,12 @@ import type { Database } from "../db/types.js";
 
 export interface NormalizedSet {
   setNumber: number;
-  targetMinReps: number;
+  targetMinReps: number | null;
   targetMaxReps: number | null;
   targetWeight: number | null;
   restMinSeconds: number | null;
   restMaxSeconds: number | null;
+  isMaxEffort: boolean;
 }
 
 export interface NormalizedExercise {
@@ -177,6 +178,7 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
         targetWeight: s.target_weight === null ? null : Number(s.target_weight),
         restMinSeconds: s.rest_min_seconds,
         restMaxSeconds: s.rest_max_seconds,
+        isMaxEffort: s.is_max_effort,
       });
       setsByExercise.set(s.workout_exercise_id, list);
     }
@@ -277,6 +279,7 @@ async function insertChildren(
           target_weight: s.targetWeight,
           rest_min_seconds: s.restMinSeconds,
           rest_max_seconds: s.restMaxSeconds,
+          is_max_effort: s.isMaxEffort,
         })
         .execute();
     }
@@ -400,6 +403,7 @@ function buildExercises(exercises: NormalizedExercise[]): WorkoutExercise[] {
       targetWeight: s.targetWeight,
       restMinSeconds: s.restMinSeconds,
       restMaxSeconds: s.restMaxSeconds,
+      isMaxEffort: s.isMaxEffort,
     })),
   }));
 }

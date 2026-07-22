@@ -8,7 +8,8 @@ import type { WorkoutService } from "../domain/workout-service.js";
 const setSchema = z
   .object({
     setNumber: z.number().int().positive(),
-    targetMinReps: z.number().int().positive(),
+    /** Obbligatorio a meno che isMaxEffort sia true (vedi refine sotto). */
+    targetMinReps: z.number().int().positive().nullish(),
     /** Se presente, deve essere >= targetMinReps (range di ripetizioni). */
     targetMaxReps: z.number().int().positive().nullish(),
     targetWeight: z.number().positive().nullish(),
@@ -17,14 +18,30 @@ const setSchema = z
     /** Se presente, richiede restMinSeconds e deve essere >= restMinSeconds
      *  (range di recupero, es. "60-90s"). */
     restMaxSeconds: z.number().int().nonnegative().nullish(),
+    /** true = sforzo massimo (AMRAP), niente obiettivo numerico di ripetizioni. */
+    isMaxEffort: z.boolean().optional().default(false),
   })
-  .refine((set) => set.targetMaxReps == null || set.targetMaxReps >= set.targetMinReps, {
-    message: "Le rep massime devono essere maggiori o uguali alle rep minime.",
-    // Path dedicato (non un campo reale) per non far scattare anche
-    // l'evidenziazione dei campi di recupero nel form: le due coppie
-    // min/max (rep, recupero) sono indipendenti.
-    path: ["_repsRange"],
+  .refine((set) => set.isMaxEffort || set.targetMinReps != null, {
+    message: "Le rep minime sono obbligatorie se l'esercizio non e' a sforzo massimo.",
+    path: ["targetMinReps"],
   })
+  .refine((set) => !set.isMaxEffort || set.targetMaxReps == null, {
+    message: "Le rep massime non hanno senso per un esercizio a sforzo massimo.",
+    path: ["targetMaxReps"],
+  })
+  .refine(
+    (set) =>
+      set.targetMaxReps == null ||
+      set.targetMinReps == null ||
+      set.targetMaxReps >= set.targetMinReps,
+    {
+      message: "Le rep massime devono essere maggiori o uguali alle rep minime.",
+      // Path dedicato (non un campo reale) per non far scattare anche
+      // l'evidenziazione dei campi di recupero nel form: le due coppie
+      // min/max (rep, recupero) sono indipendenti.
+      path: ["_repsRange"],
+    }
+  )
   .refine(
     (set) =>
       set.restMaxSeconds == null ||

@@ -104,6 +104,43 @@ describe("WorkoutDetailPage", () => {
     expect(await screen.findByText("8-12")).toBeInTheDocument();
   });
 
+  it("mostra 'Max' per un set a sforzo massimo (AMRAP)", async () => {
+    const amrapWorkout = {
+      ...WORKOUT_DETAIL,
+      exercises: [
+        {
+          ...WORKOUT_DETAIL.exercises[0],
+          sets: [
+            {
+              id: "s1",
+              setNumber: 1,
+              targetMinReps: null,
+              targetMaxReps: null,
+              targetWeight: null,
+              restMinSeconds: null,
+              restMaxSeconds: null,
+              isMaxEffort: true,
+            },
+          ],
+        },
+      ],
+    };
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: amrapWorkout },
+      { match: (u, m) => u.includes("/progression") && m === "GET", body: [] },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
+      </Routes>,
+      ["/workouts/w1"]
+    );
+
+    expect(await screen.findByText("Max")).toBeInTheDocument();
+  });
+
   it("mostra il link per registrare una sessione", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },

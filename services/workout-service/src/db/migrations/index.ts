@@ -14,6 +14,7 @@ import * as addMinMaxReps from "./012-add-min-max-reps.js";
 import * as addRestMinMaxSeconds from "./013-add-rest-min-max-seconds.js";
 import * as addVariantiPetto from "./014-add-varianti-petto.js";
 import * as addEserciziSuggeriti from "./015-add-esercizi-suggeriti.js";
+import * as addIsMaxEffort from "./016-add-is-max-effort.js";
 
 /**
  * Registro statico delle migrazioni (chiavi ordinate). Preferito a
@@ -36,4 +37,5 @@ export const migrations: Record<string, Migration> = {
   "013-add-rest-min-max-seconds": addRestMinMaxSeconds,
   "014-add-varianti-petto": addVariantiPetto,
   "015-add-esercizi-suggeriti": addEserciziSuggeriti,
+  "016-add-is-max-effort": addIsMaxEffort,
 };

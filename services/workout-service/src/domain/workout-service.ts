@@ -81,11 +81,12 @@ export class WorkoutService {
         progressionIncrement: e.progressionIncrement ?? null,
         sets: e.sets.map((s) => ({
           setNumber: s.setNumber,
-          targetMinReps: s.targetMinReps,
+          targetMinReps: s.targetMinReps ?? null,
           targetMaxReps: s.targetMaxReps ?? null,
           targetWeight: s.targetWeight ?? null,
           restMinSeconds: s.restMinSeconds ?? null,
           restMaxSeconds: s.restMaxSeconds ?? null,
+          isMaxEffort: s.isMaxEffort ?? false,
         })),
       })),
     };

@@ -36,6 +36,7 @@ describe("workoutDetailToFormValues", () => {
                 targetWeight: null,
                 restMinSeconds: null,
                 restMaxSeconds: null,
+                isMaxEffort: false,
               },
             ],
           },
@@ -71,6 +72,7 @@ describe("workoutDetailToFormValues", () => {
                 targetWeight: 60,
                 restMinSeconds: null,
                 restMaxSeconds: null,
+                isMaxEffort: false,
               },
               {
                 id: "s2a",
@@ -80,6 +82,7 @@ describe("workoutDetailToFormValues", () => {
                 targetWeight: 50,
                 restMinSeconds: null,
                 restMaxSeconds: null,
+                isMaxEffort: false,
               },
             ],
           },
@@ -100,6 +103,7 @@ describe("workoutDetailToFormValues", () => {
                 targetWeight: 40,
                 restMinSeconds: null,
                 restMaxSeconds: null,
+                isMaxEffort: false,
               },
             ],
           },
@@ -137,6 +141,7 @@ describe("workoutDetailToFormValues", () => {
                 targetWeight: null,
                 restMinSeconds: null,
                 restMaxSeconds: null,
+                isMaxEffort: false,
               },
               {
                 id: "s2",
@@ -146,6 +151,7 @@ describe("workoutDetailToFormValues", () => {
                 targetWeight: null,
                 restMinSeconds: null,
                 restMaxSeconds: null,
+                isMaxEffort: false,
               },
             ],
           },
@@ -178,6 +184,7 @@ describe("workoutDetailToFormValues", () => {
                 targetWeight: null,
                 restMinSeconds: 60,
                 restMaxSeconds: 90,
+                isMaxEffort: false,
               },
               {
                 id: "s2",
@@ -187,6 +194,7 @@ describe("workoutDetailToFormValues", () => {
                 targetWeight: null,
                 restMinSeconds: null,
                 restMaxSeconds: null,
+                isMaxEffort: false,
               },
             ],
           },
@@ -198,5 +206,38 @@ describe("workoutDetailToFormValues", () => {
     expect(result.exercises[0].sets[0].restMaxSeconds).toBe("90");
     expect(result.exercises[0].sets[1].restMinSeconds).toBe("");
     expect(result.exercises[0].sets[1].restMaxSeconds).toBe("");
+  });
+
+  it("riporta isMaxEffort e targetMinReps null per un set a sforzo massimo (AMRAP)", () => {
+    const result = workoutDetailToFormValues(
+      workout({
+        exercises: [
+          {
+            id: "we1",
+            exerciseId: "e1",
+            exerciseName: "Trazioni alla sbarra",
+            position: 1,
+            notes: null,
+            restSeconds: null,
+            progressionIncrement: null,
+            sets: [
+              {
+                id: "s1",
+                setNumber: 1,
+                targetMinReps: null,
+                targetMaxReps: null,
+                targetWeight: null,
+                restMinSeconds: null,
+                restMaxSeconds: null,
+                isMaxEffort: true,
+              },
+            ],
+          },
+        ],
+      })
+    );
+
+    expect(result.exercises[0].sets[0].isMaxEffort).toBe(true);
+    expect(result.exercises[0].sets[0].targetMinReps).toBe("");
   });
 });
