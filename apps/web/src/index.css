@@ -664,6 +664,25 @@ button.secondary:hover:not(:disabled) {
   font-variant-numeric: tabular-nums;
 }
 
+/* Recupero-prima-del-prossimo-esercizio e incremento di progressione: stesso
+   pattern auto-fit di .set-form-row, sullo stesso rigo quando c'e' spazio
+   (le etichette sono lunghe, minmax piu' largo che nei campi dei set).
+   margin-top aggiuntivo oltre al gap di .exercise-form, per staccarli
+   visivamente dai pulsanti "Aggiungi set"/"Duplica ultimo set" sopra. */
+.exercise-form__meta-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3) var(--space-5);
+  margin-top: var(--space-3);
+}
+
+/* Senza questo, "Rimuovi esercizio" si allunga per tutta la larghezza come
+   ogni altro figlio diretto di .exercise-form (flex column, stretch di
+   default): qui va invece allineato a destra, in una riga propria. */
+.exercise-form__remove-btn {
+  align-self: flex-end;
+}
+
 /* --- Suggerimenti di progressione (progress-service) --- */
 
 .progression-suggestion {
