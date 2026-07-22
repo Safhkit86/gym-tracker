@@ -98,13 +98,22 @@ export function ExerciseFieldset({
       {exercise.sets.map((set, setIndex) => (
         <div key={setIndex} className="set-form-row">
           <label>
-            Reps
+            Rep minime
             <input
               type="number"
               min={1}
-              value={set.targetReps}
-              onChange={(event) => onUpdateSet(setIndex, { targetReps: event.target.value })}
+              value={set.targetMinReps}
+              onChange={(event) => onUpdateSet(setIndex, { targetMinReps: event.target.value })}
               required
+            />
+          </label>
+          <label>
+            Rep massime (opzionale)
+            <input
+              type="number"
+              min={1}
+              value={set.targetMaxReps}
+              onChange={(event) => onUpdateSet(setIndex, { targetMaxReps: event.target.value })}
             />
           </label>
           <label>

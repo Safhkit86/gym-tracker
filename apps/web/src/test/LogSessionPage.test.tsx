@@ -19,7 +19,16 @@ const WORKOUT_DETAIL = {
       notes: null,
       restSeconds: null,
       progressionIncrement: 2.5,
-      sets: [{ id: "s1", setNumber: 1, targetReps: 10, targetWeight: 80, restSeconds: null }],
+      sets: [
+        {
+          id: "s1",
+          setNumber: 1,
+          targetMinReps: 10,
+          targetMaxReps: null,
+          targetWeight: 80,
+          restSeconds: null,
+        },
+      ],
     },
   ],
   createdAt: new Date().toISOString(),

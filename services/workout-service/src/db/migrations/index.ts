@@ -10,6 +10,7 @@ import * as addAbWheelESollevamentoGinocchia from "./008-add-ab-wheel-e-sollevam
 import * as fixSollevamentoGinocchiaCase from "./009-fix-sollevamento-ginocchia-case.js";
 import * as addEserciziStoricoImport from "./010-add-esercizi-storico-import.js";
 import * as addWorkoutPosition from "./011-add-workout-position.js";
+import * as addMinMaxReps from "./012-add-min-max-reps.js";
 
 /**
  * Registro statico delle migrazioni (chiavi ordinate). Preferito a
@@ -28,4 +29,5 @@ export const migrations: Record<string, Migration> = {
   "009-fix-sollevamento-ginocchia-case": fixSollevamentoGinocchiaCase,
   "010-add-esercizi-storico-import": addEserciziStoricoImport,
   "011-add-workout-position": addWorkoutPosition,
+  "012-add-min-max-reps": addMinMaxReps,
 };

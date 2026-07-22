@@ -162,7 +162,11 @@ export function WorkoutDetailPage() {
                   {exercise.sets.map((set) => (
                     <tr key={set.id}>
                       <td>{set.setNumber}</td>
-                      <td>{set.targetReps}</td>
+                      <td>
+                        {set.targetMaxReps !== null
+                          ? `${set.targetMinReps}-${set.targetMaxReps}`
+                          : set.targetMinReps}
+                      </td>
                       <td>
                         {set.targetWeight !== null ? `${set.targetWeight} kg` : "corpo libero"}
                       </td>

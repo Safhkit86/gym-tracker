@@ -35,7 +35,16 @@ const WORKOUT_DETAIL = {
       notes: null,
       restSeconds: 120,
       progressionIncrement: 2.5,
-      sets: [{ id: "s1", setNumber: 1, targetReps: 10, targetWeight: 40, restSeconds: 90 }],
+      sets: [
+        {
+          id: "s1",
+          setNumber: 1,
+          targetMinReps: 10,
+          targetMaxReps: null,
+          targetWeight: 40,
+          restSeconds: 90,
+        },
+      ],
     },
   ],
   createdAt: new Date().toISOString(),
@@ -72,7 +81,7 @@ describe("EditWorkoutPage", () => {
 
     expect(await screen.findByLabelText("Nome")).toHaveValue("Push day");
     expect(screen.getByLabelText("Note")).toHaveValue("Focus petto");
-    expect(screen.getByLabelText("Reps")).toHaveValue(10);
+    expect(screen.getByLabelText("Rep minime")).toHaveValue(10);
     expect(screen.getByLabelText("Peso (kg)")).toHaveValue(40);
     expect(screen.getByLabelText("Recupero (s)")).toHaveValue(90);
     expect(screen.getByLabelText(/recupero prima del prossimo esercizio/i)).toHaveValue(120);
@@ -87,7 +96,16 @@ describe("EditWorkoutPage", () => {
           ...WORKOUT_DETAIL.exercises[0],
           restSeconds: null,
           progressionIncrement: null,
-          sets: [{ id: "s1", setNumber: 1, targetReps: 10, targetWeight: null, restSeconds: null }],
+          sets: [
+            {
+              id: "s1",
+              setNumber: 1,
+              targetMinReps: 10,
+              targetMaxReps: null,
+              targetWeight: null,
+              restSeconds: null,
+            },
+          ],
         },
       ],
     };
@@ -138,7 +156,7 @@ describe("EditWorkoutPage", () => {
           position: 1,
           restSeconds: 120,
           progressionIncrement: 2.5,
-          sets: [{ setNumber: 1, targetReps: 10, targetWeight: 40, restSeconds: 90 }],
+          sets: [{ setNumber: 1, targetMinReps: 10, targetWeight: 40, restSeconds: 90 }],
         },
       ],
     });
@@ -166,7 +184,7 @@ describe("EditWorkoutPage", () => {
     const putCall = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
     const body = JSON.parse((putCall?.[1]?.body as string) ?? "{}");
     expect(body.name).toBe("Push day v2");
-    expect(body.exercises[0].sets[0]).toMatchObject({ setNumber: 1, targetReps: 10 });
+    expect(body.exercises[0].sets[0]).toMatchObject({ setNumber: 1, targetMinReps: 10 });
   });
 
   it("rimuovere un esercizio ri-deriva le posizioni senza buchi", async () => {
@@ -182,7 +200,16 @@ describe("EditWorkoutPage", () => {
           notes: null,
           restSeconds: null,
           progressionIncrement: null,
-          sets: [{ id: "s2", setNumber: 1, targetReps: 8, targetWeight: 60, restSeconds: null }],
+          sets: [
+            {
+              id: "s2",
+              setNumber: 1,
+              targetMinReps: 8,
+              targetMaxReps: null,
+              targetWeight: 60,
+              restSeconds: null,
+            },
+          ],
         },
       ],
     };
@@ -226,7 +253,7 @@ describe("EditWorkoutPage", () => {
 
     await screen.findByLabelText("Nome");
     fireEvent.click(screen.getByRole("button", { name: /aggiungi set/i }));
-    const repsInputs = screen.getAllByLabelText("Reps");
+    const repsInputs = screen.getAllByLabelText("Rep minime");
     fireEvent.change(repsInputs[1], { target: { value: "8" } });
     fireEvent.click(screen.getByRole("button", { name: /salva modifiche/i }));
 
@@ -238,8 +265,8 @@ describe("EditWorkoutPage", () => {
     const putCall = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
     const body = JSON.parse((putCall?.[1]?.body as string) ?? "{}");
     expect(body.exercises[0].sets).toEqual([
-      { setNumber: 1, targetReps: 10, targetWeight: 40, restSeconds: 90 },
-      { setNumber: 2, targetReps: 8 },
+      { setNumber: 1, targetMinReps: 10, targetWeight: 40, restSeconds: 90 },
+      { setNumber: 2, targetMinReps: 8 },
     ]);
   });
 });

@@ -53,7 +53,7 @@ describe("CreateWorkoutPage", () => {
 
     await screen.findByLabelText("Esercizio");
     fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Push day" } });
-    fireEvent.change(screen.getByLabelText("Reps"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("Rep minime"), { target: { value: "10" } });
     fireEvent.click(screen.getByRole("button", { name: /crea scheda/i }));
 
     await waitFor(() => {
@@ -69,7 +69,7 @@ describe("CreateWorkoutPage", () => {
         {
           exerciseId: "e1",
           position: 1,
-          sets: [{ setNumber: 1, targetReps: 10 }],
+          sets: [{ setNumber: 1, targetMinReps: 10 }],
         },
       ],
     });
@@ -101,11 +101,11 @@ describe("CreateWorkoutPage", () => {
     renderWithProviders(<CreateWorkoutPage />, ["/workouts/new"]);
 
     await screen.findByLabelText("Esercizio");
-    fireEvent.change(screen.getByLabelText("Reps"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("Rep minime"), { target: { value: "10" } });
     fireEvent.change(screen.getByLabelText("Peso (kg)"), { target: { value: "40" } });
     fireEvent.click(screen.getByRole("button", { name: /duplica ultimo set/i }));
 
-    const repsInputs = screen.getAllByLabelText("Reps") as HTMLInputElement[];
+    const repsInputs = screen.getAllByLabelText("Rep minime") as HTMLInputElement[];
     expect(repsInputs).toHaveLength(2);
     expect(repsInputs[1].value).toBe("10");
     const weightInputs = screen.getAllByLabelText("Peso (kg)") as HTMLInputElement[];
@@ -134,7 +134,7 @@ describe("CreateWorkoutPage", () => {
 
     await screen.findByLabelText("Esercizio");
     fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Push day" } });
-    fireEvent.change(screen.getByLabelText("Reps"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("Rep minime"), { target: { value: "10" } });
     fireEvent.change(screen.getByLabelText(/recupero prima del prossimo esercizio/i), {
       target: { value: "120" },
     });
@@ -172,7 +172,7 @@ describe("CreateWorkoutPage", () => {
 
     await screen.findByLabelText("Esercizio");
     fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Push day" } });
-    fireEvent.change(screen.getByLabelText("Reps"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("Rep minime"), { target: { value: "10" } });
     fireEvent.change(screen.getByLabelText(/incremento di progressione/i), {
       target: { value: "2.5" },
     });

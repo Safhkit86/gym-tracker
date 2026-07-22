@@ -30,7 +30,9 @@ export interface SessionSetsTable {
   workout_exercise_id: string | null;
   set_number: number;
   /** Snapshot della prescrizione al momento del log; null per log liberi. */
-  target_reps: number | null;
+  target_min_reps: number | null;
+  /** Snapshot della prescrizione al momento del log; null se non era un range. */
+  target_max_reps: number | null;
   /** Snapshot di WorkoutExercise.progressionIncrement al momento del log. */
   progression_increment: ColumnType<string | null, number | null, number | null>;
   actual_reps: number;

@@ -8,7 +8,8 @@ import { ApiRequestError } from "../api/client";
 
 interface SessionSetForm {
   setNumber: number;
-  targetReps: number | null;
+  targetMinReps: number | null;
+  targetMaxReps: number | null;
   targetWeight: number | null;
   actualReps: string;
   actualWeight: string;
@@ -37,9 +38,12 @@ function buildInitialExercises(workout: WorkoutDetail): SessionExerciseForm[] {
     progressionIncrement: exercise.progressionIncrement,
     sets: exercise.sets.map((set) => ({
       setNumber: set.setNumber,
-      targetReps: set.targetReps,
+      targetMinReps: set.targetMinReps,
+      targetMaxReps: set.targetMaxReps,
       targetWeight: set.targetWeight,
-      actualReps: String(set.targetReps),
+      // Precompilato con le rep minime: e' il valore prescritto sempre presente,
+      // le massime sono solo l'estremo superiore di un range opzionale.
+      actualReps: String(set.targetMinReps),
       actualWeight: set.targetWeight !== null ? String(set.targetWeight) : "",
       actualRpe: "",
     })),
@@ -110,7 +114,8 @@ export function LogSessionPage() {
           progressionIncrement: exercise.progressionIncrement ?? undefined,
           sets: exercise.sets.map((set) => ({
             setNumber: set.setNumber,
-            targetReps: set.targetReps ?? undefined,
+            targetMinReps: set.targetMinReps ?? undefined,
+            targetMaxReps: set.targetMaxReps ?? undefined,
             actualReps: Number(set.actualReps),
             actualWeight: set.actualWeight.trim() ? Number(set.actualWeight) : undefined,
             actualRpe: set.actualRpe.trim() ? Number(set.actualRpe) : undefined,
@@ -198,7 +203,13 @@ export function LogSessionPage() {
             {exercise.sets.map((set, setIndex) => (
               <div key={setIndex} className="set-form-row">
                 <span>
-                  Set {set.setNumber} — obiettivo: {set.targetReps ?? "—"} reps
+                  Set {set.setNumber} — obiettivo:{" "}
+                  {set.targetMinReps === null
+                    ? "—"
+                    : set.targetMaxReps !== null
+                      ? `${set.targetMinReps}-${set.targetMaxReps}`
+                      : set.targetMinReps}{" "}
+                  reps
                   {set.targetWeight !== null ? ` a ${set.targetWeight} kg` : " a corpo libero"}
                 </span>
                 <label>
