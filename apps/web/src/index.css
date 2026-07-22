@@ -512,6 +512,7 @@ button.secondary:hover:not(:disabled) {
 /* --- Create workout form --- */
 
 .exercise-form {
+  position: relative;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   border-radius: var(--radius);
@@ -521,6 +522,22 @@ button.secondary:hover:not(:disabled) {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.exercise-form--dragging {
+  box-shadow: var(--shadow-card-hover);
+  z-index: 1;
+}
+
+.exercise-form__drag-handle {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  cursor: grab;
+}
+
+.exercise-form__drag-handle:active {
+  cursor: grabbing;
 }
 
 .exercise-form legend {

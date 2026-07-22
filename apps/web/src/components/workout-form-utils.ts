@@ -7,6 +7,9 @@ export interface SetForm {
 }
 
 export interface ExerciseForm {
+  /** Chiave stabile lato client per il drag-and-drop (dnd-kit): mai inviata
+   *  al backend, ignorata da toWorkoutInput. */
+  formId: string;
   exerciseId: string;
   notes: string;
   /** Recupero dopo questo esercizio, prima del successivo. */
@@ -23,6 +26,7 @@ export function emptySet(): SetForm {
 
 export function emptyExercise(defaultExerciseId: string): ExerciseForm {
   return {
+    formId: crypto.randomUUID(),
     exerciseId: defaultExerciseId,
     notes: "",
     restSeconds: "",
@@ -83,6 +87,7 @@ export function workoutDetailToFormValues(workout: WorkoutDetail): {
   const exercises = [...workout.exercises]
     .sort((a, b) => a.position - b.position)
     .map((exercise) => ({
+      formId: crypto.randomUUID(),
       exerciseId: exercise.exerciseId,
       notes: exercise.notes ?? "",
       restSeconds: exercise.restSeconds !== null ? String(exercise.restSeconds) : "",

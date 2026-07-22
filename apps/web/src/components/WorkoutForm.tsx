@@ -1,7 +1,22 @@
 import { useState, type FormEvent } from "react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import type { Exercise, WorkoutInput } from "@gym-tracker/shared";
 import { ApiRequestError } from "../api/client";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { ExerciseFieldset } from "./ExerciseFieldset";
 import {
   emptyExercise,
   emptySet,
@@ -99,6 +114,21 @@ export function WorkoutForm({
     );
   }
 
+  function handleDragEnd(event: DragEndEvent): void {
+    const { active, over } = event;
+    if (!over || active.id === over.id) {
+      return;
+    }
+    setExercises((current) => {
+      const oldIndex = current.findIndex((exercise) => exercise.formId === active.id);
+      const newIndex = current.findIndex((exercise) => exercise.formId === over.id);
+      if (oldIndex === -1 || newIndex === -1) {
+        return current;
+      }
+      return arrayMove(current, oldIndex, newIndex);
+    });
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setError(null);
@@ -119,6 +149,10 @@ export function WorkoutForm({
 
   const groupedCatalog = groupByMuscle(catalog);
   const catalogById = new Map(catalog.map((item) => [item.id, item]));
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   return (
     <form onSubmit={handleSubmit}>
@@ -146,147 +180,29 @@ export function WorkoutForm({
         <input value={notes} onChange={(event) => setNotes(event.target.value)} />
       </label>
 
-      {exercises.map((exercise, exerciseIndex) => {
-        const selected = catalogById.get(exercise.exerciseId);
-        return (
-          <fieldset key={exerciseIndex} className="exercise-form">
-            <legend>Esercizio {exerciseIndex + 1}</legend>
-            {/* Il <select> NON e' annidato nel <label> (a differenza degli
-                altri campi): il nome accessibile di un <label> include il
-                testo di tutti i suoi discendenti, quindi annidare un select
-                con decine di <option> lo renderebbe "Esercizio Affondi Hack
-                squat ..." per uno screen reader. Associazione esplicita via
-                htmlFor/id, con i due come fratelli. */}
-            <div className="field">
-              <label htmlFor={`exercise-select-${exerciseIndex}`}>Esercizio</label>
-              <select
-                id={`exercise-select-${exerciseIndex}`}
-                value={exercise.exerciseId}
-                onChange={(event) =>
-                  updateExercise(exerciseIndex, { exerciseId: event.target.value })
-                }
-              >
-                {groupedCatalog.map(([muscleGroup, items]) => (
-                  <optgroup key={muscleGroup} label={muscleGroup}>
-                    {items.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </div>
-
-            {selected?.description && (
-              <p className="exercise-description">
-                {selected.description}{" "}
-                {selected.sourceUrl && (
-                  <a href={selected.sourceUrl} target="_blank" rel="noreferrer">
-                    Scopri di più
-                  </a>
-                )}
-              </p>
-            )}
-
-            {exercise.sets.map((set, setIndex) => (
-              <div key={setIndex} className="set-form-row">
-                <label>
-                  Reps
-                  <input
-                    type="number"
-                    min={1}
-                    value={set.targetReps}
-                    onChange={(event) =>
-                      updateSet(exerciseIndex, setIndex, { targetReps: event.target.value })
-                    }
-                    required
-                  />
-                </label>
-                <label>
-                  Peso (kg)
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.5"
-                    value={set.targetWeight}
-                    onChange={(event) =>
-                      updateSet(exerciseIndex, setIndex, { targetWeight: event.target.value })
-                    }
-                  />
-                </label>
-                <label>
-                  Recupero (s)
-                  <input
-                    type="number"
-                    min={0}
-                    value={set.restSeconds}
-                    onChange={(event) =>
-                      updateSet(exerciseIndex, setIndex, { restSeconds: event.target.value })
-                    }
-                  />
-                </label>
-                {exercise.sets.length > 1 && (
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => removeSet(exerciseIndex, setIndex)}
-                  >
-                    Rimuovi set
-                  </button>
-                )}
-              </div>
-            ))}
-            <div className="exercise-form__actions">
-              <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>
-                Aggiungi set
-              </button>
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => duplicateSet(exerciseIndex)}
-              >
-                Duplica ultimo set
-              </button>
-            </div>
-
-            <label>
-              Recupero prima del prossimo esercizio (s)
-              <input
-                type="number"
-                min={0}
-                value={exercise.restSeconds}
-                onChange={(event) =>
-                  updateExercise(exerciseIndex, { restSeconds: event.target.value })
-                }
-              />
-            </label>
-
-            <label>
-              Incremento di progressione (kg o reps)
-              <input
-                type="number"
-                min={0}
-                step="0.5"
-                value={exercise.progressionIncrement}
-                onChange={(event) =>
-                  updateExercise(exerciseIndex, { progressionIncrement: event.target.value })
-                }
-              />
-            </label>
-
-            {exercises.length > 1 && (
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => setExerciseToRemove(exerciseIndex)}
-              >
-                Rimuovi esercizio
-              </button>
-            )}
-          </fieldset>
-        );
-      })}
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <SortableContext
+          items={exercises.map((exercise) => exercise.formId)}
+          strategy={verticalListSortingStrategy}
+        >
+          {exercises.map((exercise, exerciseIndex) => (
+            <ExerciseFieldset
+              key={exercise.formId}
+              exercise={exercise}
+              exerciseIndex={exerciseIndex}
+              selected={catalogById.get(exercise.exerciseId)}
+              groupedCatalog={groupedCatalog}
+              canRemove={exercises.length > 1}
+              onUpdateExercise={(patch) => updateExercise(exerciseIndex, patch)}
+              onAddSet={() => addSet(exerciseIndex)}
+              onDuplicateSet={() => duplicateSet(exerciseIndex)}
+              onRemoveSet={(setIndex) => removeSet(exerciseIndex, setIndex)}
+              onUpdateSet={(setIndex, patch) => updateSet(exerciseIndex, setIndex, patch)}
+              onRequestRemove={() => setExerciseToRemove(exerciseIndex)}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
 
       <ConfirmDialog
         open={exerciseToRemove !== null}
