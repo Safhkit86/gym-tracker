@@ -208,33 +208,39 @@ export function ExerciseFieldset({
         </button>
       </div>
 
-      <label>
-        Recupero prima del prossimo esercizio (s)
-        <input
-          type="number"
-          min={0}
-          className={invalidClass(fieldErrors.has(`exercises.${exerciseIndex}.restSeconds`))}
-          value={exercise.restSeconds}
-          onChange={(event) => onUpdateExercise({ restSeconds: event.target.value })}
-        />
-      </label>
+      <div className="exercise-form__meta-row">
+        <label>
+          Recupero prima del prossimo esercizio (s)
+          <input
+            type="number"
+            min={0}
+            className={invalidClass(fieldErrors.has(`exercises.${exerciseIndex}.restSeconds`))}
+            value={exercise.restSeconds}
+            onChange={(event) => onUpdateExercise({ restSeconds: event.target.value })}
+          />
+        </label>
 
-      <label>
-        Incremento di progressione (kg o reps)
-        <input
-          type="number"
-          min={0}
-          step="0.5"
-          className={invalidClass(
-            fieldErrors.has(`exercises.${exerciseIndex}.progressionIncrement`)
-          )}
-          value={exercise.progressionIncrement}
-          onChange={(event) => onUpdateExercise({ progressionIncrement: event.target.value })}
-        />
-      </label>
+        <label>
+          Incremento di progressione (kg o reps)
+          <input
+            type="number"
+            min={0}
+            step="0.5"
+            className={invalidClass(
+              fieldErrors.has(`exercises.${exerciseIndex}.progressionIncrement`)
+            )}
+            value={exercise.progressionIncrement}
+            onChange={(event) => onUpdateExercise({ progressionIncrement: event.target.value })}
+          />
+        </label>
+      </div>
 
       {canRemove && (
-        <button type="button" className="secondary" onClick={onRequestRemove}>
+        <button
+          type="button"
+          className="secondary exercise-form__remove-btn"
+          onClick={onRequestRemove}
+        >
           Rimuovi esercizio
         </button>
       )}
