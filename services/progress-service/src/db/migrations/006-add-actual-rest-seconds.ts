@@ -8,10 +8,7 @@ import type { Kysely } from "kysely";
  * actual_reps/actual_weight rispetto ai target corrispondenti.
  */
 export async function up(db: Kysely<unknown>): Promise<void> {
-  await db.schema
-    .alterTable("session_sets")
-    .addColumn("actual_rest_seconds", "integer")
-    .execute();
+  await db.schema.alterTable("session_sets").addColumn("actual_rest_seconds", "integer").execute();
 }
 
 export async function down(db: Kysely<unknown>): Promise<void> {
