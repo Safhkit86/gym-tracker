@@ -143,7 +143,10 @@ export function WorkoutsListPage() {
             <ul className="workout-list">
               {workouts.map((workout) => (
                 <SortableWorkoutItem key={workout.id} id={workout.id}>
-                  <Link to={`/workouts/${workout.id}`}>{workout.name}</Link>
+                  <div className="workout-list__name">
+                    <Link to={`/workouts/${workout.id}`}>{workout.name}</Link>
+                    {workout.notes && <p className="workout-list__notes">{workout.notes}</p>}
+                  </div>
                   <div className="workout-list__right">
                     <span className="workout-list__meta">
                       {workout.exerciseCount}{" "}
