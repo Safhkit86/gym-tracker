@@ -1,17 +1,10 @@
-import type {
-  CreateSessionResponse,
-  SessionDetail,
-  SessionInput,
-  SessionSummary,
-} from "@gym-tracker/shared";
+import type { CreateSessionResponse, SessionDetail, SessionInput } from "@gym-tracker/shared";
 import { apiRequest } from "./client";
 
-export function listSessions(token: string): Promise<SessionSummary[]> {
-  return apiRequest<SessionSummary[]>("/sessions", { token });
-}
-
-export function getSession(token: string, id: string): Promise<SessionDetail> {
-  return apiRequest<SessionDetail>(`/sessions/${id}`, { token });
+/** Storico gia' con esercizi/set inclusi: la pagina storico li mostra
+ *  espansi, senza una seconda chiamata per sessione. */
+export function listSessions(token: string): Promise<SessionDetail[]> {
+  return apiRequest<SessionDetail[]>("/sessions", { token });
 }
 
 export function logSession(token: string, body: SessionInput): Promise<CreateSessionResponse> {

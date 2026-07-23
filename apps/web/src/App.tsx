@@ -14,7 +14,6 @@ import { WorkoutDetailPage } from "./pages/WorkoutDetailPage";
 import { EditWorkoutPage } from "./pages/EditWorkoutPage";
 import { LogSessionPage } from "./pages/LogSessionPage";
 import { SessionHistoryPage } from "./pages/SessionHistoryPage";
-import { SessionDetailPage } from "./pages/SessionDetailPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 
 export function App() {
@@ -36,7 +35,6 @@ export function App() {
               <Route path="/workouts/:id/edit" element={<EditWorkoutPage />} />
               <Route path="/workouts/:id/log" element={<LogSessionPage />} />
               <Route path="/sessions" element={<SessionHistoryPage />} />
-              <Route path="/sessions/:id" element={<SessionDetailPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
           </Route>

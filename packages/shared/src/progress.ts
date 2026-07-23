@@ -28,6 +28,8 @@ export interface SessionExerciseInput {
   workoutExerciseId?: string | null;
   /** Snapshot di WorkoutExercise.progressionIncrement al momento del log. */
   progressionIncrement?: number | null;
+  /** Snapshot di WorkoutExercise.restSeconds al momento del log. */
+  restSeconds?: number | null;
   sets: SessionSetInput[];
 }
 
@@ -56,17 +58,9 @@ export interface SessionExercise {
   exerciseName: string;
   workoutExerciseId: string | null;
   progressionIncrement: number | null;
+  /** Snapshot di WorkoutExercise.restSeconds al momento del log. */
+  restSeconds: number | null;
   sets: SessionSet[];
-}
-
-/** Vista sintetica per lo storico. */
-export interface SessionSummary {
-  id: string;
-  workoutId: string;
-  workoutName: string;
-  performedAt: string;
-  exerciseCount: number;
-  createdAt: string;
 }
 
 /** Vista completa: sessione con esercizi e set eseguiti. */

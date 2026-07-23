@@ -25,6 +25,7 @@ interface SessionExerciseForm {
   exerciseName: string;
   workoutExerciseId: string;
   progressionIncrement: number | null;
+  restSeconds: number | null;
   sets: SessionSetForm[];
 }
 
@@ -40,6 +41,7 @@ function buildInitialExercises(workout: WorkoutDetail): SessionExerciseForm[] {
     exerciseName: exercise.exerciseName,
     workoutExerciseId: exercise.id,
     progressionIncrement: exercise.progressionIncrement,
+    restSeconds: exercise.restSeconds,
     sets: exercise.sets.map((set) => ({
       setNumber: set.setNumber,
       targetMinReps: set.targetMinReps,
@@ -118,6 +120,7 @@ export function LogSessionPage() {
           exerciseName: exercise.exerciseName,
           workoutExerciseId: exercise.workoutExerciseId,
           progressionIncrement: exercise.progressionIncrement ?? undefined,
+          restSeconds: exercise.restSeconds ?? undefined,
           sets: exercise.sets.map((set) => ({
             setNumber: set.setNumber,
             targetMinReps: set.targetMinReps ?? undefined,

@@ -4,7 +4,6 @@ import type {
   ProgressionEvent,
   SessionDetail,
   SessionInput,
-  SessionSummary,
 } from "@gym-tracker/shared";
 import { NotFoundError } from "../errors.js";
 import type { ProgressionEventPublisher } from "../events/publisher.js";
@@ -69,7 +68,7 @@ export class SessionService {
     return { ...session, suggestions };
   }
 
-  async list(ownerId: string): Promise<SessionSummary[]> {
+  async list(ownerId: string): Promise<SessionDetail[]> {
     return this.sessions.listByOwner(ownerId);
   }
 
@@ -100,6 +99,7 @@ function normalize(input: SessionInput): NormalizedSession {
       exerciseName: e.exerciseName,
       workoutExerciseId: e.workoutExerciseId ?? null,
       progressionIncrement: e.progressionIncrement ?? null,
+      restSeconds: e.restSeconds ?? null,
       sets: e.sets.map((s) => ({
         setNumber: s.setNumber,
         targetMinReps: s.targetMinReps ?? null,
