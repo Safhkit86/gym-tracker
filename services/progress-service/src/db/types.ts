@@ -16,6 +16,8 @@ export interface WorkoutSessionsTable {
   workout_id: string;
   /** Denormalizzato dal client al momento del log (evita una chiamata HTTP). */
   workout_name: string;
+  /** Snapshot di Workout.notes al momento del log (non le note della sessione). */
+  workout_notes: string | null;
   performed_at: ColumnType<Date, Date | string, Date | string>;
   notes: string | null;
   created_at: Generated<Date>;

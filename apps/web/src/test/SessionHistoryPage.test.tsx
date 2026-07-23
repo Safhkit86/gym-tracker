@@ -9,6 +9,7 @@ const SESSION_OLDER = {
   id: "sess1",
   workoutId: "w1",
   workoutName: "Push day",
+  workoutNotes: "Petto + Tricipiti",
   performedAt: "2026-07-01T10:00:00.000Z",
   notes: "Buona sensazione",
   exercises: [
@@ -93,6 +94,10 @@ describe("SessionHistoryPage", () => {
 
     const notes = screen.getAllByText("Buona sensazione");
     expect(notes[0]).toHaveClass("session-card__notes");
+
+    const workoutNotes = screen.getAllByText("Petto + Tricipiti");
+    expect(workoutNotes).toHaveLength(2);
+    expect(workoutNotes[0]).toHaveClass("session-card__notes");
   });
 
   it("il pulsante di ordinamento inverte l'ordine mostrato", async () => {

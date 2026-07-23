@@ -461,13 +461,25 @@ button.secondary:hover:not(:disabled) {
 
 .workout-list__item {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-4);
   padding: var(--space-4) var(--space-5);
   text-decoration: none;
   transition:
     box-shadow 0.15s ease,
     border-color 0.15s ease;
+}
+
+.workout-list__name {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.workout-list__notes {
+  margin: 0;
+  font-size: 0.8rem;
 }
 
 .workout-list__item:hover {
@@ -623,13 +635,20 @@ button.secondary:hover:not(:disabled) {
 
 .session-card__header {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-3);
 }
 
 .session-card__header h2 {
   margin: 0;
+}
+
+.session-card__title {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
 }
 
 .session-card__date {

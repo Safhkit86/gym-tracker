@@ -40,6 +40,29 @@ describe("WorkoutsListPage", () => {
     expect(screen.getByText(/2 esercizi/)).toBeInTheDocument();
   });
 
+  it("mostra le note della scheda sotto il nome, se presenti", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      {
+        match: (u, m) => u.endsWith("/workouts") && m === "GET",
+        body: [
+          {
+            id: "w1",
+            name: "1 - Lunedì",
+            notes: "Braccia + Petto + Addome",
+            exerciseCount: 6,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      },
+    ]);
+
+    renderWithProviders(<WorkoutsListPage />, ["/workouts"]);
+
+    expect(await screen.findByText("Braccia + Petto + Addome")).toBeInTheDocument();
+  });
+
   it("mostra un messaggio quando non ci sono schede", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },

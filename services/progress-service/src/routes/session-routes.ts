@@ -44,6 +44,8 @@ const exerciseSchema = z.object({
 const sessionSchema = z.object({
   workoutId: z.string().uuid(),
   workoutName: z.string().trim().min(1),
+  /** Snapshot di Workout.notes al momento del log (non le note della sessione). */
+  workoutNotes: z.string().trim().min(1).nullish(),
   performedAt: z.string().datetime({ offset: true }),
   notes: z.string().trim().min(1).nullish(),
   exercises: z.array(exerciseSchema).min(1, "La sessione deve avere almeno un esercizio."),

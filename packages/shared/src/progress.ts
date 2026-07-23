@@ -36,6 +36,8 @@ export interface SessionExerciseInput {
 export interface SessionInput {
   workoutId: string;
   workoutName: string;
+  /** Snapshot di Workout.notes al momento del log (non le note della sessione). */
+  workoutNotes?: string | null;
   performedAt: string;
   notes?: string | null;
   exercises: SessionExerciseInput[];
@@ -68,6 +70,8 @@ export interface SessionDetail {
   id: string;
   workoutId: string;
   workoutName: string;
+  /** Snapshot di Workout.notes al momento del log (non le note della sessione). */
+  workoutNotes: string | null;
   performedAt: string;
   notes: string | null;
   exercises: SessionExercise[];
