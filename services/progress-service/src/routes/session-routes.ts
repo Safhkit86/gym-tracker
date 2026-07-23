@@ -32,6 +32,8 @@ const exerciseSchema = z.object({
   progressionIncrement: z.number().positive().nullish(),
   /** Snapshot di WorkoutExercise.restSeconds al momento del log. */
   restSeconds: z.number().int().nonnegative().nullish(),
+  /** Recupero effettivamente preso prima dell'esercizio successivo. */
+  actualRestSeconds: z.number().int().nonnegative().nullish(),
   sets: z
     .array(setSchema)
     .min(1, "Ogni esercizio deve avere almeno un set.")

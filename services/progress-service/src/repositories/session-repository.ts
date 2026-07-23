@@ -20,6 +20,7 @@ export interface NormalizedSessionExercise {
   workoutExerciseId: string | null;
   progressionIncrement: number | null;
   restSeconds: number | null;
+  actualRestSeconds: number | null;
   sets: NormalizedSessionSet[];
 }
 
@@ -101,6 +102,7 @@ export class KyselySessionRepository implements SessionRepository {
               target_max_reps: s.targetMaxReps,
               progression_increment: ex.progressionIncrement,
               rest_seconds: ex.restSeconds,
+              actual_rest_seconds: ex.actualRestSeconds,
               position: i,
               actual_reps: s.actualReps,
               actual_weight: s.actualWeight,
@@ -155,6 +157,7 @@ export class KyselySessionRepository implements SessionRepository {
           progressionIncrement:
             s.progression_increment === null ? null : Number(s.progression_increment),
           restSeconds: s.rest_seconds,
+          actualRestSeconds: s.actual_rest_seconds,
           sets: [],
         };
         exercisesByExerciseId.set(s.exercise_id, exercise);
@@ -212,6 +215,7 @@ export class KyselySessionRepository implements SessionRepository {
           progressionIncrement:
             s.progression_increment === null ? null : Number(s.progression_increment),
           restSeconds: s.rest_seconds,
+          actualRestSeconds: s.actual_rest_seconds,
           sets: [],
         };
         exercisesByExerciseId.set(s.exercise_id, exercise);
@@ -347,6 +351,7 @@ export class InMemorySessionRepository implements SessionRepository {
         workoutExerciseId: ex.workoutExerciseId,
         progressionIncrement: ex.progressionIncrement,
         restSeconds: ex.restSeconds,
+        actualRestSeconds: ex.actualRestSeconds,
         sets: ex.sets.map((s) => ({
           id: randomUUID(),
           setNumber: s.setNumber,

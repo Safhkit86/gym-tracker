@@ -30,6 +30,8 @@ export interface SessionExerciseInput {
   progressionIncrement?: number | null;
   /** Snapshot di WorkoutExercise.restSeconds al momento del log. */
   restSeconds?: number | null;
+  /** Recupero effettivamente preso prima dell'esercizio successivo. */
+  actualRestSeconds?: number | null;
   sets: SessionSetInput[];
 }
 
@@ -62,6 +64,8 @@ export interface SessionExercise {
   progressionIncrement: number | null;
   /** Snapshot di WorkoutExercise.restSeconds al momento del log. */
   restSeconds: number | null;
+  /** Recupero effettivamente preso prima dell'esercizio successivo. */
+  actualRestSeconds: number | null;
   sets: SessionSet[];
 }
 

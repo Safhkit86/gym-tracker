@@ -633,6 +633,60 @@ button.secondary:hover:not(:disabled) {
   width: 5rem;
 }
 
+/* --- Registra sessione --- */
+
+/* Stessa tabella dello storico, ma le celle ospitano un obiettivo (target)
+   + una casella di inserimento: colonne piu' larghe delle card di sola
+   lettura, e una sola tabella in pagina quindi nessun bisogno di allineare
+   Kg/Recupero con altre card. Stessa specificita' delle regole generali
+   di .session-card (selettore + pseudo-classe): vince per ordine, essendo
+   dichiarata dopo. */
+.log-session-table th:first-child,
+.log-session-table td:first-child {
+  width: 11rem;
+}
+
+.log-session-table th:not(:first-child):not(:nth-last-child(-n + 2)),
+.log-session-table td:not(:first-child):not(:nth-last-child(-n + 2)) {
+  width: 7rem;
+}
+
+.log-session-table th:nth-last-child(2),
+.log-session-table td:nth-last-child(2) {
+  width: 8rem;
+}
+
+.log-session-table th:last-child,
+.log-session-table td:last-child {
+  width: 8rem;
+}
+
+.log-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.log-cell__target {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.log-cell input {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+}
+
+.log-session-table td input {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+}
+
+.session-card__date-input {
+  width: auto;
+}
+
 .session-card__header {
   display: flex;
   align-items: flex-start;

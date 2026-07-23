@@ -16,6 +16,14 @@ function formatWeight(session: SessionDetail["exercises"][number]): string {
   return weight !== null ? `${weight} kg` : "corpo libero";
 }
 
+/** Recupero mostrato: quello effettivamente preso se registrato (sessioni
+ *  create dopo l'introduzione del campo), altrimenti quello prescritto
+ *  dalla scheda al momento del log (sessioni precedenti). */
+function formatRestSeconds(exercise: SessionDetail["exercises"][number]): string {
+  const seconds = exercise.actualRestSeconds ?? exercise.restSeconds;
+  return seconds !== null ? `${seconds}s` : "—";
+}
+
 /** Numero di settimana per sessione, indipendente dall'ordinamento mostrato:
  *  scorre le sessioni in ordine cronologico e incrementa ogni volta che
  *  ricomincia dalla scheda "1 - ...", cosi' il conteggio resta corretto sia
@@ -160,9 +168,7 @@ export function SessionHistoryPage() {
                               </td>
                             ))}
                             <td>{formatWeight(exercise)}</td>
-                            <td>
-                              {exercise.restSeconds !== null ? `${exercise.restSeconds}s` : "—"}
-                            </td>
+                            <td>{formatRestSeconds(exercise)}</td>
                           </tr>
                         ))}
                       </tbody>

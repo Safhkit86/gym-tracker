@@ -39,6 +39,8 @@ export interface SessionSetsTable {
   progression_increment: ColumnType<string | null, number | null, number | null>;
   /** Snapshot di WorkoutExercise.restSeconds al momento del log. */
   rest_seconds: number | null;
+  /** Recupero effettivamente preso, inserito dall'utente nel form di log. */
+  actual_rest_seconds: number | null;
   /** Indice dell'esercizio nell'array `exercises` della request: determina
    *  l'ordine di visualizzazione, non derivabile in modo affidabile da
    *  created_at quando piu' esercizi vengono inseriti nella stessa transazione. */

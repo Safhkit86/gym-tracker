@@ -13,6 +13,7 @@ function sessionPayload(overrides: {
   performedAt: string;
   progressionIncrement?: number | null;
   restSeconds?: number | null;
+  actualRestSeconds?: number | null;
   actualWeight?: number | null;
   actualReps?: number;
   targetMinReps?: number | null;
@@ -30,6 +31,8 @@ function sessionPayload(overrides: {
         progressionIncrement:
           overrides.progressionIncrement === undefined ? 2.5 : overrides.progressionIncrement,
         restSeconds: overrides.restSeconds === undefined ? 90 : overrides.restSeconds,
+        actualRestSeconds:
+          overrides.actualRestSeconds === undefined ? 90 : overrides.actualRestSeconds,
         sets: [
           {
             setNumber: 1,
@@ -227,6 +230,7 @@ describe("GET /sessions e /sessions/:id", () => {
     expect(response.body[0].exercises[0]).toMatchObject({
       exerciseName: "Panca piana",
       restSeconds: 90,
+      actualRestSeconds: 90,
     });
     expect(response.body[0].exercises[0].sets[0]).toMatchObject({
       actualReps: 10,
