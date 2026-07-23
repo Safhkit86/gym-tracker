@@ -26,6 +26,7 @@ export interface NormalizedSessionExercise {
 export interface NormalizedSession {
   workoutId: string;
   workoutName: string;
+  workoutNotes: string | null;
   performedAt: string;
   notes: string | null;
   exercises: NormalizedSessionExercise[];
@@ -79,6 +80,7 @@ export class KyselySessionRepository implements SessionRepository {
           owner_id: ownerId,
           workout_id: input.workoutId,
           workout_name: input.workoutName,
+          workout_notes: input.workoutNotes,
           performed_at: input.performedAt,
           notes: input.notes,
         })
@@ -172,6 +174,7 @@ export class KyselySessionRepository implements SessionRepository {
       id: session.id,
       workoutId: session.workout_id,
       workoutName: session.workout_name,
+      workoutNotes: session.workout_notes,
       performedAt: session.performed_at.toISOString(),
       notes: session.notes,
       exercises: [...(exercisesBySession.get(session.id)?.values() ?? [])],
@@ -229,6 +232,7 @@ export class KyselySessionRepository implements SessionRepository {
       id: session.id,
       workoutId: session.workout_id,
       workoutName: session.workout_name,
+      workoutNotes: session.workout_notes,
       performedAt: session.performed_at.toISOString(),
       notes: session.notes,
       exercises: [...exercisesByExerciseId.values()],
@@ -318,6 +322,7 @@ interface StoredSession {
   ownerId: string;
   workoutId: string;
   workoutName: string;
+  workoutNotes: string | null;
   performedAt: string;
   notes: string | null;
   exercises: SessionExercise[];
@@ -333,6 +338,7 @@ export class InMemorySessionRepository implements SessionRepository {
       ownerId,
       workoutId: input.workoutId,
       workoutName: input.workoutName,
+      workoutNotes: input.workoutNotes,
       performedAt: input.performedAt,
       notes: input.notes,
       exercises: input.exercises.map((ex) => ({
@@ -420,6 +426,7 @@ function toDetail(s: StoredSession): SessionDetail {
     id: s.id,
     workoutId: s.workoutId,
     workoutName: s.workoutName,
+    workoutNotes: s.workoutNotes,
     performedAt: s.performedAt,
     notes: s.notes,
     exercises: s.exercises,

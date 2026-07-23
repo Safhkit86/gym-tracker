@@ -126,7 +126,12 @@ export function SessionHistoryPage() {
                 )}
                 <section className="card session-card">
                   <div className="session-card__header">
-                    <h2>{session.workoutName}</h2>
+                    <div className="session-card__title">
+                      <h2>{session.workoutName}</h2>
+                      {session.workoutNotes && (
+                        <p className="session-card__notes">{session.workoutNotes}</p>
+                      )}
+                    </div>
                     <span className="session-card__date">
                       {new Date(session.performedAt).toLocaleDateString("it-IT")}
                     </span>

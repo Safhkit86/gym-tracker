@@ -92,6 +92,7 @@ function normalize(input: SessionInput): NormalizedSession {
   return {
     workoutId: input.workoutId,
     workoutName: input.workoutName,
+    workoutNotes: input.workoutNotes ?? null,
     performedAt: input.performedAt,
     notes: input.notes ?? null,
     exercises: input.exercises.map((e) => ({

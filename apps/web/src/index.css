@@ -635,13 +635,20 @@ button.secondary:hover:not(:disabled) {
 
 .session-card__header {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-3);
 }
 
 .session-card__header h2 {
   margin: 0;
+}
+
+.session-card__title {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
 }
 
 .session-card__date {

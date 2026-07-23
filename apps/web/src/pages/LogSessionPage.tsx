@@ -113,6 +113,7 @@ export function LogSessionPage() {
       const response = await logSession(token, {
         workoutId: workout.id,
         workoutName: workout.name,
+        workoutNotes: workout.notes ?? undefined,
         performedAt: new Date(performedAt).toISOString(),
         notes: notes.trim() || undefined,
         exercises: exercises.map((exercise) => ({

@@ -20,6 +20,7 @@ function sessionPayload(overrides: {
   return {
     workoutId: overrides.workoutId ?? WORKOUT_ID,
     workoutName: "Push day",
+    workoutNotes: "Petto + Tricipiti",
     performedAt: overrides.performedAt,
     notes: "Buona sensazione",
     exercises: [
@@ -219,7 +220,10 @@ describe("GET /sessions e /sessions/:id", () => {
     const response = await request(app).get("/sessions").set("Authorization", `Bearer ${tokenA}`);
     expect(response.status).toBe(200);
     expect(response.body).toHaveLength(1);
-    expect(response.body[0]).toMatchObject({ workoutName: "Push day" });
+    expect(response.body[0]).toMatchObject({
+      workoutName: "Push day",
+      workoutNotes: "Petto + Tricipiti",
+    });
     expect(response.body[0].exercises[0]).toMatchObject({
       exerciseName: "Panca piana",
       restSeconds: 90,
