@@ -16,6 +16,23 @@ function formatWeight(session: SessionDetail["exercises"][number]): string {
   return weight !== null ? `${weight} kg` : "corpo libero";
 }
 
+/** Numero di settimana per sessione, indipendente dall'ordinamento mostrato:
+ *  scorre le sessioni in ordine cronologico e incrementa ogni volta che
+ *  ricomincia dalla scheda "1 - ...", cosi' il conteggio resta corretto sia
+ *  in ordine crescente che decrescente. */
+function computeWeekNumbers(sessions: SessionDetail[]): Map<string, number> {
+  const chronological = [...sessions].sort((a, b) => a.performedAt.localeCompare(b.performedAt));
+  const weekBySessionId = new Map<string, number>();
+  let week = 0;
+  for (const session of chronological) {
+    if (week === 0 || /^1\s*-/.test(session.workoutName)) {
+      week++;
+    }
+    weekBySessionId.set(session.id, week);
+  }
+  return weekBySessionId;
+}
+
 export function SessionHistoryPage() {
   const { token } = useAuth();
   const [sessions, setSessions] = useState<SessionDetail[] | null>(null);
@@ -65,9 +82,10 @@ export function SessionHistoryPage() {
   // Il backend restituisce gia' dal piu' recente: per "asc" basta invertire
   // in locale, senza un'altra chiamata.
   const orderedSessions = sessions && sortOrder === "asc" ? [...sessions].reverse() : sessions;
+  const weekBySessionId = sessions ? computeWeekNumbers(sessions) : null;
 
   return (
-    <main>
+    <main className="main-wide">
       <h1>Storico allenamenti</h1>
       {error && (
         <p role="alert" className="form-error">
@@ -89,57 +107,70 @@ export function SessionHistoryPage() {
             </button>
           </div>
 
-          {orderedSessions.map((session) => {
+          {orderedSessions.map((session, index) => {
             const maxSets = Math.max(1, ...session.exercises.map((e) => e.sets.length));
+            const week = weekBySessionId?.get(session.id);
+            const previousWeek =
+              index > 0 ? weekBySessionId?.get(orderedSessions[index - 1].id) : undefined;
+            const isNewWeek = week !== undefined && week !== previousWeek;
             return (
-              <section key={session.id} className="card session-card">
-                <div className="session-card__header">
-                  <h2>{session.workoutName}</h2>
-                  <span className="session-card__date">
-                    {new Date(session.performedAt).toLocaleDateString("it-IT")}
-                  </span>
-                </div>
-                {session.notes && <p>{session.notes}</p>}
+              <div key={session.id}>
+                {isNewWeek && (
+                  <div className="session-week-divider">
+                    <span>Settimana {week}</span>
+                  </div>
+                )}
+                <section className="card session-card">
+                  <div className="session-card__header">
+                    <h2>{session.workoutName}</h2>
+                    <span className="session-card__date">
+                      {new Date(session.performedAt).toLocaleDateString("it-IT")}
+                    </span>
+                  </div>
+                  {session.notes && <p>{session.notes}</p>}
 
-                <div className="table-scroll">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Esercizio</th>
-                        {Array.from({ length: maxSets }, (_, i) => (
-                          <th key={i}>Set {i + 1}</th>
-                        ))}
-                        <th>Kg</th>
-                        <th>Recupero</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {session.exercises.map((exercise) => (
-                        <tr key={exercise.exerciseId}>
-                          <td>{exercise.exerciseName}</td>
+                  <div className="table-scroll">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Esercizio</th>
                           {Array.from({ length: maxSets }, (_, i) => (
-                            <td key={i}>{exercise.sets[i] ? exercise.sets[i].actualReps : "—"}</td>
+                            <th key={i}>Set {i + 1}</th>
                           ))}
-                          <td>{formatWeight(exercise)}</td>
-                          <td>
-                            {exercise.restSeconds !== null ? `${exercise.restSeconds}s` : "—"}
-                          </td>
+                          <th>Kg</th>
+                          <th>Recupero</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {session.exercises.map((exercise) => (
+                          <tr key={exercise.exerciseId}>
+                            <td>{exercise.exerciseName}</td>
+                            {Array.from({ length: maxSets }, (_, i) => (
+                              <td key={i}>
+                                {exercise.sets[i] ? exercise.sets[i].actualReps : "—"}
+                              </td>
+                            ))}
+                            <td>{formatWeight(exercise)}</td>
+                            <td>
+                              {exercise.restSeconds !== null ? `${exercise.restSeconds}s` : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-                <div className="session-card__actions">
-                  <IconButton
-                    onClick={() => setConfirmDeleteId(session.id)}
-                    icon={<TrashIcon />}
-                    label="Elimina sessione"
-                    variant="danger"
-                    disabled={deletingId === session.id}
-                  />
-                </div>
-              </section>
+                  <div className="session-card__actions">
+                    <IconButton
+                      onClick={() => setConfirmDeleteId(session.id)}
+                      icon={<TrashIcon />}
+                      label="Elimina sessione"
+                      variant="danger"
+                      disabled={deletingId === session.id}
+                    />
+                  </div>
+                </section>
+              </div>
             );
           })}
         </>

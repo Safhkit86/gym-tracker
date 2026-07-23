@@ -610,6 +610,28 @@ button.secondary:hover:not(:disabled) {
   margin-top: var(--space-4);
 }
 
+/* Separa visivamente le settimane di allenamento: una linea con il numero
+   di settimana a sinistra, sopra la prima card della settimana (in
+   entrambi gli ordinamenti, vedi computeWeekNumbers in SessionHistoryPage). */
+.session-week-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-6) 0 var(--space-3);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.session-week-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
 /* --- Create workout form --- */
 
 .exercise-form {

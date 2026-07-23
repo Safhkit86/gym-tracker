@@ -111,6 +111,47 @@ describe("SessionHistoryPage", () => {
     expect(dates[1]).toMatch(/08/);
   });
 
+  it("mostra un separatore di settimana quando ricomincia dalla scheda 1", async () => {
+    const week1Monday = {
+      ...SESSION_OLDER,
+      id: "w1s1",
+      workoutName: "1 - Lunedì",
+      performedAt: "2026-07-06T10:00:00.000Z",
+    };
+    const week1Tuesday = {
+      ...SESSION_OLDER,
+      id: "w1s2",
+      workoutName: "2 - Martedì",
+      performedAt: "2026-07-07T10:00:00.000Z",
+    };
+    const week2Monday = {
+      ...SESSION_OLDER,
+      id: "w2s1",
+      workoutName: "1 - Lunedì",
+      performedAt: "2026-07-13T10:00:00.000Z",
+    };
+    const week2Tuesday = {
+      ...SESSION_OLDER,
+      id: "w2s2",
+      workoutName: "2 - Martedì",
+      performedAt: "2026-07-14T10:00:00.000Z",
+    };
+
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      {
+        match: (u, m) => u.endsWith("/sessions") && m === "GET",
+        body: [week2Tuesday, week2Monday, week1Tuesday, week1Monday],
+      },
+    ]);
+
+    renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+    await screen.findAllByText("Panca piana");
+
+    const dividers = screen.getAllByText(/Settimana \d/).map((el) => el.textContent);
+    expect(dividers).toEqual(["Settimana 2", "Settimana 1"]);
+  });
+
   it("elimina una sessione dopo conferma", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
