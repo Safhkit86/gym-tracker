@@ -40,6 +40,30 @@ describe("WorkoutsListPage", () => {
     expect(screen.getByText(/2 esercizi/)).toBeInTheDocument();
   });
 
+  it("ha un pulsante per registrare una sessione direttamente dalla lista", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      {
+        match: (u, m) => u.endsWith("/workouts") && m === "GET",
+        body: [
+          {
+            id: "w1",
+            name: "Push day",
+            notes: null,
+            exerciseCount: 2,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      },
+    ]);
+
+    renderWithProviders(<WorkoutsListPage />, ["/workouts"]);
+
+    const logLink = await screen.findByRole("link", { name: /registra sessione/i });
+    expect(logLink).toHaveAttribute("href", "/workouts/w1/log");
+  });
+
   it("mostra le note della scheda sotto il nome, se presenti", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },

@@ -28,7 +28,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { PromptDialog } from "../components/PromptDialog";
 import { IconButton } from "../components/IconButton";
 import { SortableWorkoutItem } from "../components/SortableWorkoutItem";
-import { CopyIcon, PlusIcon, TrashIcon } from "../components/icons";
+import { CopyIcon, PlayIcon, PlusIcon, TrashIcon } from "../components/icons";
 import { duplicateWorkoutInput } from "../components/workout-form-utils";
 
 export function WorkoutsListPage() {
@@ -152,6 +152,12 @@ export function WorkoutsListPage() {
                       {workout.exerciseCount}{" "}
                       {workout.exerciseCount === 1 ? "esercizio" : "esercizi"}
                     </span>
+                    <IconButton
+                      to={`/workouts/${workout.id}/log`}
+                      icon={<PlayIcon />}
+                      label="Registra sessione"
+                      variant="accent"
+                    />
                     <IconButton
                       onClick={() => setDuplicateTarget(workout)}
                       icon={<CopyIcon />}
