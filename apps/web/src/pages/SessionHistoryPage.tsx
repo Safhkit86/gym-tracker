@@ -131,7 +131,7 @@ export function SessionHistoryPage() {
                       {new Date(session.performedAt).toLocaleDateString("it-IT")}
                     </span>
                   </div>
-                  {session.notes && <p>{session.notes}</p>}
+                  {session.notes && <p className="session-card__notes">{session.notes}</p>}
 
                   <div className="table-scroll">
                     <table>

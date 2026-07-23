@@ -637,6 +637,11 @@ button.secondary:hover:not(:disabled) {
   white-space: nowrap;
 }
 
+.session-card__notes {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
 .session-card__actions {
   display: flex;
   justify-content: flex-end;

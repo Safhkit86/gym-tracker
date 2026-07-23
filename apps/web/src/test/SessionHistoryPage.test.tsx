@@ -90,6 +90,9 @@ describe("SessionHistoryPage", () => {
     const dates = screen.getAllByText(/2026/).map((el) => el.textContent);
     expect(dates[0]).toMatch(/08/);
     expect(dates[1]).toMatch(/01/);
+
+    const notes = screen.getAllByText("Buona sensazione");
+    expect(notes[0]).toHaveClass("session-card__notes");
   });
 
   it("il pulsante di ordinamento inverte l'ordine mostrato", async () => {
