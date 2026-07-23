@@ -20,6 +20,13 @@ export interface SessionSetInput {
   actualWeight?: number | null;
   /** Percezione dello sforzo 1-10; null se non registrata. */
   actualRpe?: number | null;
+  /** Snapshot di WorkoutSet.restMinSeconds (recupero tra questo set e il
+   *  successivo dello stesso esercizio) al momento del log. */
+  targetRestMinSeconds?: number | null;
+  /** Snapshot di WorkoutSet.restMaxSeconds al momento del log. */
+  targetRestMaxSeconds?: number | null;
+  /** Recupero tra i set effettivamente preso. */
+  actualRestSeconds?: number | null;
 }
 
 export interface SessionExerciseInput {
@@ -28,10 +35,10 @@ export interface SessionExerciseInput {
   workoutExerciseId?: string | null;
   /** Snapshot di WorkoutExercise.progressionIncrement al momento del log. */
   progressionIncrement?: number | null;
-  /** Snapshot di WorkoutExercise.restSeconds al momento del log. */
+  /** Snapshot di WorkoutExercise.restSeconds (recupero prima di passare
+   *  all'esercizio successivo — concetto diverso dal recupero tra i set,
+   *  che vive sul singolo set) al momento del log. */
   restSeconds?: number | null;
-  /** Recupero effettivamente preso prima dell'esercizio successivo. */
-  actualRestSeconds?: number | null;
   sets: SessionSetInput[];
 }
 
@@ -55,6 +62,12 @@ export interface SessionSet {
   actualReps: number;
   actualWeight: number | null;
   actualRpe: number | null;
+  /** Snapshot di WorkoutSet.restMinSeconds al momento del log. */
+  targetRestMinSeconds: number | null;
+  /** Snapshot di WorkoutSet.restMaxSeconds al momento del log. */
+  targetRestMaxSeconds: number | null;
+  /** Recupero tra i set effettivamente preso. */
+  actualRestSeconds: number | null;
 }
 
 export interface SessionExercise {
@@ -62,10 +75,9 @@ export interface SessionExercise {
   exerciseName: string;
   workoutExerciseId: string | null;
   progressionIncrement: number | null;
-  /** Snapshot di WorkoutExercise.restSeconds al momento del log. */
+  /** Snapshot di WorkoutExercise.restSeconds (recupero prima dell'esercizio
+   *  successivo) al momento del log. */
   restSeconds: number | null;
-  /** Recupero effettivamente preso prima dell'esercizio successivo. */
-  actualRestSeconds: number | null;
   sets: SessionSet[];
 }
 

@@ -13,6 +13,8 @@ function sessionPayload(overrides: {
   performedAt: string;
   progressionIncrement?: number | null;
   restSeconds?: number | null;
+  targetRestMinSeconds?: number | null;
+  targetRestMaxSeconds?: number | null;
   actualRestSeconds?: number | null;
   actualWeight?: number | null;
   actualReps?: number;
@@ -31,14 +33,18 @@ function sessionPayload(overrides: {
         progressionIncrement:
           overrides.progressionIncrement === undefined ? 2.5 : overrides.progressionIncrement,
         restSeconds: overrides.restSeconds === undefined ? 90 : overrides.restSeconds,
-        actualRestSeconds:
-          overrides.actualRestSeconds === undefined ? 90 : overrides.actualRestSeconds,
         sets: [
           {
             setNumber: 1,
             targetMinReps: overrides.targetMinReps ?? 10,
             actualReps: overrides.actualReps ?? 10,
             actualWeight: overrides.actualWeight ?? 80,
+            targetRestMinSeconds:
+              overrides.targetRestMinSeconds === undefined ? 90 : overrides.targetRestMinSeconds,
+            targetRestMaxSeconds:
+              overrides.targetRestMaxSeconds === undefined ? 120 : overrides.targetRestMaxSeconds,
+            actualRestSeconds:
+              overrides.actualRestSeconds === undefined ? 100 : overrides.actualRestSeconds,
           },
         ],
       },
@@ -230,11 +236,13 @@ describe("GET /sessions e /sessions/:id", () => {
     expect(response.body[0].exercises[0]).toMatchObject({
       exerciseName: "Panca piana",
       restSeconds: 90,
-      actualRestSeconds: 90,
     });
     expect(response.body[0].exercises[0].sets[0]).toMatchObject({
       actualReps: 10,
       actualWeight: 80,
+      targetRestMinSeconds: 90,
+      targetRestMaxSeconds: 120,
+      actualRestSeconds: 100,
     });
 
     const responseB = await request(app).get("/sessions").set("Authorization", `Bearer ${tokenB}`);

@@ -12,6 +12,9 @@ export interface NormalizedSessionSet {
   actualReps: number;
   actualWeight: number | null;
   actualRpe: number | null;
+  targetRestMinSeconds: number | null;
+  targetRestMaxSeconds: number | null;
+  actualRestSeconds: number | null;
 }
 
 export interface NormalizedSessionExercise {
@@ -20,7 +23,6 @@ export interface NormalizedSessionExercise {
   workoutExerciseId: string | null;
   progressionIncrement: number | null;
   restSeconds: number | null;
-  actualRestSeconds: number | null;
   sets: NormalizedSessionSet[];
 }
 
@@ -102,7 +104,9 @@ export class KyselySessionRepository implements SessionRepository {
               target_max_reps: s.targetMaxReps,
               progression_increment: ex.progressionIncrement,
               rest_seconds: ex.restSeconds,
-              actual_rest_seconds: ex.actualRestSeconds,
+              target_rest_min_seconds: s.targetRestMinSeconds,
+              target_rest_max_seconds: s.targetRestMaxSeconds,
+              actual_rest_seconds: s.actualRestSeconds,
               position: i,
               actual_reps: s.actualReps,
               actual_weight: s.actualWeight,
@@ -157,7 +161,6 @@ export class KyselySessionRepository implements SessionRepository {
           progressionIncrement:
             s.progression_increment === null ? null : Number(s.progression_increment),
           restSeconds: s.rest_seconds,
-          actualRestSeconds: s.actual_rest_seconds,
           sets: [],
         };
         exercisesByExerciseId.set(s.exercise_id, exercise);
@@ -170,6 +173,9 @@ export class KyselySessionRepository implements SessionRepository {
         actualReps: s.actual_reps,
         actualWeight: s.actual_weight === null ? null : Number(s.actual_weight),
         actualRpe: s.actual_rpe,
+        targetRestMinSeconds: s.target_rest_min_seconds,
+        targetRestMaxSeconds: s.target_rest_max_seconds,
+        actualRestSeconds: s.actual_rest_seconds,
       });
     }
 
@@ -215,7 +221,6 @@ export class KyselySessionRepository implements SessionRepository {
           progressionIncrement:
             s.progression_increment === null ? null : Number(s.progression_increment),
           restSeconds: s.rest_seconds,
-          actualRestSeconds: s.actual_rest_seconds,
           sets: [],
         };
         exercisesByExerciseId.set(s.exercise_id, exercise);
@@ -228,6 +233,9 @@ export class KyselySessionRepository implements SessionRepository {
         actualReps: s.actual_reps,
         actualWeight: s.actual_weight === null ? null : Number(s.actual_weight),
         actualRpe: s.actual_rpe,
+        targetRestMinSeconds: s.target_rest_min_seconds,
+        targetRestMaxSeconds: s.target_rest_max_seconds,
+        actualRestSeconds: s.actual_rest_seconds,
       };
       exercise.sets.push(set);
     }
@@ -351,7 +359,6 @@ export class InMemorySessionRepository implements SessionRepository {
         workoutExerciseId: ex.workoutExerciseId,
         progressionIncrement: ex.progressionIncrement,
         restSeconds: ex.restSeconds,
-        actualRestSeconds: ex.actualRestSeconds,
         sets: ex.sets.map((s) => ({
           id: randomUUID(),
           setNumber: s.setNumber,
@@ -360,6 +367,9 @@ export class InMemorySessionRepository implements SessionRepository {
           actualReps: s.actualReps,
           actualWeight: s.actualWeight,
           actualRpe: s.actualRpe,
+          targetRestMinSeconds: s.targetRestMinSeconds,
+          targetRestMaxSeconds: s.targetRestMaxSeconds,
+          actualRestSeconds: s.actualRestSeconds,
         })),
       })),
       createdAt: new Date(),

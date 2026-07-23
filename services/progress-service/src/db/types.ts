@@ -37,9 +37,14 @@ export interface SessionSetsTable {
   target_max_reps: number | null;
   /** Snapshot di WorkoutExercise.progressionIncrement al momento del log. */
   progression_increment: ColumnType<string | null, number | null, number | null>;
-  /** Snapshot di WorkoutExercise.restSeconds al momento del log. */
+  /** Snapshot di WorkoutExercise.restSeconds (recupero prima dell'esercizio
+   *  successivo) al momento del log. */
   rest_seconds: number | null;
-  /** Recupero effettivamente preso, inserito dall'utente nel form di log. */
+  /** Snapshot di WorkoutSet.restMinSeconds (recupero tra i set) al momento del log. */
+  target_rest_min_seconds: number | null;
+  /** Snapshot di WorkoutSet.restMaxSeconds al momento del log. */
+  target_rest_max_seconds: number | null;
+  /** Recupero tra i set effettivamente preso, inserito dall'utente nel form di log. */
   actual_rest_seconds: number | null;
   /** Indice dell'esercizio nell'array `exercises` della request: determina
    *  l'ordine di visualizzazione, non derivabile in modo affidabile da

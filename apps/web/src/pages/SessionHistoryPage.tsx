@@ -16,12 +16,10 @@ function formatWeight(session: SessionDetail["exercises"][number]): string {
   return weight !== null ? `${weight} kg` : "corpo libero";
 }
 
-/** Recupero mostrato: quello effettivamente preso se registrato (sessioni
- *  create dopo l'introduzione del campo), altrimenti quello prescritto
- *  dalla scheda al momento del log (sessioni precedenti). */
+/** Recupero prima di passare all'esercizio successivo (prescritto dalla
+ *  scheda al momento del log). */
 function formatRestSeconds(exercise: SessionDetail["exercises"][number]): string {
-  const seconds = exercise.actualRestSeconds ?? exercise.restSeconds;
-  return seconds !== null ? `${seconds}s` : "—";
+  return exercise.restSeconds !== null ? `${exercise.restSeconds}s` : "—";
 }
 
 /** Numero di settimana per sessione, indipendente dall'ordinamento mostrato:

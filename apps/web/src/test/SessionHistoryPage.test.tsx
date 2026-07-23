@@ -100,31 +100,6 @@ describe("SessionHistoryPage", () => {
     expect(workoutNotes[0]).toHaveClass("session-card__notes");
   });
 
-  it("mostra il recupero effettivo se presente, non il prescritto", async () => {
-    const sessionWithActualRest = {
-      ...SESSION_OLDER,
-      exercises: [
-        {
-          ...SESSION_OLDER.exercises[0],
-          restSeconds: 90,
-          actualRestSeconds: 150,
-        },
-      ],
-    };
-    mockFetchResponses([
-      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-      {
-        match: (u, m) => u.endsWith("/sessions") && m === "GET",
-        body: [sessionWithActualRest],
-      },
-    ]);
-
-    renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
-
-    expect(await screen.findByText("150s")).toBeInTheDocument();
-    expect(screen.queryByText("90s")).not.toBeInTheDocument();
-  });
-
   it("il pulsante di ordinamento inverte l'ordine mostrato", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },

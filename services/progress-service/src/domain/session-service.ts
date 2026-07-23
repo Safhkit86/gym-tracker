@@ -101,7 +101,6 @@ function normalize(input: SessionInput): NormalizedSession {
       workoutExerciseId: e.workoutExerciseId ?? null,
       progressionIncrement: e.progressionIncrement ?? null,
       restSeconds: e.restSeconds ?? null,
-      actualRestSeconds: e.actualRestSeconds ?? null,
       sets: e.sets.map((s) => ({
         setNumber: s.setNumber,
         targetMinReps: s.targetMinReps ?? null,
@@ -109,6 +108,9 @@ function normalize(input: SessionInput): NormalizedSession {
         actualReps: s.actualReps,
         actualWeight: s.actualWeight ?? null,
         actualRpe: s.actualRpe ?? null,
+        targetRestMinSeconds: s.targetRestMinSeconds ?? null,
+        targetRestMaxSeconds: s.targetRestMaxSeconds ?? null,
+        actualRestSeconds: s.actualRestSeconds ?? null,
       })),
     })),
   };
