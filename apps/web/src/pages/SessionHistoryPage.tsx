@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import type { SessionDetail } from "@gym-tracker/shared";
 import { useAuth } from "../auth/useAuth";
 import { deleteSession, listSessions } from "../api/sessions";
@@ -83,6 +83,11 @@ export function SessionHistoryPage() {
   // in locale, senza un'altra chiamata.
   const orderedSessions = sessions && sortOrder === "asc" ? [...sessions].reverse() : sessions;
   const weekBySessionId = sessions ? computeWeekNumbers(sessions) : null;
+  // Stesso numero di colonne "Set N" su ogni card (non solo per-sessione):
+  // altrimenti Kg/Recupero cadrebbero a un'ascissa diversa da card a card.
+  const maxSets = sessions
+    ? Math.max(1, ...sessions.flatMap((s) => s.exercises.map((e) => e.sets.length)))
+    : 1;
 
   return (
     <main className="main-wide">
@@ -108,13 +113,12 @@ export function SessionHistoryPage() {
           </div>
 
           {orderedSessions.map((session, index) => {
-            const maxSets = Math.max(1, ...session.exercises.map((e) => e.sets.length));
             const week = weekBySessionId?.get(session.id);
             const previousWeek =
               index > 0 ? weekBySessionId?.get(orderedSessions[index - 1].id) : undefined;
             const isNewWeek = week !== undefined && week !== previousWeek;
             return (
-              <div key={session.id}>
+              <Fragment key={session.id}>
                 {isNewWeek && (
                   <div className="session-week-divider">
                     <span>Settimana {week}</span>
@@ -170,7 +174,7 @@ export function SessionHistoryPage() {
                     />
                   </div>
                 </section>
-              </div>
+              </Fragment>
             );
           })}
         </>

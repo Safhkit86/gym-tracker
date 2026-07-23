@@ -588,6 +588,39 @@ button.secondary:hover:not(:disabled) {
 
 /* --- Storico allenamenti --- */
 
+/* Ogni sessione ha una <table> a se': senza larghezze esplicite, colonne
+   come "Kg"/"Recupero" cadono a un'ascissa diversa da una card all'altra
+   in base alla lunghezza del nome esercizio (prima colonna) e al numero di
+   colonne "Set N" di quella sessione. table-layout: fixed + larghezze
+   fisse per ruolo di colonna (invece che per indice) allineano tutte le
+   card, a prescindere dal contenuto; SessionHistoryPage inoltre usa lo
+   stesso numero di colonne "Set N" (il massimo su tutta la pagina, non
+   solo sulla sessione corrente) cosi' Kg/Recupero restano nella stessa
+   posizione anche tra sessioni con un numero di set diverso. */
+.session-card table {
+  table-layout: fixed;
+}
+
+.session-card th:first-child,
+.session-card td:first-child {
+  width: 12rem;
+}
+
+.session-card th:not(:first-child):not(:nth-last-child(-n + 2)),
+.session-card td:not(:first-child):not(:nth-last-child(-n + 2)) {
+  width: 4rem;
+}
+
+.session-card th:nth-last-child(2),
+.session-card td:nth-last-child(2) {
+  width: 6.5rem;
+}
+
+.session-card th:last-child,
+.session-card td:last-child {
+  width: 5rem;
+}
+
 .session-card__header {
   display: flex;
   align-items: baseline;
