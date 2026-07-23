@@ -19,10 +19,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .alterTable("session_sets")
     .addColumn("target_rest_max_seconds", "integer")
     .execute();
-  await db.schema
-    .alterTable("session_sets")
-    .addColumn("actual_rest_seconds", "integer")
-    .execute();
+  await db.schema.alterTable("session_sets").addColumn("actual_rest_seconds", "integer").execute();
 }
 
 export async function down(db: Kysely<unknown>): Promise<void> {
