@@ -31,7 +31,10 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     WHERE ss.session_id = sub.session_id AND ss.exercise_id = sub.exercise_id
   `.execute(db);
 
-  await db.schema.alterTable("session_sets").alterColumn("position", (col) => col.setNotNull()).execute();
+  await db.schema
+    .alterTable("session_sets")
+    .alterColumn("position", (col) => col.setNotNull())
+    .execute();
 }
 
 export async function down(db: Kysely<unknown>): Promise<void> {
