@@ -37,6 +37,10 @@ export interface SessionSetsTable {
   progression_increment: ColumnType<string | null, number | null, number | null>;
   /** Snapshot di WorkoutExercise.restSeconds al momento del log. */
   rest_seconds: number | null;
+  /** Indice dell'esercizio nell'array `exercises` della request: determina
+   *  l'ordine di visualizzazione, non derivabile in modo affidabile da
+   *  created_at quando piu' esercizi vengono inseriti nella stessa transazione. */
+  position: number;
   actual_reps: number;
   actual_weight: ColumnType<string | null, number | null, number | null>;
   actual_rpe: number | null;

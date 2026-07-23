@@ -85,7 +85,7 @@ export class KyselySessionRepository implements SessionRepository {
         .returning("id")
         .executeTakeFirstOrThrow();
 
-      for (const ex of input.exercises) {
+      for (const [i, ex] of input.exercises.entries()) {
         for (const s of ex.sets) {
           await trx
             .insertInto("session_sets")
@@ -99,6 +99,7 @@ export class KyselySessionRepository implements SessionRepository {
               target_max_reps: s.targetMaxReps,
               progression_increment: ex.progressionIncrement,
               rest_seconds: ex.restSeconds,
+              position: i,
               actual_reps: s.actualReps,
               actual_weight: s.actualWeight,
               actual_rpe: s.actualRpe,
@@ -132,7 +133,7 @@ export class KyselySessionRepository implements SessionRepository {
         "in",
         sessions.map((s) => s.id)
       )
-      .orderBy("created_at")
+      .orderBy("position")
       .orderBy("set_number")
       .execute();
 
@@ -193,7 +194,7 @@ export class KyselySessionRepository implements SessionRepository {
       .selectFrom("session_sets")
       .selectAll()
       .where("session_id", "=", id)
-      .orderBy("created_at")
+      .orderBy("position")
       .orderBy("set_number")
       .execute();
 
