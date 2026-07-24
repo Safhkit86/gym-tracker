@@ -20,7 +20,7 @@ async function migrateToLatest(): Promise<void> {
     // Namespace per servizio: piu' servizi condividono lo stesso database
     // Postgres (vedi docker-compose.yml), quindi la tabella di tracking di
     // Kysely (default "kysely_migration") deve avere un nome per servizio
-    // per non collidere con quella di auth-service e degli altri servizi.
+    // per non collidere con quella di account-service e degli altri servizi.
     migrationTableName: "kysely_migration_workout",
     migrationLockTableName: "kysely_migration_lock_workout",
   });

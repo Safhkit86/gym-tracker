@@ -6,7 +6,7 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
 ## Struttura
 
 - `packages/shared` — tipi e contratti condivisi tra i servizi
-- `services/auth-service` — utenti, autenticazione, JWT (implementato)
+- `services/account-service` — utenti, autenticazione, JWT (implementato)
 - `services/workout-service` — schede/esercizi (implementato)
 - `services/api-gateway` — unico punto di ingresso per i client, reverse-proxy
   verso i servizi (implementato in forma minima)
@@ -42,9 +42,9 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   `package.json` (e `package-lock.json*`) di root, non solo quelli dei
   singoli workspace: senza il manifest di root, `/app` non è riconosciuto
   come workspace root e `npm run build --workspace=...` fallisce con
-  `ENOENT: package.json`. Usa il Dockerfile di `auth-service` come modello.
+  `ENOENT: package.json`. Usa il Dockerfile di `account-service` come modello.
 - Ogni `src/config.ts` carica il `.env` di root con `dotenv` (vedi
-  `services/auth-service/src/config.ts`) prima di validare lo schema zod:
+  `services/account-service/src/config.ts`) prima di validare lo schema zod:
   serve solo quando il servizio gira sull'host (`npm run dev`/`db:migrate`
   fuori da Docker), dove le variabili non arrivano già impostate come fa
   docker-compose. Non sovrascrive variabili già in `process.env` e non fa
@@ -54,7 +54,7 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   `DATABASE_URL`, tabelle diverse per servizio): nel `Migrator` di Kysely
   (`src/db/migrate.ts`) imposta sempre `migrationTableName` e
   `migrationLockTableName` con un suffisso per servizio (es.
-  `kysely_migration_auth`, `kysely_migration_workout`), altrimenti la tabella
+  `kysely_migration_account`, `kysely_migration_workout`), altrimenti la tabella
   di tracking migrazioni di default (`kysely_migration`) collide tra servizi
   e la migrazione fallisce con "corrupted migrations".
 - `apps/web` usa una versione di `vitest` diversa da quella dei servizi

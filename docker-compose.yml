@@ -46,7 +46,7 @@ services:
       timeout: 5s
       retries: 10
 
-  # Cattura le email inviate da auth-service (reset/cambio password) in
+  # Cattura le email inviate da account-service (reset/cambio password) in
   # locale, senza un vero server SMTP: UI su :8025, nessuna configurazione
   # necessaria (nessuna autenticazione richiesta lato client SMTP).
   mailpit:
@@ -70,13 +70,13 @@ services:
       retries: 10
 
   # --- Microservizi ---
-  auth-service:
+  account-service:
     build:
       context: .
-      dockerfile: services/auth-service/Dockerfile
+      dockerfile: services/account-service/Dockerfile
     restart: unless-stopped
     environment:
-      PORT: ${AUTH_SERVICE_PORT:-4001}
+      PORT: ${ACCOUNT_SERVICE_PORT:-4001}
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       DATABASE_URL: postgres://${POSTGRES_USER:-gymtracker}:${POSTGRES_PASSWORD:-gymtracker}@postgres:5432/${POSTGRES_DB:-gymtracker}
       SMTP_HOST: mailpit
@@ -84,7 +84,7 @@ services:
       SMTP_FROM: ${SMTP_FROM:-no-reply@gym-tracker.local}
       WEB_APP_URL: ${WEB_APP_URL:-http://localhost:5173}
     ports:
-      - "${AUTH_SERVICE_PORT:-4001}:4001"
+      - "${ACCOUNT_SERVICE_PORT:-4001}:4001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -151,14 +151,14 @@ services:
     environment:
       PORT: ${API_GATEWAY_PORT:-4000}
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
-      AUTH_SERVICE_URL: http://auth-service:4001
+      ACCOUNT_SERVICE_URL: http://account-service:4001
       WORKOUT_SERVICE_URL: http://workout-service:4002
       PROGRESS_SERVICE_URL: http://progress-service:4003
       NOTIFY_SERVICE_URL: http://notify-service:4004
     ports:
       - "${API_GATEWAY_PORT:-4000}:4000"
     depends_on:
-      - auth-service
+      - account-service
       - workout-service
       - progress-service
       - notify-service

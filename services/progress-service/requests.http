@@ -1,12 +1,12 @@
 # Richieste manuali per progress-service (Fase 3).
 #
 # Richiede l'estensione VS Code "REST Client" (humao.rest-client).
-# Il token si ottiene da auth-service (login), poi si usa qui: esegui prima
-# "Login (auth-service)", poi gli altri blocchi in ordine.
+# Il token si ottiene da account-service (login), poi si usa qui: esegui prima
+# "Login (account-service)", poi gli altri blocchi in ordine.
 #
 # Prerequisiti: infrastruttura + servizi avviati e migrazioni eseguite
 #   docker compose up -d
-#   npm run db:migrate --workspace=@gym-tracker/auth-service
+#   npm run db:migrate --workspace=@gym-tracker/account-service
 #   npm run db:migrate --workspace=@gym-tracker/workout-service
 #   npm run db:migrate --workspace=@gym-tracker/progress-service
 
@@ -18,7 +18,7 @@
 ### Health check di progress-service
 GET {{baseUrl}}/health
 
-### Login (auth-service) — cattura il token usato dai blocchi successivi.
+### Login (account-service) — cattura il token usato dai blocchi successivi.
 # @name login
 POST {{authUrl}}/auth/login
 Content-Type: application/json

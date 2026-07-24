@@ -9,7 +9,7 @@ Modella la **prescrizione** (cosa fare); l'esecuzione reale sarà di `progress-s
 avere set diversi per reps/peso sullo stesso esercizio). Catalogo `Exercise`
 con `ownerId` nullo per gli esercizi globali (seed) o valorizzato per quelli
 creati dall'utente. `ownerId` sulle schede/esercizi è il `sub` del JWT: non è
-una foreign key verso `auth-service` (confine tra servizi).
+una foreign key verso `account-service` (confine tra servizi).
 
 Ogni `WorkoutExercise` può avere un `progressionIncrement` (kg se pesato,
 ripetizioni a corpo libero): è il _quanto_ di progressione per quell'esercizio
@@ -18,7 +18,7 @@ suggerimenti — non un valore fisso uguale per tutti gli esercizi.
 
 ## Endpoint
 
-Tutti richiedono `Authorization: Bearer <token>` emesso da `auth-service`.
+Tutti richiedono `Authorization: Bearer <token>` emesso da `account-service`.
 
 | Metodo | Path            | Descrizione                               |
 | ------ | --------------- | ----------------------------------------- |

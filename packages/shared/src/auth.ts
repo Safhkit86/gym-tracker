@@ -46,7 +46,7 @@ export interface AuthResponse {
   user: PublicUser;
 }
 
-/** Claim del JWT di accesso emesso da auth-service. */
+/** Claim del JWT di accesso emesso da account-service. */
 export interface AuthTokenClaims {
   /** id utente (subject) */
   sub: string;
@@ -63,7 +63,7 @@ export class TokenVerificationError extends Error {
 
 /**
  * Firma e verifica degli access token. Vive in shared perche' il formato del
- * token e' un contratto tra i servizi: auth-service lo emette, tutti gli altri
+ * token e' un contratto tra i servizi: account-service lo emette, tutti gli altri
  * lo verificano. Cosi' la logica (algoritmo, claim, scadenza) sta in un posto solo.
  */
 export interface AccessTokenService {

@@ -22,7 +22,7 @@ Web app (apps/web) / Android app (futuro)
 ```
 
 - **api-gateway** — unico punto di ingresso per i client: inoltra le richieste
-  ai servizi (`/auth`, `/me` → auth-service; `/exercises`, `/workouts` →
+  ai servizi (`/auth`, `/me` → account-service; `/exercises`, `/workouts` →
   workout-service; `/sessions`, `/progression` → progress-service;
   `/notifications` → notify-service). Verifica centralmente il Bearer JWT
   (401 prima ancora di raggiungere un servizio a valle, tranne su
@@ -30,7 +30,7 @@ Web app (apps/web) / Android app (futuro)
   `/auth/reset-password`, pubblici) e applica un rate limit per IP
   (più stringente su `/auth` e su `/me/password`) — in aggiunta, non in
   sostituzione, alla verifica che ogni servizio fa comunque per conto proprio.
-- **auth-service** — utenti, JWT, reset password via email, cambio password
+- **account-service** — utenti, JWT, reset password via email, cambio password
   con codice email come secondo fattore (Fase 1). Le email (reset password,
   conferma cambio password) sono catturate in locale da **Mailpit**
   (nessun vero SMTP in sviluppo): UI su http://localhost:8025.
@@ -70,11 +70,11 @@ cp .env.example .env
 npm install
 docker compose up -d postgres redis rabbitmq   # solo infrastruttura
 npm run build --workspace=@gym-tracker/shared
-npm run db:migrate --workspace=@gym-tracker/auth-service      # crea le tabelle
+npm run db:migrate --workspace=@gym-tracker/account-service      # crea le tabelle
 npm run db:migrate --workspace=@gym-tracker/workout-service   # crea le tabelle + seed catalogo
 npm run db:migrate --workspace=@gym-tracker/progress-service  # crea le tabelle
 npm run db:migrate --workspace=@gym-tracker/notify-service    # crea le tabelle
-cd services/auth-service && npm run dev         # avvia auth-service in watch mode
+cd services/account-service && npm run dev         # avvia account-service in watch mode
 # in altri terminali:
 #   cd services/workout-service && npm run dev
 #   cd services/progress-service && npm run dev
@@ -108,7 +108,7 @@ Per ripartire da zero (macchina appena riavviata, container fermi):
 docker compose up -d   # infrastruttura + servizi
 
 # solo la prima volta o dopo un nuovo checkout/pull
-npm run db:migrate --workspace=@gym-tracker/auth-service
+npm run db:migrate --workspace=@gym-tracker/account-service
 npm run db:migrate --workspace=@gym-tracker/workout-service
 npm run db:migrate --workspace=@gym-tracker/progress-service
 npm run db:migrate --workspace=@gym-tracker/notify-service
@@ -158,7 +158,7 @@ Ogni Pull Request verso `master` esegue automaticamente (`.github/workflows/ci.y
 1. Lint su tutti i workspace
 2. Test su tutti i workspace
 3. Build TypeScript su tutti i workspace
-4. Build dell'immagine Docker di ogni servizio implementato (`auth-service`, `workout-service`, `progress-service`, `notify-service`, `api-gateway`)
+4. Build dell'immagine Docker di ogni servizio implementato (`account-service`, `workout-service`, `progress-service`, `notify-service`, `api-gateway`)
 
 La validazione obbligatoria delle PR è **attiva**: su `master` è impostata una
 branch protection rule con il check `CI passed` (il job `ci-status` del workflow)
@@ -171,7 +171,7 @@ e UI: si spuntano indipendentemente, la fase è completa solo quando lo sono
 entrambi.
 
 - ✅ **Fase 0** — repo, CI/CD, Docker Compose
-- ✅ **Fase 1** — auth-service (registrazione, login, JWT)
+- ✅ **Fase 1** — account-service (registrazione, login, JWT)
   - ✅ Backend
   - ✅ UI (login, registrazione, dashboard protetta)
 - ✅ **Fase 2** — workout-service (schede, esercizi, set/reps/peso/recupero)

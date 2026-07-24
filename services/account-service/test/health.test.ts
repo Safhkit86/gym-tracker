@@ -10,7 +10,7 @@ describe("GET /health", () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({
-      service: "auth-service",
+      service: "account-service",
       status: "ok",
     });
     expect(response.body.timestamp).toBeDefined();

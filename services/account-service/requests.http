@@ -1,13 +1,13 @@
-# Richieste manuali per auth-service (Fase 1).
+# Richieste manuali per account-service (Fase 1).
 #
 # Richiede l'estensione VS Code "REST Client" (humao.rest-client):
 # sopra ogni blocco compare "Send Request" — cliccalo e vedi la risposta
 # nella tab a fianco. Esegui prima Login (o Register), poi /me: il token
 # viene preso automaticamente dalla risposta del login.
 #
-# Prerequisiti: infrastruttura + auth-service avviati e migrazione eseguita
+# Prerequisiti: infrastruttura + account-service avviati e migrazione eseguita
 #   docker compose up -d
-#   npm run db:migrate --workspace=@gym-tracker/auth-service
+#   npm run db:migrate --workspace=@gym-tracker/account-service
 
 @baseUrl = http://localhost:4001
 @email = demo@example.com

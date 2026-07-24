@@ -12,7 +12,7 @@ export async function bearerFor(ownerId: string, email = "test@example.com"): Pr
 }
 
 /**
- * Server HTTP minimale usato come finto upstream (auth-service/workout-service)
+ * Server HTTP minimale usato come finto upstream (account-service/workout-service)
  * nei test: risponde con lo status/body configurati ed espone l'ultima
  * richiesta ricevuta (path, metodo, body) per fare asserzioni sull'inoltro.
  */
@@ -79,7 +79,7 @@ export async function buildTestApp(rateLimits?: RateLimitConfig): Promise<{
   const progress = await startFakeUpstream();
   const notify = await startFakeUpstream();
   const app = createApp({
-    authServiceUrl: auth.url,
+    accountServiceUrl: auth.url,
     workoutServiceUrl: workout.url,
     progressServiceUrl: progress.url,
     notifyServiceUrl: notify.url,

@@ -8,7 +8,7 @@ import { KyselyUserRepository } from "./repositories/user-repository.js";
 import { KyselyPasswordActionTokenRepository } from "./repositories/password-action-token-repository.js";
 
 const config = loadConfig();
-const logger = createLogger("auth-service");
+const logger = createLogger("account-service");
 
 const db = createDb(config.DATABASE_URL);
 

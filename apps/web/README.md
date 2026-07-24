@@ -15,7 +15,7 @@ npm run test --workspace=@gym-tracker/web    # Vitest + Testing Library
 npm run build --workspace=@gym-tracker/web   # build di produzione
 ```
 
-Richiede `api-gateway` (e a cascata auth-service/workout-service, Postgres)
+Richiede `api-gateway` (e a cascata account-service/workout-service, Postgres)
 in esecuzione — vedi il README della root per il setup completo. L'URL del
 gateway si configura con `VITE_API_BASE_URL` (default `http://localhost:4000`,
 vedi `.env.example`).

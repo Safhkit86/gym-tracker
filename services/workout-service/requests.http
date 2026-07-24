@@ -1,12 +1,12 @@
 # Richieste manuali per workout-service (Fase 2).
 #
 # Richiede l'estensione VS Code "REST Client" (humao.rest-client).
-# Il token si ottiene da auth-service (login), poi si usa qui: esegui prima
-# "Login (auth-service)", poi gli altri blocchi in ordine.
+# Il token si ottiene da account-service (login), poi si usa qui: esegui prima
+# "Login (account-service)", poi gli altri blocchi in ordine.
 #
 # Prerequisiti: infrastruttura + servizi avviati e migrazioni eseguite
 #   docker compose up -d
-#   npm run db:migrate --workspace=@gym-tracker/auth-service
+#   npm run db:migrate --workspace=@gym-tracker/account-service
 #   npm run db:migrate --workspace=@gym-tracker/workout-service
 
 @authUrl = http://localhost:4001
@@ -17,8 +17,8 @@
 ### Health check di workout-service
 GET {{baseUrl}}/health
 
-### Login (auth-service) — cattura il token usato dai blocchi successivi.
-# Se l'utente non esiste ancora, registralo prima con auth-service/requests.http.
+### Login (account-service) — cattura il token usato dai blocchi successivi.
+# Se l'utente non esiste ancora, registralo prima con account-service/requests.http.
 # @name login
 POST {{authUrl}}/auth/login
 Content-Type: application/json

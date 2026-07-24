@@ -14,7 +14,7 @@ loadDotenv({ path: fileURLToPath(new URL("../../../.env", import.meta.url)) });
  */
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
-  AUTH_SERVICE_URL: z.string().url(),
+  ACCOUNT_SERVICE_URL: z.string().url(),
   WORKOUT_SERVICE_URL: z.string().url(),
   PROGRESS_SERVICE_URL: z.string().url(),
   NOTIFY_SERVICE_URL: z.string().url(),
