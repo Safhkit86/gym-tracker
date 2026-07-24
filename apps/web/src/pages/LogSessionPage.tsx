@@ -1,11 +1,6 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
-import type {
-  CreateSessionResponse,
-  SessionDetail,
-  SessionSet,
-  WorkoutDetail,
-} from "@gym-tracker/shared";
+import type { CreateSessionResponse, SessionDetail, WorkoutDetail } from "@gym-tracker/shared";
 import { useAuth } from "../auth/useAuth";
 import { getWorkout } from "../api/workouts";
 import { listSessions, logSession } from "../api/sessions";
@@ -17,12 +12,17 @@ interface SessionSetForm {
   targetMaxReps: number | null;
   isMaxEffort: boolean;
   actualReps: string;
-  /** Recupero tra questo set e il successivo: obiettivo prescritto (range,
-   *  mai modificabile) + effettivo (editabile). Concetto diverso dal
-   *  recupero prima dell'esercizio successivo (vedi SessionExerciseForm). */
+  /** Snapshot del recupero tra questo set e il successivo (mai modificabile
+   *  qui): l'utente inserisce un solo "recupero effettivo" per l'intero
+   *  esercizio (vedi SessionExerciseForm.actualRestSeconds), applicato a
+   *  tutti i set nel payload — stesso trattamento del peso. */
   targetRestMinSeconds: number | null;
   targetRestMaxSeconds: number | null;
-  actualRestSeconds: string;
+}
+
+interface RestRangeTarget {
+  targetRestMinSeconds: number | null;
+  targetRestMaxSeconds: number | null;
 }
 
 interface SessionExerciseForm {
@@ -31,9 +31,14 @@ interface SessionExerciseForm {
   workoutExerciseId: string;
   progressionIncrement: number | null;
   /** Recupero prima di passare all'esercizio successivo: solo informativo
-   *  in questa pagina (non c'e' un "effettivo" da registrare per un
-   *  intervallo che l'utente non controlla riga per riga). */
+   *  in questa pagina (mostrato come riga separatrice tra un esercizio e
+   *  il successivo, mai modificabile). */
   restSeconds: number | null;
+  /** Recupero tra i set: obiettivo (range, dal primo set) + effettivo
+   *  (editabile, un solo valore per l'intero esercizio). */
+  targetRestMinSeconds: number | null;
+  targetRestMaxSeconds: number | null;
+  actualRestSeconds: string;
   /** true quando la scheda non prevede un peso per questo esercizio: la
    *  colonna Kg resta "corpo libero", senza campo editabile. */
   isBodyweight: boolean;
@@ -57,47 +62,49 @@ function formatSetTarget(set: SessionSetForm): string {
     : String(set.targetMinReps);
 }
 
-function formatRestRange(set: SessionSetForm): string {
-  if (set.targetRestMinSeconds === null) {
+function formatRestRange(target: RestRangeTarget): string {
+  if (target.targetRestMinSeconds === null) {
     return "—";
   }
-  return set.targetRestMaxSeconds !== null
-    ? `${set.targetRestMinSeconds}-${set.targetRestMaxSeconds}s`
-    : `${set.targetRestMinSeconds}s`;
+  return target.targetRestMaxSeconds !== null
+    ? `${target.targetRestMinSeconds}-${target.targetRestMaxSeconds}s`
+    : `${target.targetRestMinSeconds}s`;
 }
 
-/** Peso dell'ultima sessione registrata per la stessa scheda+esercizio (non
- *  il target della scheda): le sessioni arrivano gia' ordinate dal piu'
- *  recente (GET /sessions), quindi la prima corrispondenza trovata e' quella
- *  buona. null se l'esercizio non e' mai stato registrato prima. */
-function findPreviousWeight(
+/** Peso/recupero dell'ultima sessione registrata per la stessa scheda+
+ *  esercizio (non il target della scheda): le sessioni arrivano gia'
+ *  ordinate dal piu' recente (GET /sessions), quindi la prima corrispondenza
+ *  trovata e' quella buona. null se l'esercizio non e' mai stato registrato
+ *  prima. Un solo valore per esercizio (dal primo set, come per il peso). */
+function findPreviousExerciseValue(
   previousSessions: SessionDetail[],
   workoutId: string,
-  exerciseId: string
+  exerciseId: string,
+  field: "actualWeight" | "actualRestSeconds"
 ): number | null {
   for (const session of previousSessions) {
     if (session.workoutId !== workoutId) {
       continue;
     }
     const exercise = session.exercises.find((e) => e.exerciseId === exerciseId);
-    const weight = exercise?.sets[0]?.actualWeight;
-    if (weight !== undefined && weight !== null) {
-      return weight;
+    const value = exercise?.sets[0]?.[field];
+    if (value !== undefined && value !== null) {
+      return value;
     }
   }
   return null;
 }
 
 /** Stesso set (stesso numero) dell'ultima sessione registrata per la stessa
- *  scheda+esercizio: da qui vengono le rep/il recupero effettivi di default,
- *  non dall'obiettivo della scheda (vedi buildInitialExercises). null se
- *  quel set non e' mai stato registrato prima. */
-function findPreviousSet(
+ *  scheda+esercizio: da qui vengono le rep effettive di default, non
+ *  dall'obiettivo della scheda (vedi buildInitialExercises). null se quel
+ *  set non e' mai stato registrato prima. */
+function findPreviousSetReps(
   previousSessions: SessionDetail[],
   workoutId: string,
   exerciseId: string,
   setNumber: number
-): SessionSet | null {
+): number | null {
   for (const session of previousSessions) {
     if (session.workoutId !== workoutId) {
       continue;
@@ -105,52 +112,65 @@ function findPreviousSet(
     const exercise = session.exercises.find((e) => e.exerciseId === exerciseId);
     const set = exercise?.sets.find((s) => s.setNumber === setNumber);
     if (set) {
-      return set;
+      return set.actualReps;
     }
   }
   return null;
 }
 
 /** Precompila il form di log: rep effettive, peso e recupero effettivo
- *  partono tutti dall'ULTIMA sessione registrata per lo stesso set/esercizio
- *  di questa scheda (non dall'obiettivo) — se il range e' 6-10 e l'ultima
- *  volta si sono fatte 9 rep, riparte da 9. Solo se non c'e' ancora storico
- *  per quel set/esercizio si ripiega sull'obiettivo della scheda (rep minime,
- *  peso target, recupero minimo). L'utente conferma o corregge. */
+ *  partono tutti dall'ULTIMA sessione registrata per lo stesso esercizio di
+ *  questa scheda (non dall'obiettivo) — se il range e' 6-10 e l'ultima volta
+ *  si sono fatte 9 rep, riparte da 9. Solo se non c'e' ancora storico per
+ *  quell'esercizio si ripiega sull'obiettivo della scheda (rep minime, peso
+ *  target, recupero minimo). L'utente conferma o corregge. */
 function buildInitialExercises(
   workout: WorkoutDetail,
   previousSessions: SessionDetail[]
 ): SessionExerciseForm[] {
   return workout.exercises.map((exercise) => {
-    const targetWeight = exercise.sets[0]?.targetWeight ?? null;
-    const previousWeight = findPreviousWeight(previousSessions, workout.id, exercise.exerciseId);
+    const firstSet = exercise.sets[0];
+    const targetWeight = firstSet?.targetWeight ?? null;
+    const previousWeight = findPreviousExerciseValue(
+      previousSessions,
+      workout.id,
+      exercise.exerciseId,
+      "actualWeight"
+    );
     const initialWeight = previousWeight ?? targetWeight;
+
+    const previousRestSeconds = findPreviousExerciseValue(
+      previousSessions,
+      workout.id,
+      exercise.exerciseId,
+      "actualRestSeconds"
+    );
+    const initialRestSeconds = previousRestSeconds ?? firstSet?.restMinSeconds ?? null;
+
     return {
       exerciseId: exercise.exerciseId,
       exerciseName: exercise.exerciseName,
       workoutExerciseId: exercise.id,
       progressionIncrement: exercise.progressionIncrement,
       restSeconds: exercise.restSeconds,
+      targetRestMinSeconds: firstSet?.restMinSeconds ?? null,
+      targetRestMaxSeconds: firstSet?.restMaxSeconds ?? null,
+      actualRestSeconds: initialRestSeconds !== null ? String(initialRestSeconds) : "",
       isBodyweight: targetWeight === null,
       actualWeight: targetWeight !== null && initialWeight !== null ? String(initialWeight) : "",
       sets: exercise.sets.map((set) => {
-        const previousSet = findPreviousSet(
+        const previousReps = findPreviousSetReps(
           previousSessions,
           workout.id,
           exercise.exerciseId,
           set.setNumber
         );
-        const actualReps = previousSet
-          ? String(previousSet.actualReps)
-          : set.isMaxEffort
-            ? ""
-            : String(set.targetMinReps);
-        const actualRestSeconds =
-          previousSet?.actualRestSeconds != null
-            ? String(previousSet.actualRestSeconds)
-            : set.restMinSeconds !== null
-              ? String(set.restMinSeconds)
-              : "";
+        const actualReps =
+          previousReps !== null
+            ? String(previousReps)
+            : set.isMaxEffort
+              ? ""
+              : String(set.targetMinReps);
         return {
           setNumber: set.setNumber,
           targetMinReps: set.targetMinReps,
@@ -159,7 +179,6 @@ function buildInitialExercises(
           actualReps,
           targetRestMinSeconds: set.restMinSeconds,
           targetRestMaxSeconds: set.restMaxSeconds,
-          actualRestSeconds,
         };
       }),
     };
@@ -233,6 +252,9 @@ export function LogSessionPage() {
             !exercise.isBodyweight && exercise.actualWeight.trim()
               ? Number(exercise.actualWeight)
               : undefined;
+          const actualRestSeconds = exercise.actualRestSeconds.trim()
+            ? Number(exercise.actualRestSeconds)
+            : undefined;
           return {
             exerciseId: exercise.exerciseId,
             exerciseName: exercise.exerciseName,
@@ -247,9 +269,7 @@ export function LogSessionPage() {
               actualWeight,
               targetRestMinSeconds: set.targetRestMinSeconds ?? undefined,
               targetRestMaxSeconds: set.targetRestMaxSeconds ?? undefined,
-              actualRestSeconds: set.actualRestSeconds.trim()
-                ? Number(set.actualRestSeconds)
-                : undefined,
+              actualRestSeconds,
             })),
           };
         }),
@@ -342,77 +362,86 @@ export function LogSessionPage() {
                     <th key={i}>Set {i + 1}</th>
                   ))}
                   <th>Kg</th>
+                  <th>Recupero</th>
                 </tr>
               </thead>
               <tbody>
                 {exercises.map((exercise, exerciseIndex) => (
-                  <tr key={exercise.workoutExerciseId}>
-                    <td>
-                      <div className="log-exercise-name">
-                        <span>{exercise.exerciseName}</span>
-                        {exercise.restSeconds !== null && (
-                          <span className="session-card__notes">
-                            Recupero tra esercizi: {exercise.restSeconds}s
-                          </span>
+                  <Fragment key={exercise.workoutExerciseId}>
+                    <tr>
+                      <td>
+                        <div className="log-exercise-name">
+                          <span>{exercise.exerciseName}</span>
+                        </div>
+                      </td>
+                      {Array.from({ length: maxSets }, (_, setIndex) => {
+                        const set = exercise.sets[setIndex];
+                        if (!set) {
+                          return <td key={setIndex} />;
+                        }
+                        return (
+                          <td key={setIndex}>
+                            <div className="log-cell">
+                              <span className="log-cell__target">{formatSetTarget(set)}</span>
+                              <input
+                                type="number"
+                                min={0}
+                                value={set.actualReps}
+                                onChange={(event) =>
+                                  updateSet(exerciseIndex, setIndex, {
+                                    actualReps: event.target.value,
+                                  })
+                                }
+                                aria-label={`${exercise.exerciseName} set ${set.setNumber} rep effettive`}
+                                required
+                              />
+                            </div>
+                          </td>
+                        );
+                      })}
+                      <td>
+                        {exercise.isBodyweight ? (
+                          "corpo libero"
+                        ) : (
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.5"
+                            value={exercise.actualWeight}
+                            onChange={(event) =>
+                              updateExercise(exerciseIndex, { actualWeight: event.target.value })
+                            }
+                            aria-label={`${exercise.exerciseName} kg effettivi`}
+                          />
                         )}
-                      </div>
-                    </td>
-                    {Array.from({ length: maxSets }, (_, setIndex) => {
-                      const set = exercise.sets[setIndex];
-                      if (!set) {
-                        return <td key={setIndex} />;
-                      }
-                      return (
-                        <td key={setIndex}>
-                          <div className="log-cell">
-                            <span className="log-cell__target">{formatSetTarget(set)}</span>
-                            <input
-                              type="number"
-                              min={0}
-                              value={set.actualReps}
-                              onChange={(event) =>
-                                updateSet(exerciseIndex, setIndex, {
-                                  actualReps: event.target.value,
-                                })
-                              }
-                              aria-label={`${exercise.exerciseName} set ${set.setNumber} rep effettive`}
-                              required
-                            />
-                            <span className="log-cell__target log-cell__target--rest">
-                              Rec {formatRestRange(set)}
-                            </span>
-                            <input
-                              type="number"
-                              min={0}
-                              value={set.actualRestSeconds}
-                              onChange={(event) =>
-                                updateSet(exerciseIndex, setIndex, {
-                                  actualRestSeconds: event.target.value,
-                                })
-                              }
-                              aria-label={`${exercise.exerciseName} set ${set.setNumber} recupero effettivo`}
-                            />
-                          </div>
+                      </td>
+                      <td>
+                        <div className="log-cell">
+                          <span className="log-cell__target">{formatRestRange(exercise)}</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={exercise.actualRestSeconds}
+                            onChange={(event) =>
+                              updateExercise(exerciseIndex, {
+                                actualRestSeconds: event.target.value,
+                              })
+                            }
+                            aria-label={`${exercise.exerciseName} recupero effettivo`}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                    {exerciseIndex < exercises.length - 1 && exercise.restSeconds !== null && (
+                      <tr className="log-rest-divider-row">
+                        <td colSpan={maxSets + 3}>
+                          <span className="log-rest-divider">
+                            Recupero prima del prossimo esercizio: {exercise.restSeconds}s
+                          </span>
                         </td>
-                      );
-                    })}
-                    <td>
-                      {exercise.isBodyweight ? (
-                        "corpo libero"
-                      ) : (
-                        <input
-                          type="number"
-                          min={0}
-                          step="0.5"
-                          value={exercise.actualWeight}
-                          onChange={(event) =>
-                            updateExercise(exerciseIndex, { actualWeight: event.target.value })
-                          }
-                          aria-label={`${exercise.exerciseName} kg effettivi`}
-                        />
-                      )}
-                    </td>
-                  </tr>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

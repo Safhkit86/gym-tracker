@@ -67,13 +67,47 @@ describe("LogSessionPage", () => {
     expect(reps.value).toBe("10");
     const weight = screen.getByLabelText(/panca piana kg effettivi/i) as HTMLInputElement;
     expect(weight.value).toBe("80");
-    const rest = screen.getByLabelText(/panca piana set 1 recupero effettivo/i) as HTMLInputElement;
+    const rest = screen.getByLabelText(/panca piana recupero effettivo/i) as HTMLInputElement;
     expect(rest.value).toBe("90");
 
     expect(screen.getByText("10")).toBeInTheDocument(); // obiettivo rep sopra la casella
-    expect(screen.getByText("Rec 90-120s")).toBeInTheDocument(); // obiettivo recupero sopra la casella
-    expect(screen.getByText("Recupero tra esercizi: 90s")).toBeInTheDocument();
+    expect(screen.getByText("90-120s")).toBeInTheDocument(); // obiettivo recupero sopra la casella
     expect(screen.queryByLabelText(/^note$/i)).not.toBeInTheDocument();
+  });
+
+  it("mostra una riga separatrice con il recupero prima dell'esercizio successivo, tra un esercizio e l'altro", async () => {
+    const twoExerciseWorkout = {
+      ...WORKOUT_DETAIL,
+      exercises: [
+        WORKOUT_DETAIL.exercises[0],
+        {
+          ...WORKOUT_DETAIL.exercises[0],
+          id: "we2",
+          exerciseId: "e2",
+          exerciseName: "Trazioni",
+          restSeconds: 120,
+        },
+      ],
+    };
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: twoExerciseWorkout },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+      </Routes>,
+      ["/workouts/w1/log"]
+    );
+
+    await screen.findByText("Trazioni");
+    expect(screen.getByText("Recupero prima del prossimo esercizio: 90s")).toBeInTheDocument();
+    // Nessuna riga dopo l'ultimo esercizio (nessun esercizio successivo a cui riposare prima).
+    expect(
+      screen.queryByText(/Recupero prima del prossimo esercizio: 120s/)
+    ).not.toBeInTheDocument();
   });
 
   it("precompila rep/peso/recupero dall'ultima sessione registrata, non dall'obiettivo", async () => {
@@ -132,7 +166,7 @@ describe("LogSessionPage", () => {
     expect(reps.value).toBe("9");
     const weight = screen.getByLabelText(/panca piana kg effettivi/i) as HTMLInputElement;
     expect(weight.value).toBe("85");
-    const rest = screen.getByLabelText(/panca piana set 1 recupero effettivo/i) as HTMLInputElement;
+    const rest = screen.getByLabelText(/panca piana recupero effettivo/i) as HTMLInputElement;
     expect(rest.value).toBe("100");
   });
 
