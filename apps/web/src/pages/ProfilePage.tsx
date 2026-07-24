@@ -1,10 +1,16 @@
 import { useEffect, useState, type FormEvent } from "react";
+import type { ProgressionPreferences } from "@gym-tracker/shared";
 import { useAuth } from "../auth/useAuth";
 import { confirmPasswordChange, requestPasswordChange } from "../api/auth";
-import { getMeasurements, updateMeasurements } from "../api/profile";
+import {
+  getMeasurements,
+  getProgressionPreferences,
+  updateMeasurements,
+  updateProgressionPreferences,
+} from "../api/profile";
 import { ApiRequestError } from "../api/client";
 
-type ProfileSection = "account" | "measurements";
+type ProfileSection = "account" | "measurements" | "preferences";
 
 /** Nullable o maggiore di zero: 0 (o un negativo, impedito gia' da min={0}
  *  sull'input) non e' una misura valida, va trattato come "non impostata"
@@ -41,6 +47,31 @@ export function ProfilePage() {
   const [measurementsError, setMeasurementsError] = useState<string | null>(null);
   const [measurementsMessage, setMeasurementsMessage] = useState<string | null>(null);
   const [isSavingMeasurements, setIsSavingMeasurements] = useState(false);
+
+  const [requiredConsecutiveSessions, setRequiredConsecutiveSessions] = useState("2");
+  const [groupingScope, setGroupingScope] =
+    useState<ProgressionPreferences["groupingScope"]>("workout");
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  const [preferencesError, setPreferencesError] = useState<string | null>(null);
+  const [preferencesMessage, setPreferencesMessage] = useState<string | null>(null);
+  const [isSavingPreferences, setIsSavingPreferences] = useState(false);
+
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+    getProgressionPreferences(token)
+      .then((data) => {
+        setRequiredConsecutiveSessions(String(data.requiredConsecutiveSessions));
+        setGroupingScope(data.groupingScope);
+        setPreferencesLoaded(true);
+      })
+      .catch((err: unknown) => {
+        setPreferencesError(
+          err instanceof ApiRequestError ? err.message : "Impossibile caricare le preferenze."
+        );
+      });
+  }, [token]);
 
   useEffect(() => {
     if (!token) {
@@ -146,6 +177,32 @@ export function ProfilePage() {
     }
   }
 
+  async function handleSavePreferences(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    setPreferencesError(null);
+    setPreferencesMessage(null);
+    if (!token) {
+      return;
+    }
+
+    setIsSavingPreferences(true);
+    try {
+      const result = await updateProgressionPreferences(token, {
+        requiredConsecutiveSessions: Number(requiredConsecutiveSessions),
+        groupingScope,
+      });
+      setRequiredConsecutiveSessions(String(result.requiredConsecutiveSessions));
+      setGroupingScope(result.groupingScope);
+      setPreferencesMessage("Preferenze salvate.");
+    } catch (err) {
+      setPreferencesError(
+        err instanceof ApiRequestError ? err.message : "Errore imprevisto. Riprova."
+      );
+    } finally {
+      setIsSavingPreferences(false);
+    }
+  }
+
   if (!user) {
     return (
       <main>
@@ -172,6 +229,13 @@ export function ProfilePage() {
           onClick={() => setActiveSection("measurements")}
         >
           Misure
+        </button>
+        <button
+          type="button"
+          className={activeSection === "preferences" ? undefined : "secondary"}
+          onClick={() => setActiveSection("preferences")}
+        >
+          Preferenze
         </button>
       </div>
 
@@ -340,6 +404,51 @@ export function ProfilePage() {
               {measurementsMessage && <p role="status">{measurementsMessage}</p>}
               <button type="submit" disabled={isSavingMeasurements}>
                 {isSavingMeasurements ? "Salvataggio…" : "Salva misure"}
+              </button>
+            </form>
+          )}
+        </section>
+      )}
+
+      {activeSection === "preferences" && (
+        <section className="card">
+          <h2>Preferenze</h2>
+          {!preferencesLoaded && !preferencesError && <p>Caricamento…</p>}
+          {preferencesLoaded && (
+            <form onSubmit={handleSavePreferences}>
+              <label>
+                Suggerisci progressione quando raggiungi il massimo delle ripetizioni in tutti i set
+                per{" "}
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={requiredConsecutiveSessions}
+                  onChange={(event) => setRequiredConsecutiveSessions(event.target.value)}
+                  required
+                />{" "}
+                volte
+              </label>
+              <label>
+                Suggerisci progressione considerando
+                <select
+                  value={groupingScope}
+                  onChange={(event) =>
+                    setGroupingScope(event.target.value as ProgressionPreferences["groupingScope"])
+                  }
+                >
+                  <option value="workout">Scheda + esercizio</option>
+                  <option value="exercise">Solo esercizio</option>
+                </select>
+              </label>
+              {preferencesError && (
+                <p role="alert" className="form-error">
+                  {preferencesError}
+                </p>
+              )}
+              {preferencesMessage && <p role="status">{preferencesMessage}</p>}
+              <button type="submit" disabled={isSavingPreferences}>
+                {isSavingPreferences ? "Salvataggio…" : "Salva preferenze"}
               </button>
             </form>
           )}

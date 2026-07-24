@@ -22,6 +22,12 @@ function measurementsHandler(body: unknown = EMPTY_MEASUREMENTS) {
   return { match: (u: string, m: string) => u.endsWith("/me/measurements") && m === "GET", body };
 }
 
+const DEFAULT_PREFERENCES = { requiredConsecutiveSessions: 2, groupingScope: "workout" };
+
+function preferencesHandler(body: unknown = DEFAULT_PREFERENCES) {
+  return { match: (u: string, m: string) => u.endsWith("/me/preferences") && m === "GET", body };
+}
+
 describe("ProfilePage", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -36,6 +42,7 @@ describe("ProfilePage", () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
+      preferencesHandler(),
     ]);
 
     renderWithProviders(<ProfilePage />, ["/profile"]);
@@ -48,6 +55,7 @@ describe("ProfilePage", () => {
     const fetchMock = mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
+      preferencesHandler(),
       {
         match: (u, m) => u.endsWith("/me/password/change-request") && m === "POST",
         body: { message: "Codice di conferma inviato via email." },
@@ -91,6 +99,7 @@ describe("ProfilePage", () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
+      preferencesHandler(),
       {
         match: (u, m) => u.endsWith("/me/password/change-request") && m === "POST",
         status: 400,
@@ -118,6 +127,7 @@ describe("ProfilePage", () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
+      preferencesHandler(),
     ]);
 
     renderWithProviders(<ProfilePage />, ["/profile"]);
@@ -142,6 +152,7 @@ describe("ProfilePage", () => {
         waistCm: 85,
         legCm: 55,
       }),
+      preferencesHandler(),
       {
         match: (u, m) => u.endsWith("/me/measurements") && m === "PUT",
         body: {
@@ -179,6 +190,7 @@ describe("ProfilePage", () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
+      preferencesHandler(),
       {
         match: (u, m) => u.endsWith("/me/measurements") && m === "PUT",
         body: EMPTY_MEASUREMENTS,
@@ -200,6 +212,7 @@ describe("ProfilePage", () => {
     const fetchMock = mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
+      preferencesHandler(),
       {
         match: (u, m) => u.endsWith("/me/measurements") && m === "PUT",
         body: EMPTY_MEASUREMENTS,
@@ -220,5 +233,62 @@ describe("ProfilePage", () => {
       ([u, init]) => String(u).endsWith("/me/measurements") && init?.method === "PUT"
     );
     expect(JSON.parse((putCall?.[1]?.body as string) ?? "{}")).toMatchObject({ heightCm: null });
+  });
+
+  it("mostra le preferenze di default (2, scheda+esercizio) nel tab Preferenze", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      measurementsHandler(),
+      preferencesHandler(),
+    ]);
+
+    renderWithProviders(<ProfilePage />, ["/profile"]);
+
+    await screen.findByText(/test@example.com/);
+    fireEvent.click(screen.getByRole("button", { name: "Preferenze" }));
+
+    const sessionsInput = (await screen.findByLabelText(
+      /suggerisci progressione quando raggiungi il massimo/i
+    )) as HTMLInputElement;
+    expect(sessionsInput.value).toBe("2");
+    const scopeSelect = screen.getByLabelText(
+      /suggerisci progressione considerando/i
+    ) as HTMLSelectElement;
+    expect(scopeSelect.value).toBe("workout");
+  });
+
+  it("salva le preferenze aggiornate (X e raggruppamento)", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      measurementsHandler(),
+      preferencesHandler(),
+      {
+        match: (u, m) => u.endsWith("/me/preferences") && m === "PUT",
+        body: { requiredConsecutiveSessions: 3, groupingScope: "exercise" },
+      },
+    ]);
+
+    renderWithProviders(<ProfilePage />, ["/profile"]);
+
+    await screen.findByText(/test@example.com/);
+    fireEvent.click(screen.getByRole("button", { name: "Preferenze" }));
+
+    const sessionsInput = await screen.findByLabelText(
+      /suggerisci progressione quando raggiungi il massimo/i
+    );
+    fireEvent.change(sessionsInput, { target: { value: "3" } });
+    const scopeSelect = screen.getByLabelText(/suggerisci progressione considerando/i);
+    fireEvent.change(scopeSelect, { target: { value: "exercise" } });
+    fireEvent.click(screen.getByRole("button", { name: /salva preferenze/i }));
+
+    expect(await screen.findByText("Preferenze salvate.")).toBeInTheDocument();
+    const putCall = fetchMock.mock.calls.find(
+      ([u, init]) => String(u).endsWith("/me/preferences") && init?.method === "PUT"
+    );
+    expect(putCall).toBeDefined();
+    expect(JSON.parse((putCall?.[1]?.body as string) ?? "{}")).toEqual({
+      requiredConsecutiveSessions: 3,
+      groupingScope: "exercise",
+    });
   });
 });

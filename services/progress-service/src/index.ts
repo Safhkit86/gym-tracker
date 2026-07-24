@@ -5,6 +5,7 @@ import { createDb } from "./db/client.js";
 import { AmqpProgressionEventPublisher } from "./events/publisher.js";
 import { KyselyProgressionEventRepository } from "./repositories/progression-event-repository.js";
 import { KyselySessionRepository } from "./repositories/session-repository.js";
+import { KyselyProgressionPreferencesRepository } from "./repositories/progression-preferences-repository.js";
 
 const config = loadConfig();
 const logger = createLogger("progress-service");
@@ -15,6 +16,7 @@ const publisher = await AmqpProgressionEventPublisher.connect(config.RABBITMQ_UR
 const app = createApp({
   sessions: new KyselySessionRepository(db),
   progressionEvents: new KyselyProgressionEventRepository(db),
+  progressionPreferences: new KyselyProgressionPreferencesRepository(db),
   publisher,
   tokens: createAccessTokenService(config.JWT_SECRET),
   logger,

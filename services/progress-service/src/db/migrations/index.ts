@@ -5,6 +5,7 @@ import * as addRestSecondsSnapshot from "./003-add-rest-seconds-snapshot.js";
 import * as addExercisePosition from "./004-add-exercise-position.js";
 import * as addWorkoutNotesSnapshot from "./005-add-workout-notes-snapshot.js";
 import * as addActualRestSeconds from "./006-add-actual-rest-seconds.js";
+import * as addProgressionPreferences from "./007-add-progression-preferences.js";
 
 /**
  * Registro statico delle migrazioni (chiavi ordinate). Preferito a
@@ -18,4 +19,5 @@ export const migrations: Record<string, Migration> = {
   "004-add-exercise-position": addExercisePosition,
   "005-add-workout-notes-snapshot": addWorkoutNotesSnapshot,
   "006-add-actual-rest-seconds": addActualRestSeconds,
+  "007-add-progression-preferences": addProgressionPreferences,
 };

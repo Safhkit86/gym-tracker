@@ -145,4 +145,47 @@ describe("evaluateProgression", () => {
       suggestedValue: 82.5,
     });
   });
+
+  it("con requiredConsecutiveSessions personalizzato, non basta il numero di default", () => {
+    const history = [
+      session("s2", "2026-07-10", QUALIFYING_WEIGHTED),
+      session("s1", "2026-07-03", QUALIFYING_WEIGHTED),
+    ];
+    // Preferenza utente: servono 3 sessioni consecutive, non le 2 di default.
+    expect(evaluateProgression(history, 2.5, 3)).toBeNull();
+  });
+
+  it("con requiredConsecutiveSessions personalizzato a 3, suggerisce dopo 3 sessioni consecutive", () => {
+    const history = [
+      session("s3", "2026-07-17", QUALIFYING_WEIGHTED),
+      session("s2", "2026-07-10", QUALIFYING_WEIGHTED),
+      session("s1", "2026-07-03", QUALIFYING_WEIGHTED),
+    ];
+    const result = evaluateProgression(history, 2.5, 3);
+    expect(result).toMatchObject({
+      suggestionType: "increase_weight",
+      previousValue: 80,
+      suggestedValue: 82.5,
+    });
+  });
+
+  it("con requiredConsecutiveSessions=1, basta una sola sessione qualificante", () => {
+    const history = [session("s1", "2026-07-10", QUALIFYING_WEIGHTED)];
+    const result = evaluateProgression(history, 2.5, 1);
+    expect(result).toMatchObject({
+      suggestionType: "increase_weight",
+      previousValue: 80,
+      suggestedValue: 82.5,
+    });
+  });
+
+  it("con requiredConsecutiveSessions=3, non propone nulla se una delle 3 sessioni non e' uniforme", () => {
+    const heavier = QUALIFYING_WEIGHTED.map((s) => ({ ...s, actualWeight: 82.5 }));
+    const history = [
+      session("s3", "2026-07-17", heavier),
+      session("s2", "2026-07-10", QUALIFYING_WEIGHTED),
+      session("s1", "2026-07-03", QUALIFYING_WEIGHTED),
+    ];
+    expect(evaluateProgression(history, 2.5, 3)).toBeNull();
+  });
 });

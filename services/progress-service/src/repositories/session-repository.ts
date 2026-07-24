@@ -59,16 +59,19 @@ export interface SessionRepository {
   findDetail(ownerId: string, id: string): Promise<SessionDetail | null>;
   delete(ownerId: string, id: string): Promise<boolean>;
   /**
-   * Ultime `limit` sessioni (piu' recente prima) per lo stesso
-   * (owner, scheda, esercizio) — include la sessione appena creata.
-   * Lo scope e' per-scheda: lo stesso esercizio in una scheda diversa non
-   * fa parte dello stesso "programma" (vedi progression-rule-engine.ts).
+   * Ultime `limit` sessioni (piu' recente prima) per lo stesso esercizio —
+   * include la sessione appena creata. Lo `scope` decide il raggruppamento
+   * (preferenza per-utente, vedi progression-preferences-repository.ts):
+   * `"workout"` (default, comportamento storico) considera solo le sessioni
+   * della stessa scheda; `"exercise"` considera l'esercizio ovunque compaia,
+   * indipendentemente dalla scheda.
    */
   findRecentSetsForExercise(
     ownerId: string,
     workoutId: string,
     exerciseId: string,
-    limit: number
+    limit: number,
+    scope?: "workout" | "exercise"
   ): Promise<ExerciseSessionSnapshot[]>;
 }
 
@@ -265,13 +268,14 @@ export class KyselySessionRepository implements SessionRepository {
     ownerId: string,
     workoutId: string,
     exerciseId: string,
-    limit: number
+    limit: number,
+    scope: "workout" | "exercise" = "workout"
   ): Promise<ExerciseSessionSnapshot[]> {
     const sessions = await this.db
       .selectFrom("workout_sessions as ws")
       .select(["ws.id", "ws.performed_at", "ws.created_at"])
       .where("ws.owner_id", "=", ownerId)
-      .where("ws.workout_id", "=", workoutId)
+      .$if(scope === "workout", (qb) => qb.where("ws.workout_id", "=", workoutId))
       .where((eb) =>
         eb.exists(
           eb
@@ -409,10 +413,12 @@ export class InMemorySessionRepository implements SessionRepository {
     ownerId: string,
     workoutId: string,
     exerciseId: string,
-    limit: number
+    limit: number,
+    scope: "workout" | "exercise" = "workout"
   ): Promise<ExerciseSessionSnapshot[]> {
     return [...this.byId.values()]
-      .filter((s) => s.ownerId === ownerId && s.workoutId === workoutId)
+      .filter((s) => s.ownerId === ownerId)
+      .filter((s) => scope !== "workout" || s.workoutId === workoutId)
       .filter((s) => s.exercises.some((ex) => ex.exerciseId === exerciseId))
       .sort((a, b) => {
         const byPerformed = b.performedAt.localeCompare(a.performedAt);
