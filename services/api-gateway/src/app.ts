@@ -111,6 +111,11 @@ export function createApp(deps: AppDeps): Express {
   // Piu' stringente del generico /me: azione sensibile sul proprio account.
   // Montata prima del blanket /me qui sotto, entrambe dopo requireAuth.
   app.use("/me/password", rateLimiters.sensitive, proxyTo(deps.accountServiceUrl));
+  // Le preferenze di progressione sono configurazione del motore in
+  // progress-service (non dati di account), quindi vanno a un servizio
+  // diverso dal blanket /me qui sotto: va montata prima, altrimenti il
+  // blanket la intercetterebbe per prima instradandola ad account-service.
+  app.use("/me/preferences", proxyTo(deps.progressServiceUrl));
   app.use("/me", proxyTo(deps.accountServiceUrl));
   app.use("/exercises", proxyTo(deps.workoutServiceUrl));
   app.use("/workouts", proxyTo(deps.workoutServiceUrl));

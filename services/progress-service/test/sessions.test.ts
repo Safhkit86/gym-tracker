@@ -206,6 +206,48 @@ describe("POST /sessions", () => {
 
     expect(second.body.suggestions).toEqual([]);
   });
+
+  it("con groupingScope 'exercise', scatta anche se le due sessioni qualificanti sono su schede diverse", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+
+    await request(app)
+      .put("/me/preferences")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ requiredConsecutiveSessions: 2, groupingScope: "exercise" });
+
+    await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(sessionPayload({ performedAt: "2026-07-01T10:00:00.000Z", workoutId: WORKOUT_ID }));
+
+    const second = await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(
+        sessionPayload({ performedAt: "2026-07-08T10:00:00.000Z", workoutId: OTHER_WORKOUT_ID })
+      );
+
+    expect(second.body.suggestions).toHaveLength(1);
+    expect(second.body.suggestions[0]).toMatchObject({ suggestionType: "increase_weight" });
+  });
+
+  it("con requiredConsecutiveSessions=1, scatta gia' alla prima sessione qualificante", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+
+    await request(app)
+      .put("/me/preferences")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ requiredConsecutiveSessions: 1, groupingScope: "workout" });
+
+    const first = await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(sessionPayload({ performedAt: "2026-07-01T10:00:00.000Z" }));
+
+    expect(first.body.suggestions).toHaveLength(1);
+  });
 });
 
 describe("GET /sessions e /sessions/:id", () => {

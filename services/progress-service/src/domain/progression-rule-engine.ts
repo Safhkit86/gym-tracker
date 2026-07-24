@@ -1,10 +1,12 @@
 import type { ExerciseSessionSnapshot } from "../repositories/session-repository.js";
 
 /**
- * Numero di sessioni consecutive che devono soddisfare l'obiettivo di
- * ripetizioni prima che scatti un suggerimento. Scelta deliberata (non
- * configurabile in v1): 1 sola sessione produrrebbe suggerimenti "rumorosi"
- * su una singola buona prestazione, invece di una tendenza reale.
+ * Numero di default di sessioni consecutive che devono soddisfare
+ * l'obiettivo di ripetizioni prima che scatti un suggerimento (1 sola
+ * sessione produrrebbe suggerimenti "rumorosi" su una singola buona
+ * prestazione, invece di una tendenza reale). Configurabile per utente
+ * (Profilo > Preferenze, vedi progression-preferences-repository.ts):
+ * questo e' solo il valore di default per chi non ha ancora impostato nulla.
  */
 export const REQUIRED_CONSECUTIVE_SESSIONS = 2;
 
@@ -28,16 +30,17 @@ export interface ProgressionSuggestionResult {
  */
 export function evaluateProgression(
   history: ExerciseSessionSnapshot[],
-  progressionIncrement: number | null
+  progressionIncrement: number | null,
+  requiredConsecutiveSessions: number = REQUIRED_CONSECUTIVE_SESSIONS
 ): ProgressionSuggestionResult | null {
   if (progressionIncrement === null) {
     return null;
   }
-  if (history.length < REQUIRED_CONSECUTIVE_SESSIONS) {
+  if (history.length < requiredConsecutiveSessions) {
     return null;
   }
 
-  const recent = history.slice(0, REQUIRED_CONSECUTIVE_SESSIONS);
+  const recent = history.slice(0, requiredConsecutiveSessions);
   const perSession: Array<{ weight: number | null; count: number; minReps: number }> = [];
 
   for (const session of recent) {
@@ -68,11 +71,12 @@ export function evaluateProgression(
     });
   }
 
-  const [latest, previous] = perSession as [
-    (typeof perSession)[number],
-    (typeof perSession)[number],
-  ];
-  if (latest.count !== previous.count || latest.weight !== previous.weight) {
+  // Tutte le sessioni qualificanti devono avere lo stesso peso e lo stesso
+  // numero di set (non solo le ultime due): generalizza a N sessioni invece
+  // di confrontare solo la piu' recente con la precedente.
+  const [latest, ...rest] = perSession as [(typeof perSession)[number], ...typeof perSession];
+  const allConsistent = rest.every((s) => s.count === latest.count && s.weight === latest.weight);
+  if (!allConsistent) {
     return null;
   }
 
@@ -81,7 +85,7 @@ export function evaluateProgression(
       suggestionType: "increase_weight",
       previousValue: latest.weight,
       suggestedValue: latest.weight + progressionIncrement,
-      reason: `Obiettivo di ripetizioni raggiunto per ${REQUIRED_CONSECUTIVE_SESSIONS} sessioni consecutive a ${latest.weight}kg: aumenta il carico.`,
+      reason: `Obiettivo di ripetizioni raggiunto per ${requiredConsecutiveSessions} sessioni consecutive a ${latest.weight}kg: aumenta il carico.`,
     };
   }
 
@@ -90,6 +94,6 @@ export function evaluateProgression(
     suggestionType: "increase_reps",
     previousValue: latest.minReps,
     suggestedValue: Math.round(latest.minReps + progressionIncrement),
-    reason: `Obiettivo di ripetizioni raggiunto per ${REQUIRED_CONSECUTIVE_SESSIONS} sessioni consecutive a corpo libero: aumenta le ripetizioni.`,
+    reason: `Obiettivo di ripetizioni raggiunto per ${requiredConsecutiveSessions} sessioni consecutive a corpo libero: aumenta le ripetizioni.`,
   };
 }

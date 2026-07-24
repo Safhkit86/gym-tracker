@@ -9,7 +9,8 @@ import { NotFoundError } from "../errors.js";
 import type { ProgressionEventPublisher } from "../events/publisher.js";
 import type { ProgressionEventRepository } from "../repositories/progression-event-repository.js";
 import type { NormalizedSession, SessionRepository } from "../repositories/session-repository.js";
-import { REQUIRED_CONSECUTIVE_SESSIONS, evaluateProgression } from "./progression-rule-engine.js";
+import type { ProgressionPreferencesRepository } from "../repositories/progression-preferences-repository.js";
+import { evaluateProgression } from "./progression-rule-engine.js";
 
 /**
  * Logica delle sessioni. Nessuna validazione contro workout-service (il
@@ -21,12 +22,14 @@ export class SessionService {
   constructor(
     private readonly sessions: SessionRepository,
     private readonly progressionEvents: ProgressionEventRepository,
+    private readonly progressionPreferences: ProgressionPreferencesRepository,
     private readonly publisher: ProgressionEventPublisher,
     private readonly logger: Logger
   ) {}
 
   async logSession(ownerId: string, input: SessionInput): Promise<CreateSessionResponse> {
     const session = await this.sessions.create(ownerId, normalize(input));
+    const preferences = await this.progressionPreferences.find(ownerId);
 
     const suggestions: ProgressionEvent[] = [];
     const seenExerciseIds = new Set<string>();
@@ -40,9 +43,14 @@ export class SessionService {
         ownerId,
         session.workoutId,
         exercise.exerciseId,
-        REQUIRED_CONSECUTIVE_SESSIONS
+        preferences.requiredConsecutiveSessions,
+        preferences.groupingScope
       );
-      const result = evaluateProgression(history, exercise.progressionIncrement);
+      const result = evaluateProgression(
+        history,
+        exercise.progressionIncrement,
+        preferences.requiredConsecutiveSessions
+      );
       if (!result) {
         continue;
       }

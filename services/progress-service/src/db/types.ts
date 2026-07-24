@@ -72,8 +72,18 @@ export interface ProgressionEventsTable {
   created_at: Generated<Date>;
 }
 
+export type GroupingScope = "workout" | "exercise";
+
+export interface ProgressionPreferencesTable {
+  owner_id: string;
+  required_consecutive_sessions: Generated<number>;
+  grouping_scope: Generated<GroupingScope>;
+  updated_at: ColumnType<Date, Date | undefined, Date>;
+}
+
 export interface Database {
   workout_sessions: WorkoutSessionsTable;
   session_sets: SessionSetsTable;
   progression_events: ProgressionEventsTable;
+  progression_preferences: ProgressionPreferencesTable;
 }
