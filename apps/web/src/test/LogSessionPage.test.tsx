@@ -18,6 +18,16 @@ function stubNarrowViewport(matches: boolean): void {
   );
 }
 
+function preferencesHandler(
+  body: unknown = {
+    requiredConsecutiveSessions: 2,
+    groupingScope: "workout",
+    prefillScope: "workout",
+  }
+) {
+  return { match: (u: string, m: string) => u.endsWith("/me/preferences") && m === "GET", body };
+}
+
 const WORKOUT_DETAIL = {
   id: "w1",
   name: "Push day",
@@ -64,6 +74,7 @@ describe("LogSessionPage", () => {
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
       { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      preferencesHandler(),
     ]);
 
     renderWithProviders(
@@ -105,6 +116,7 @@ describe("LogSessionPage", () => {
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: twoExerciseWorkout },
       { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      preferencesHandler(),
     ]);
 
     renderWithProviders(
@@ -141,6 +153,7 @@ describe("LogSessionPage", () => {
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: twoExerciseWorkout },
       { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      preferencesHandler(),
     ]);
 
     renderWithProviders(
@@ -204,6 +217,7 @@ describe("LogSessionPage", () => {
           },
         ],
       },
+      preferencesHandler(),
     ]);
 
     renderWithProviders(
@@ -223,11 +237,129 @@ describe("LogSessionPage", () => {
     expect(rest.value).toBe("100");
   });
 
+  it("con prefillScope 'workout' (default), ignora lo storico dello stesso esercizio in un'altra scheda", async () => {
+    const otherWorkoutSession = {
+      id: "sess0",
+      workoutId: "w2",
+      workoutName: "Trazioni day",
+      workoutNotes: null,
+      performedAt: "2026-07-01T10:00:00.000Z",
+      notes: null,
+      exercises: [
+        {
+          exerciseId: "e1",
+          exerciseName: "Panca piana",
+          workoutExerciseId: "we-other",
+          progressionIncrement: 2.5,
+          restSeconds: 90,
+          sets: [
+            {
+              id: "s0",
+              setNumber: 1,
+              targetMinReps: 10,
+              targetMaxReps: null,
+              actualReps: 9,
+              actualWeight: 85,
+              actualRpe: null,
+              targetRestMinSeconds: 90,
+              targetRestMaxSeconds: 120,
+              actualRestSeconds: 100,
+            },
+          ],
+        },
+      ],
+      createdAt: "2026-07-01T10:00:00.000Z",
+    };
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [otherWorkoutSession] },
+      preferencesHandler({
+        requiredConsecutiveSessions: 2,
+        groupingScope: "workout",
+        prefillScope: "workout",
+      }),
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+      </Routes>,
+      ["/workouts/w1/log"]
+    );
+
+    // Nessuno storico per la scheda w1: riparte dall'obiettivo della scheda (10), non da "9".
+    const reps = (await screen.findByLabelText(
+      /panca piana set 1 rep effettive/i
+    )) as HTMLInputElement;
+    expect(reps.value).toBe("10");
+  });
+
+  it("con prefillScope 'exercise', riporta le ultime rep dello stesso esercizio anche da un'altra scheda", async () => {
+    const otherWorkoutSession = {
+      id: "sess0",
+      workoutId: "w2",
+      workoutName: "Trazioni day",
+      workoutNotes: null,
+      performedAt: "2026-07-01T10:00:00.000Z",
+      notes: null,
+      exercises: [
+        {
+          exerciseId: "e1",
+          exerciseName: "Panca piana",
+          workoutExerciseId: "we-other",
+          progressionIncrement: 2.5,
+          restSeconds: 90,
+          sets: [
+            {
+              id: "s0",
+              setNumber: 1,
+              targetMinReps: 10,
+              targetMaxReps: null,
+              actualReps: 9,
+              actualWeight: 85,
+              actualRpe: null,
+              targetRestMinSeconds: 90,
+              targetRestMaxSeconds: 120,
+              actualRestSeconds: 100,
+            },
+          ],
+        },
+      ],
+      createdAt: "2026-07-01T10:00:00.000Z",
+    };
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [otherWorkoutSession] },
+      preferencesHandler({
+        requiredConsecutiveSessions: 2,
+        groupingScope: "workout",
+        prefillScope: "exercise",
+      }),
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+      </Routes>,
+      ["/workouts/w1/log"]
+    );
+
+    // Stesso esercizio registrato in un'altra scheda (w2): con prefillScope
+    // "exercise" riporta comunque le ultime rep effettive (9), non l'obiettivo.
+    const reps = (await screen.findByLabelText(
+      /panca piana set 1 rep effettive/i
+    )) as HTMLInputElement;
+    expect(reps.value).toBe("9");
+  });
+
   it("registra la sessione con reps/peso/recupero effettivi", async () => {
     const fetchMock = mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
       { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      preferencesHandler(),
       {
         match: (u, m) => u.endsWith("/sessions") && m === "POST",
         status: 201,
@@ -327,6 +459,7 @@ describe("LogSessionPage", () => {
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: amrapWorkout },
       { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      preferencesHandler(),
     ]);
 
     renderWithProviders(
@@ -355,6 +488,7 @@ describe("LogSessionPage", () => {
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: bodyweightWorkout },
       { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      preferencesHandler(),
     ]);
 
     renderWithProviders(

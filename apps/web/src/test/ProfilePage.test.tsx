@@ -22,7 +22,11 @@ function measurementsHandler(body: unknown = EMPTY_MEASUREMENTS) {
   return { match: (u: string, m: string) => u.endsWith("/me/measurements") && m === "GET", body };
 }
 
-const DEFAULT_PREFERENCES = { requiredConsecutiveSessions: 2, groupingScope: "workout" };
+const DEFAULT_PREFERENCES = {
+  requiredConsecutiveSessions: 2,
+  groupingScope: "workout",
+  prefillScope: "workout",
+};
 
 function preferencesHandler(body: unknown = DEFAULT_PREFERENCES) {
   return { match: (u: string, m: string) => u.endsWith("/me/preferences") && m === "GET", body };
@@ -255,16 +259,24 @@ describe("ProfilePage", () => {
       /suggerisci progressione considerando/i
     ) as HTMLSelectElement;
     expect(scopeSelect.value).toBe("workout");
+    const prefillSelect = screen.getByLabelText(
+      /riporta ultime ripetizioni effettive di default da/i
+    ) as HTMLSelectElement;
+    expect(prefillSelect.value).toBe("workout");
   });
 
-  it("salva le preferenze aggiornate (X e raggruppamento)", async () => {
+  it("salva le preferenze aggiornate (X, raggruppamento e scope di precompilazione)", async () => {
     const fetchMock = mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
       preferencesHandler(),
       {
         match: (u, m) => u.endsWith("/me/preferences") && m === "PUT",
-        body: { requiredConsecutiveSessions: 3, groupingScope: "exercise" },
+        body: {
+          requiredConsecutiveSessions: 3,
+          groupingScope: "exercise",
+          prefillScope: "exercise",
+        },
       },
     ]);
 
@@ -279,6 +291,10 @@ describe("ProfilePage", () => {
     fireEvent.change(sessionsInput, { target: { value: "3" } });
     const scopeSelect = screen.getByLabelText(/suggerisci progressione considerando/i);
     fireEvent.change(scopeSelect, { target: { value: "exercise" } });
+    const prefillSelect = screen.getByLabelText(
+      /riporta ultime ripetizioni effettive di default da/i
+    );
+    fireEvent.change(prefillSelect, { target: { value: "exercise" } });
     fireEvent.click(screen.getByRole("button", { name: /salva preferenze/i }));
 
     expect(await screen.findByText("Preferenze salvate.")).toBeInTheDocument();
@@ -289,6 +305,7 @@ describe("ProfilePage", () => {
     expect(JSON.parse((putCall?.[1]?.body as string) ?? "{}")).toEqual({
       requiredConsecutiveSessions: 3,
       groupingScope: "exercise",
+      prefillScope: "exercise",
     });
   });
 });

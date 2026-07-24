@@ -21,10 +21,17 @@ export type UpdateUserMeasurementsRequest = UserMeasurements;
  * (comportamento storico) o per solo esercizio, indipendentemente dalla
  * scheda in cui compare (es. lo stesso esercizio in due schede diverse
  * della settimana).
+ *
+ * `prefillScope` e' un concetto distinto (non riguarda il motore di
+ * suggerimento, ma la precompilazione delle rep effettive quando si apre
+ * Registra sessione, vedi LogSessionPage.tsx): se le ultime rep storicizzate
+ * da riproporre vengono cercate per scheda+esercizio (comportamento
+ * storico) o per solo esercizio, indipendentemente dalla scheda.
  */
 export interface ProgressionPreferences {
   requiredConsecutiveSessions: number;
   groupingScope: "workout" | "exercise";
+  prefillScope: "workout" | "exercise";
 }
 
 export type UpdateProgressionPreferencesRequest = ProgressionPreferences;

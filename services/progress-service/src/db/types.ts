@@ -78,6 +78,9 @@ export interface ProgressionPreferencesTable {
   owner_id: string;
   required_consecutive_sessions: Generated<number>;
   grouping_scope: Generated<GroupingScope>;
+  /** Precompilazione delle rep effettive in Registra sessione: concetto
+   *  distinto da grouping_scope (quello e' per il motore di suggerimento). */
+  prefill_scope: Generated<GroupingScope>;
   updated_at: ColumnType<Date, Date | undefined, Date>;
 }
 

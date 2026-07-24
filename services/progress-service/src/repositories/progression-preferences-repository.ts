@@ -4,11 +4,13 @@ import type { Database, GroupingScope } from "../db/types.js";
 export interface ProgressionPreferencesRecord {
   requiredConsecutiveSessions: number;
   groupingScope: GroupingScope;
+  prefillScope: GroupingScope;
 }
 
 const DEFAULT_PREFERENCES: ProgressionPreferencesRecord = {
   requiredConsecutiveSessions: 2,
   groupingScope: "workout",
+  prefillScope: "workout",
 };
 
 export interface ProgressionPreferencesRepository {
@@ -36,6 +38,7 @@ export class KyselyProgressionPreferencesRepository implements ProgressionPrefer
     return {
       requiredConsecutiveSessions: row.required_consecutive_sessions,
       groupingScope: row.grouping_scope,
+      prefillScope: row.prefill_scope,
     };
   }
 
@@ -49,11 +52,13 @@ export class KyselyProgressionPreferencesRepository implements ProgressionPrefer
         owner_id: ownerId,
         required_consecutive_sessions: values.requiredConsecutiveSessions,
         grouping_scope: values.groupingScope,
+        prefill_scope: values.prefillScope,
       })
       .onConflict((oc) =>
         oc.column("owner_id").doUpdateSet({
           required_consecutive_sessions: values.requiredConsecutiveSessions,
           grouping_scope: values.groupingScope,
+          prefill_scope: values.prefillScope,
           updated_at: new Date(),
         })
       )
@@ -62,6 +67,7 @@ export class KyselyProgressionPreferencesRepository implements ProgressionPrefer
     return {
       requiredConsecutiveSessions: row.required_consecutive_sessions,
       groupingScope: row.grouping_scope,
+      prefillScope: row.prefill_scope,
     };
   }
 }
