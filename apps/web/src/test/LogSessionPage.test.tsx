@@ -6,6 +6,18 @@ import { LogSessionPage } from "../pages/LogSessionPage";
 
 const FAKE_USER = { id: "u1", email: "test@example.com", createdAt: new Date().toISOString() };
 
+function stubNarrowViewport(matches: boolean): void {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn().mockImplementation((query: string) => ({
+      matches,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+  );
+}
+
 const WORKOUT_DETAIL = {
   id: "w1",
   name: "Push day",
@@ -108,6 +120,47 @@ describe("LogSessionPage", () => {
     expect(
       screen.queryByText(/Recupero prima del prossimo esercizio: 120s/)
     ).not.toBeInTheDocument();
+  });
+
+  it("su schermi stretti mostra un blocco per esercizio invece della tabella", async () => {
+    stubNarrowViewport(true);
+    const twoExerciseWorkout = {
+      ...WORKOUT_DETAIL,
+      exercises: [
+        WORKOUT_DETAIL.exercises[0],
+        {
+          ...WORKOUT_DETAIL.exercises[0],
+          id: "we2",
+          exerciseId: "e2",
+          exerciseName: "Trazioni",
+          restSeconds: 120,
+        },
+      ],
+    };
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: twoExerciseWorkout },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+      </Routes>,
+      ["/workouts/w1/log"]
+    );
+
+    await screen.findByText("Trazioni");
+    expect(document.querySelector(".log-session-table")).not.toBeInTheDocument();
+    expect(document.querySelectorAll(".log-exercise-block")).toHaveLength(2);
+    expect(screen.getByText("Recupero prima del prossimo esercizio: 90s")).toBeInTheDocument();
+
+    const reps = screen.getByLabelText(/panca piana set 1 rep effettive/i) as HTMLInputElement;
+    expect(reps.value).toBe("10");
+    const weight = screen.getByLabelText(/panca piana kg effettivi/i) as HTMLInputElement;
+    expect(weight.value).toBe("80");
+    const rest = screen.getByLabelText(/panca piana recupero effettivo/i) as HTMLInputElement;
+    expect(rest.value).toBe("90");
   });
 
   it("precompila rep/peso/recupero dall'ultima sessione registrata, non dall'obiettivo", async () => {

@@ -702,6 +702,55 @@ button.secondary:hover:not(:disabled) {
   padding: var(--space-1) var(--space-2);
 }
 
+/* Sotto NARROW_LAYOUT_QUERY (LogSessionPage.tsx) la tabella lascia il posto
+   a un blocco per esercizio con i campi impilati verticalmente: la tabella,
+   larga quanto Esercizio + N colonne Set + Kg + Recupero, non ci starebbe
+   senza scroll orizzontale su schermi stretti (o finestre non massimizzate). */
+.log-session-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.log-exercise-block {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+}
+
+.log-exercise-block h3 {
+  margin: 0 0 var(--space-2);
+  font-size: 1rem;
+}
+
+.log-stack-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.log-stack-row + .log-stack-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.log-stack-label {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.log-stack-row input {
+  width: 6rem;
+  padding: 0.4rem 0.5rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.log-rest-divider-stack {
+  text-align: center;
+}
+
 .session-card__date-input {
   width: auto;
 }

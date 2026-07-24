@@ -50,6 +50,30 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** Sotto questa larghezza la tabella (nome esercizio + N set + Kg + Recupero)
+ *  non entra più nella card senza scroll orizzontale: sotto la soglia si
+ *  passa al layout impilato (un blocco per esercizio, campi in verticale). */
+const NARROW_LAYOUT_QUERY = "(max-width: 1024px)";
+
+function useIsNarrowViewport(query: string): boolean {
+  const [isNarrow, setIsNarrow] = useState(() =>
+    typeof window.matchMedia === "function" ? window.matchMedia(query).matches : false
+  );
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") {
+      return;
+    }
+    const mql = window.matchMedia(query);
+    setIsNarrow(mql.matches);
+    const handleChange = (event: MediaQueryListEvent) => setIsNarrow(event.matches);
+    mql.addEventListener("change", handleChange);
+    return () => mql.removeEventListener("change", handleChange);
+  }, [query]);
+
+  return isNarrow;
+}
+
 function formatSetTarget(set: SessionSetForm): string {
   if (set.isMaxEffort) {
     return "Max";
@@ -195,6 +219,7 @@ export function LogSessionPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<CreateSessionResponse | null>(null);
+  const isNarrow = useIsNarrowViewport(NARROW_LAYOUT_QUERY);
 
   useEffect(() => {
     if (!token || !id) {
@@ -353,99 +378,168 @@ export function LogSessionPage() {
             />
           </div>
 
-          <div className="table-scroll">
-            <table className="log-session-table">
-              <thead>
-                <tr>
-                  <th>Esercizio</th>
-                  {Array.from({ length: maxSets }, (_, i) => (
-                    <th key={i}>Set {i + 1}</th>
-                  ))}
-                  <th>Kg</th>
-                  <th>Recupero</th>
-                </tr>
-              </thead>
-              <tbody>
-                {exercises.map((exercise, exerciseIndex) => (
-                  <Fragment key={exercise.workoutExerciseId}>
-                    <tr>
-                      <td>
-                        <div className="log-exercise-name">
-                          <span>{exercise.exerciseName}</span>
-                        </div>
-                      </td>
-                      {Array.from({ length: maxSets }, (_, setIndex) => {
-                        const set = exercise.sets[setIndex];
-                        if (!set) {
-                          return <td key={setIndex} />;
+          {isNarrow ? (
+            <div className="log-session-stack">
+              {exercises.map((exercise, exerciseIndex) => (
+                <Fragment key={exercise.workoutExerciseId}>
+                  <div className="log-exercise-block">
+                    <h3>{exercise.exerciseName}</h3>
+                    {exercise.sets.map((set, setIndex) => (
+                      <div className="log-stack-row" key={setIndex}>
+                        <span className="log-stack-label">
+                          Set {set.setNumber}{" "}
+                          <span className="log-cell__target">({formatSetTarget(set)})</span>
+                        </span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={set.actualReps}
+                          onChange={(event) =>
+                            updateSet(exerciseIndex, setIndex, { actualReps: event.target.value })
+                          }
+                          aria-label={`${exercise.exerciseName} set ${set.setNumber} rep effettive`}
+                          required
+                        />
+                      </div>
+                    ))}
+                    <div className="log-stack-row">
+                      <span className="log-stack-label">Kg</span>
+                      {exercise.isBodyweight ? (
+                        <span>corpo libero</span>
+                      ) : (
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.5"
+                          value={exercise.actualWeight}
+                          onChange={(event) =>
+                            updateExercise(exerciseIndex, { actualWeight: event.target.value })
+                          }
+                          aria-label={`${exercise.exerciseName} kg effettivi`}
+                        />
+                      )}
+                    </div>
+                    <div className="log-stack-row">
+                      <span className="log-stack-label">
+                        Recupero{" "}
+                        <span className="log-cell__target">({formatRestRange(exercise)})</span>
+                      </span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={exercise.actualRestSeconds}
+                        onChange={(event) =>
+                          updateExercise(exerciseIndex, { actualRestSeconds: event.target.value })
                         }
-                        return (
-                          <td key={setIndex}>
-                            <div className="log-cell">
-                              <span className="log-cell__target">{formatSetTarget(set)}</span>
-                              <input
-                                type="number"
-                                min={0}
-                                value={set.actualReps}
-                                onChange={(event) =>
-                                  updateSet(exerciseIndex, setIndex, {
-                                    actualReps: event.target.value,
-                                  })
-                                }
-                                aria-label={`${exercise.exerciseName} set ${set.setNumber} rep effettive`}
-                                required
-                              />
-                            </div>
-                          </td>
-                        );
-                      })}
-                      <td>
-                        {exercise.isBodyweight ? (
-                          "corpo libero"
-                        ) : (
-                          <input
-                            type="number"
-                            min={0}
-                            step="0.5"
-                            value={exercise.actualWeight}
-                            onChange={(event) =>
-                              updateExercise(exerciseIndex, { actualWeight: event.target.value })
-                            }
-                            aria-label={`${exercise.exerciseName} kg effettivi`}
-                          />
-                        )}
-                      </td>
-                      <td>
-                        <div className="log-cell">
-                          <span className="log-cell__target">{formatRestRange(exercise)}</span>
-                          <input
-                            type="number"
-                            min={0}
-                            value={exercise.actualRestSeconds}
-                            onChange={(event) =>
-                              updateExercise(exerciseIndex, {
-                                actualRestSeconds: event.target.value,
-                              })
-                            }
-                            aria-label={`${exercise.exerciseName} recupero effettivo`}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                    {exerciseIndex < exercises.length - 1 && exercise.restSeconds !== null && (
-                      <tr className="log-rest-divider-row">
-                        <td colSpan={maxSets + 3}>
-                          <span className="log-rest-divider">
-                            Recupero prima del prossimo esercizio: {exercise.restSeconds}s
-                          </span>
+                        aria-label={`${exercise.exerciseName} recupero effettivo`}
+                      />
+                    </div>
+                  </div>
+                  {exerciseIndex < exercises.length - 1 && exercise.restSeconds !== null && (
+                    <div className="log-rest-divider-stack">
+                      <span className="log-rest-divider">
+                        Recupero prima del prossimo esercizio: {exercise.restSeconds}s
+                      </span>
+                    </div>
+                  )}
+                </Fragment>
+              ))}
+            </div>
+          ) : (
+            <div className="table-scroll">
+              <table className="log-session-table">
+                <thead>
+                  <tr>
+                    <th>Esercizio</th>
+                    {Array.from({ length: maxSets }, (_, i) => (
+                      <th key={i}>Set {i + 1}</th>
+                    ))}
+                    <th>Kg</th>
+                    <th>Recupero</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {exercises.map((exercise, exerciseIndex) => (
+                    <Fragment key={exercise.workoutExerciseId}>
+                      <tr>
+                        <td>
+                          <div className="log-exercise-name">
+                            <span>{exercise.exerciseName}</span>
+                          </div>
+                        </td>
+                        {Array.from({ length: maxSets }, (_, setIndex) => {
+                          const set = exercise.sets[setIndex];
+                          if (!set) {
+                            return <td key={setIndex} />;
+                          }
+                          return (
+                            <td key={setIndex}>
+                              <div className="log-cell">
+                                <span className="log-cell__target">{formatSetTarget(set)}</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={set.actualReps}
+                                  onChange={(event) =>
+                                    updateSet(exerciseIndex, setIndex, {
+                                      actualReps: event.target.value,
+                                    })
+                                  }
+                                  aria-label={`${exercise.exerciseName} set ${set.setNumber} rep effettive`}
+                                  required
+                                />
+                              </div>
+                            </td>
+                          );
+                        })}
+                        <td>
+                          {exercise.isBodyweight ? (
+                            "corpo libero"
+                          ) : (
+                            <input
+                              type="number"
+                              min={0}
+                              step="0.5"
+                              value={exercise.actualWeight}
+                              onChange={(event) =>
+                                updateExercise(exerciseIndex, { actualWeight: event.target.value })
+                              }
+                              aria-label={`${exercise.exerciseName} kg effettivi`}
+                            />
+                          )}
+                        </td>
+                        <td>
+                          <div className="log-cell">
+                            <span className="log-cell__target">{formatRestRange(exercise)}</span>
+                            <input
+                              type="number"
+                              min={0}
+                              value={exercise.actualRestSeconds}
+                              onChange={(event) =>
+                                updateExercise(exerciseIndex, {
+                                  actualRestSeconds: event.target.value,
+                                })
+                              }
+                              aria-label={`${exercise.exerciseName} recupero effettivo`}
+                            />
+                          </div>
                         </td>
                       </tr>
-                    )}
-                  </Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      {exerciseIndex < exercises.length - 1 && exercise.restSeconds !== null && (
+                        <tr className="log-rest-divider-row">
+                          <td colSpan={maxSets + 3}>
+                            <span className="log-rest-divider">
+                              Recupero prima del prossimo esercizio: {exercise.restSeconds}s
+                            </span>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {error && (
             <p role="alert" className="form-error">

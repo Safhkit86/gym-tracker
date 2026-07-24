@@ -149,6 +149,12 @@ conversazione corrente:
   ipotesi. Quando ci sono più alternative visive plausibili, preferire un
   artifact (mockup/HTML) che l'utente possa guardare e scegliere, invece di
   descriverle solo a parole o implementarne una a caso.
+- Dopo ogni modifica alla UI di `apps/web`, verificarla visivamente (screenshot
+  Playwright, non solo lint/test/build) prima di dichiararla completa — e
+  controllare più di una dimensione di schermo (es. viewport stretto tipo
+  mobile oltre a quello desktop), non solo quella comoda in cui è stata
+  sviluppata: un elemento può risultare tagliato/mal posizionato solo sotto
+  una certa larghezza.
 
 ## Cosa NON fare
 
