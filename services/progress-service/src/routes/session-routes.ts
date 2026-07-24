@@ -15,6 +15,12 @@ const setSchema = z
     actualReps: z.number().int().nonnegative(),
     actualWeight: z.number().positive().nullish(),
     actualRpe: z.number().int().min(1).max(10).nullish(),
+    /** Snapshot di WorkoutSet.restMinSeconds (recupero tra i set) al momento del log. */
+    targetRestMinSeconds: z.number().int().nonnegative().nullish(),
+    /** Snapshot di WorkoutSet.restMaxSeconds al momento del log. */
+    targetRestMaxSeconds: z.number().int().nonnegative().nullish(),
+    /** Recupero tra i set effettivamente preso. */
+    actualRestSeconds: z.number().int().nonnegative().nullish(),
   })
   .refine(
     (set) =>
@@ -22,6 +28,13 @@ const setSchema = z
       set.targetMinReps == null ||
       set.targetMaxReps >= set.targetMinReps,
     "Le rep massime devono essere maggiori o uguali alle rep minime."
+  )
+  .refine(
+    (set) =>
+      set.targetRestMaxSeconds == null ||
+      set.targetRestMinSeconds == null ||
+      set.targetRestMaxSeconds >= set.targetRestMinSeconds,
+    "Il recupero massimo deve essere maggiore o uguale al minimo."
   );
 
 const exerciseSchema = z.object({
@@ -30,7 +43,8 @@ const exerciseSchema = z.object({
   workoutExerciseId: z.string().uuid().nullish(),
   /** Snapshot di WorkoutExercise.progressionIncrement al momento del log. */
   progressionIncrement: z.number().positive().nullish(),
-  /** Snapshot di WorkoutExercise.restSeconds al momento del log. */
+  /** Snapshot di WorkoutExercise.restSeconds (recupero prima dell'esercizio
+   *  successivo) al momento del log. */
   restSeconds: z.number().int().nonnegative().nullish(),
   sets: z
     .array(setSchema)

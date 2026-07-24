@@ -139,6 +139,17 @@ conversazione corrente:
   riferimenti a sistemi esterni (dashboard, tracker). Non duplicare lì
   quello che si può già dedurre leggendo il codice o la git history.
 
+## Come collaborare (regola di processo)
+
+- Non fare mai più di quanto richiesto e non inventare soluzioni non
+  esplicitamente chieste, specialmente su dettagli di UI/UX (posizione di
+  un elemento, testo di un'etichetta, struttura di una tabella). Se emerge
+  un dubbio interpretativo, o si sta per aggiungere/cambiare qualcosa non
+  chiesto esplicitamente, fermarsi e chiedere invece di procedere per
+  ipotesi. Quando ci sono più alternative visive plausibili, preferire un
+  artifact (mockup/HTML) che l'utente possa guardare e scegliere, invece di
+  descriverle solo a parole o implementarne una a caso.
+
 ## Cosa NON fare
 
 - Non far comunicare i client (web/Android) direttamente con un servizio:

@@ -12,6 +12,9 @@ export interface NormalizedSessionSet {
   actualReps: number;
   actualWeight: number | null;
   actualRpe: number | null;
+  targetRestMinSeconds: number | null;
+  targetRestMaxSeconds: number | null;
+  actualRestSeconds: number | null;
 }
 
 export interface NormalizedSessionExercise {
@@ -101,6 +104,9 @@ export class KyselySessionRepository implements SessionRepository {
               target_max_reps: s.targetMaxReps,
               progression_increment: ex.progressionIncrement,
               rest_seconds: ex.restSeconds,
+              target_rest_min_seconds: s.targetRestMinSeconds,
+              target_rest_max_seconds: s.targetRestMaxSeconds,
+              actual_rest_seconds: s.actualRestSeconds,
               position: i,
               actual_reps: s.actualReps,
               actual_weight: s.actualWeight,
@@ -167,6 +173,9 @@ export class KyselySessionRepository implements SessionRepository {
         actualReps: s.actual_reps,
         actualWeight: s.actual_weight === null ? null : Number(s.actual_weight),
         actualRpe: s.actual_rpe,
+        targetRestMinSeconds: s.target_rest_min_seconds,
+        targetRestMaxSeconds: s.target_rest_max_seconds,
+        actualRestSeconds: s.actual_rest_seconds,
       });
     }
 
@@ -224,6 +233,9 @@ export class KyselySessionRepository implements SessionRepository {
         actualReps: s.actual_reps,
         actualWeight: s.actual_weight === null ? null : Number(s.actual_weight),
         actualRpe: s.actual_rpe,
+        targetRestMinSeconds: s.target_rest_min_seconds,
+        targetRestMaxSeconds: s.target_rest_max_seconds,
+        actualRestSeconds: s.actual_rest_seconds,
       };
       exercise.sets.push(set);
     }
@@ -355,6 +367,9 @@ export class InMemorySessionRepository implements SessionRepository {
           actualReps: s.actualReps,
           actualWeight: s.actualWeight,
           actualRpe: s.actualRpe,
+          targetRestMinSeconds: s.targetRestMinSeconds,
+          targetRestMaxSeconds: s.targetRestMaxSeconds,
+          actualRestSeconds: s.actualRestSeconds,
         })),
       })),
       createdAt: new Date(),

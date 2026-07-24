@@ -17,7 +17,7 @@ const WORKOUT_DETAIL = {
       exerciseName: "Panca piana",
       position: 1,
       notes: null,
-      restSeconds: null,
+      restSeconds: 90,
       progressionIncrement: 2.5,
       sets: [
         {
@@ -26,8 +26,9 @@ const WORKOUT_DETAIL = {
           targetMinReps: 10,
           targetMaxReps: null,
           targetWeight: 80,
-          restMinSeconds: null,
-          restMaxSeconds: null,
+          restMinSeconds: 90,
+          restMaxSeconds: 120,
+          isMaxEffort: false,
         },
       ],
     },
@@ -46,10 +47,11 @@ describe("LogSessionPage", () => {
     vi.unstubAllGlobals();
   });
 
-  it("precompila reps/peso dall'obiettivo della scheda", async () => {
+  it("precompila reps/peso/recupero dall'obiettivo della scheda quando non c'e' storico", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
     ]);
 
     renderWithProviders(
@@ -59,16 +61,120 @@ describe("LogSessionPage", () => {
       ["/workouts/w1/log"]
     );
 
-    const reps = (await screen.findByLabelText(/reps effettive/i)) as HTMLInputElement;
+    const reps = (await screen.findByLabelText(
+      /panca piana set 1 rep effettive/i
+    )) as HTMLInputElement;
     expect(reps.value).toBe("10");
-    const weight = screen.getByLabelText(/peso effettivo/i) as HTMLInputElement;
+    const weight = screen.getByLabelText(/panca piana kg effettivi/i) as HTMLInputElement;
     expect(weight.value).toBe("80");
+    const rest = screen.getByLabelText(/panca piana recupero effettivo/i) as HTMLInputElement;
+    expect(rest.value).toBe("90");
+
+    expect(screen.getByText("10")).toBeInTheDocument(); // obiettivo rep sopra la casella
+    expect(screen.getByText("90-120s")).toBeInTheDocument(); // obiettivo recupero sopra la casella
+    expect(screen.queryByLabelText(/^note$/i)).not.toBeInTheDocument();
   });
 
-  it("registra la sessione e mostra il suggerimento restituito dal server", async () => {
+  it("mostra una riga separatrice con il recupero prima dell'esercizio successivo, tra un esercizio e l'altro", async () => {
+    const twoExerciseWorkout = {
+      ...WORKOUT_DETAIL,
+      exercises: [
+        WORKOUT_DETAIL.exercises[0],
+        {
+          ...WORKOUT_DETAIL.exercises[0],
+          id: "we2",
+          exerciseId: "e2",
+          exerciseName: "Trazioni",
+          restSeconds: 120,
+        },
+      ],
+    };
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: twoExerciseWorkout },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+      </Routes>,
+      ["/workouts/w1/log"]
+    );
+
+    await screen.findByText("Trazioni");
+    expect(screen.getByText("Recupero prima del prossimo esercizio: 90s")).toBeInTheDocument();
+    // Nessuna riga dopo l'ultimo esercizio (nessun esercizio successivo a cui riposare prima).
+    expect(
+      screen.queryByText(/Recupero prima del prossimo esercizio: 120s/)
+    ).not.toBeInTheDocument();
+  });
+
+  it("precompila rep/peso/recupero dall'ultima sessione registrata, non dall'obiettivo", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+      {
+        match: (u, m) => u.endsWith("/sessions") && m === "GET",
+        body: [
+          {
+            id: "sess0",
+            workoutId: "w1",
+            workoutName: "Push day",
+            workoutNotes: null,
+            performedAt: "2026-07-01T10:00:00.000Z",
+            notes: null,
+            exercises: [
+              {
+                exerciseId: "e1",
+                exerciseName: "Panca piana",
+                workoutExerciseId: "we1",
+                progressionIncrement: 2.5,
+                restSeconds: 90,
+                sets: [
+                  {
+                    id: "s0",
+                    setNumber: 1,
+                    targetMinReps: 10,
+                    targetMaxReps: null,
+                    actualReps: 9,
+                    actualWeight: 85,
+                    actualRpe: null,
+                    targetRestMinSeconds: 90,
+                    targetRestMaxSeconds: 120,
+                    actualRestSeconds: 100,
+                  },
+                ],
+              },
+            ],
+            createdAt: "2026-07-01T10:00:00.000Z",
+          },
+        ],
+      },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+      </Routes>,
+      ["/workouts/w1/log"]
+    );
+
+    const reps = (await screen.findByLabelText(
+      /panca piana set 1 rep effettive/i
+    )) as HTMLInputElement;
+    expect(reps.value).toBe("9");
+    const weight = screen.getByLabelText(/panca piana kg effettivi/i) as HTMLInputElement;
+    expect(weight.value).toBe("85");
+    const rest = screen.getByLabelText(/panca piana recupero effettivo/i) as HTMLInputElement;
+    expect(rest.value).toBe("100");
+  });
+
+  it("registra la sessione con reps/peso/recupero effettivi", async () => {
     const fetchMock = mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
       {
         match: (u, m) => u.endsWith("/sessions") && m === "POST",
         status: 201,
@@ -76,6 +182,7 @@ describe("LogSessionPage", () => {
           id: "sess1",
           workoutId: "w1",
           workoutName: "Push day",
+          workoutNotes: null,
           performedAt: new Date().toISOString(),
           notes: null,
           exercises: [],
@@ -106,7 +213,7 @@ describe("LogSessionPage", () => {
       ["/workouts/w1/log"]
     );
 
-    await screen.findByLabelText(/reps effettive/i);
+    await screen.findByLabelText(/panca piana set 1 rep effettive/i);
     fireEvent.click(screen.getByRole("button", { name: /registra sessione/i }));
 
     await waitFor(() => {
@@ -123,15 +230,26 @@ describe("LogSessionPage", () => {
         {
           exerciseId: "e1",
           progressionIncrement: 2.5,
-          sets: [{ setNumber: 1, actualReps: 10, actualWeight: 80 }],
+          restSeconds: 90,
+          sets: [
+            {
+              setNumber: 1,
+              actualReps: 10,
+              actualWeight: 80,
+              targetRestMinSeconds: 90,
+              targetRestMaxSeconds: 120,
+              actualRestSeconds: 90,
+            },
+          ],
         },
       ],
     });
+    expect(body.notes).toBeUndefined();
 
     expect(await screen.findByText(/aumenta il carico/i)).toBeInTheDocument();
   });
 
-  it("per un set a sforzo massimo mostra 'AMRAP' e parte con reps effettive vuote", async () => {
+  it("per un set a sforzo massimo mostra 'Max' come obiettivo e parte con rep effettive vuote", async () => {
     const amrapWorkout = {
       ...WORKOUT_DETAIL,
       exercises: [
@@ -155,6 +273,7 @@ describe("LogSessionPage", () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: amrapWorkout },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
     ]);
 
     renderWithProviders(
@@ -164,8 +283,35 @@ describe("LogSessionPage", () => {
       ["/workouts/w1/log"]
     );
 
-    expect(await screen.findByText(/il piu' possibile \(AMRAP\)/i)).toBeInTheDocument();
-    const reps = screen.getByLabelText(/reps effettive/i) as HTMLInputElement;
+    expect(await screen.findByText("Max")).toBeInTheDocument();
+    const reps = screen.getByLabelText(/panca piana set 1 rep effettive/i) as HTMLInputElement;
     expect(reps.value).toBe("");
+  });
+
+  it("per un esercizio a corpo libero mostra 'corpo libero' senza casella per il peso", async () => {
+    const bodyweightWorkout = {
+      ...WORKOUT_DETAIL,
+      exercises: [
+        {
+          ...WORKOUT_DETAIL.exercises[0],
+          sets: [{ ...WORKOUT_DETAIL.exercises[0].sets[0], targetWeight: null }],
+        },
+      ],
+    };
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: bodyweightWorkout },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+      </Routes>,
+      ["/workouts/w1/log"]
+    );
+
+    expect(await screen.findByText("corpo libero")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/panca piana kg effettivi/i)).not.toBeInTheDocument();
   });
 });
