@@ -195,4 +195,30 @@ describe("ProfilePage", () => {
 
     expect(await screen.findByText("Misure salvate.")).toBeInTheDocument();
   });
+
+  it("un valore 0 viene trattato come non impostato (null), non inviato come 0", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      measurementsHandler(),
+      {
+        match: (u, m) => u.endsWith("/me/measurements") && m === "PUT",
+        body: EMPTY_MEASUREMENTS,
+      },
+    ]);
+
+    renderWithProviders(<ProfilePage />, ["/profile"]);
+
+    await screen.findByText(/test@example.com/);
+    fireEvent.click(screen.getByRole("button", { name: "Misure" }));
+
+    const heightInput = await screen.findByLabelText(/altezza/i);
+    fireEvent.change(heightInput, { target: { value: "0" } });
+    fireEvent.click(screen.getByRole("button", { name: /salva misure/i }));
+
+    expect(await screen.findByText("Misure salvate.")).toBeInTheDocument();
+    const putCall = fetchMock.mock.calls.find(
+      ([u, init]) => String(u).endsWith("/me/measurements") && init?.method === "PUT"
+    );
+    expect(JSON.parse((putCall?.[1]?.body as string) ?? "{}")).toMatchObject({ heightCm: null });
+  });
 });

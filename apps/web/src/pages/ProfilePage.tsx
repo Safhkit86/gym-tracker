@@ -6,6 +6,18 @@ import { ApiRequestError } from "../api/client";
 
 type ProfileSection = "account" | "measurements";
 
+/** Nullable o maggiore di zero: 0 (o un negativo, impedito gia' da min={0}
+ *  sull'input) non e' una misura valida, va trattato come "non impostata"
+ *  invece di essere inviato al server e farsi respingere con un errore. */
+function parseMeasurement(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const parsed = Number(trimmed);
+  return parsed > 0 ? parsed : null;
+}
+
 export function ProfilePage() {
   const { user, token } = useAuth();
   const [activeSection, setActiveSection] = useState<ProfileSection>("account");
@@ -111,12 +123,12 @@ export function ProfilePage() {
     setIsSavingMeasurements(true);
     try {
       const result = await updateMeasurements(token, {
-        heightCm: heightCm.trim() ? Number(heightCm) : null,
-        weightKg: weightKg.trim() ? Number(weightKg) : null,
-        chestCm: chestCm.trim() ? Number(chestCm) : null,
-        armCm: armCm.trim() ? Number(armCm) : null,
-        waistCm: waistCm.trim() ? Number(waistCm) : null,
-        legCm: legCm.trim() ? Number(legCm) : null,
+        heightCm: parseMeasurement(heightCm),
+        weightKg: parseMeasurement(weightKg),
+        chestCm: parseMeasurement(chestCm),
+        armCm: parseMeasurement(armCm),
+        waistCm: parseMeasurement(waistCm),
+        legCm: parseMeasurement(legCm),
       });
       setHeightCm(result.heightCm !== null ? String(result.heightCm) : "");
       setWeightKg(result.weightKg !== null ? String(result.weightKg) : "");
