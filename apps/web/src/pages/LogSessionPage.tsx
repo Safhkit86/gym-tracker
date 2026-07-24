@@ -5,6 +5,7 @@ import { useAuth } from "../auth/useAuth";
 import { getWorkout } from "../api/workouts";
 import { listSessions, logSession } from "../api/sessions";
 import { ApiRequestError } from "../api/client";
+import { NARROW_TABLE_LAYOUT_QUERY, useIsNarrowViewport } from "../hooks/useIsNarrowViewport";
 
 interface SessionSetForm {
   setNumber: number;
@@ -48,30 +49,6 @@ interface SessionExerciseForm {
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-/** Sotto questa larghezza la tabella (nome esercizio + N set + Kg + Recupero)
- *  non entra più nella card senza scroll orizzontale: sotto la soglia si
- *  passa al layout impilato (un blocco per esercizio, campi in verticale). */
-const NARROW_LAYOUT_QUERY = "(max-width: 1024px)";
-
-function useIsNarrowViewport(query: string): boolean {
-  const [isNarrow, setIsNarrow] = useState(() =>
-    typeof window.matchMedia === "function" ? window.matchMedia(query).matches : false
-  );
-
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") {
-      return;
-    }
-    const mql = window.matchMedia(query);
-    setIsNarrow(mql.matches);
-    const handleChange = (event: MediaQueryListEvent) => setIsNarrow(event.matches);
-    mql.addEventListener("change", handleChange);
-    return () => mql.removeEventListener("change", handleChange);
-  }, [query]);
-
-  return isNarrow;
 }
 
 function formatSetTarget(set: SessionSetForm): string {
@@ -219,7 +196,7 @@ export function LogSessionPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<CreateSessionResponse | null>(null);
-  const isNarrow = useIsNarrowViewport(NARROW_LAYOUT_QUERY);
+  const isNarrow = useIsNarrowViewport(NARROW_TABLE_LAYOUT_QUERY);
 
   useEffect(() => {
     if (!token || !id) {
@@ -356,7 +333,7 @@ export function LogSessionPage() {
   const maxSets = Math.max(1, ...exercises.map((e) => e.sets.length));
 
   return (
-    <main className="main-wide main-log-session">
+    <main className="main-wide main-wide-table">
       <p>
         <Link to={`/workouts/${workout.id}`}>← {workout.name}</Link>
       </p>
@@ -379,14 +356,14 @@ export function LogSessionPage() {
           </div>
 
           {isNarrow ? (
-            <div className="log-session-stack">
+            <div className="stack-table">
               {exercises.map((exercise, exerciseIndex) => (
                 <Fragment key={exercise.workoutExerciseId}>
-                  <div className="log-exercise-block">
+                  <div className="stack-block">
                     <h3>{exercise.exerciseName}</h3>
                     {exercise.sets.map((set, setIndex) => (
-                      <div className="log-stack-row" key={setIndex}>
-                        <span className="log-stack-label">
+                      <div className="stack-row" key={setIndex}>
+                        <span className="stack-label">
                           Set {set.setNumber}{" "}
                           <span className="log-cell__target">({formatSetTarget(set)})</span>
                         </span>
@@ -402,8 +379,8 @@ export function LogSessionPage() {
                         />
                       </div>
                     ))}
-                    <div className="log-stack-row">
-                      <span className="log-stack-label">Kg</span>
+                    <div className="stack-row">
+                      <span className="stack-label">Kg</span>
                       {exercise.isBodyweight ? (
                         <span>corpo libero</span>
                       ) : (
@@ -419,8 +396,8 @@ export function LogSessionPage() {
                         />
                       )}
                     </div>
-                    <div className="log-stack-row">
-                      <span className="log-stack-label">
+                    <div className="stack-row">
+                      <span className="stack-label">
                         Recupero{" "}
                         <span className="log-cell__target">({formatRestRange(exercise)})</span>
                       </span>
@@ -436,8 +413,8 @@ export function LogSessionPage() {
                     </div>
                   </div>
                   {exerciseIndex < exercises.length - 1 && exercise.restSeconds !== null && (
-                    <div className="log-rest-divider-stack">
-                      <span className="log-rest-divider">
+                    <div className="rest-divider-stack">
+                      <span className="rest-divider">
                         Recupero prima del prossimo esercizio: {exercise.restSeconds}s
                       </span>
                     </div>
@@ -526,9 +503,9 @@ export function LogSessionPage() {
                         </td>
                       </tr>
                       {exerciseIndex < exercises.length - 1 && exercise.restSeconds !== null && (
-                        <tr className="log-rest-divider-row">
+                        <tr className="rest-divider-row">
                           <td colSpan={maxSets + 3}>
-                            <span className="log-rest-divider">
+                            <span className="rest-divider">
                               Recupero prima del prossimo esercizio: {exercise.restSeconds}s
                             </span>
                           </td>

@@ -152,7 +152,7 @@ describe("LogSessionPage", () => {
 
     await screen.findByText("Trazioni");
     expect(document.querySelector(".log-session-table")).not.toBeInTheDocument();
-    expect(document.querySelectorAll(".log-exercise-block")).toHaveLength(2);
+    expect(document.querySelectorAll(".stack-block")).toHaveLength(2);
     expect(screen.getByText("Recupero prima del prossimo esercizio: 90s")).toBeInTheDocument();
 
     const reps = screen.getByLabelText(/panca piana set 1 rep effettive/i) as HTMLInputElement;

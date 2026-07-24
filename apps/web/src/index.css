@@ -57,12 +57,14 @@ main.main-wide {
   max-width: 64rem;
 }
 
-/* La tabella di log (Esercizio + una colonna per Set + Kg + Recupero, tutte
-   a larghezza fissa per allineamento) supera 64rem gia' con 4 set: senza
-   piu' spazio finisce in scroll orizzontale anche su schermi larghi, dove
-   avanza spazio inutilizzato ai lati della card. Vince su .main-wide per
-   ordine (stessa specificita', dichiarata dopo). */
-main.main-log-session {
+/* Standard condiviso da ogni pagina con una tabella a colonne di larghezza
+   fissa (Storico, Registra sessione, vedi CLAUDE.md): Esercizio + una
+   colonna per Set + Kg + Recupero supera 64rem gia' con 4 set, finendo in
+   scroll orizzontale anche su schermi larghi con spazio inutilizzato ai
+   lati della card. Vince su .main-wide per ordine (stessa specificita',
+   dichiarata dopo). Sotto NARROW_TABLE_LAYOUT_QUERY (useIsNarrowViewport.ts)
+   la tabella lascia comunque il posto allo ".stack-table" qui sotto. */
+main.main-wide-table {
   max-width: 80rem;
 }
 
@@ -695,14 +697,15 @@ button.secondary:hover:not(:disabled) {
 
 /* Riga separatrice tra un esercizio e il successivo: il recupero prima di
    passare all'esercizio successivo (WorkoutExercise.restSeconds), non il
-   recupero tra i set dello stesso esercizio (colonna "Recupero"). */
-.log-rest-divider-row td {
+   recupero tra i set dello stesso esercizio (colonna "Recupero"). Standard
+   condiviso da ogni pagina con questa tabella (Storico, Registra sessione). */
+.rest-divider-row td {
   border-bottom: none;
   padding: var(--space-2) var(--space-2);
   text-align: right;
 }
 
-.log-rest-divider {
+.rest-divider {
   display: inline-block;
   font-size: 0.8rem;
   color: var(--color-accent);
@@ -711,28 +714,29 @@ button.secondary:hover:not(:disabled) {
   padding: var(--space-1) var(--space-2);
 }
 
-/* Sotto NARROW_LAYOUT_QUERY (LogSessionPage.tsx) la tabella lascia il posto
-   a un blocco per esercizio con i campi impilati verticalmente: la tabella,
-   larga quanto Esercizio + N colonne Set + Kg + Recupero, non ci starebbe
-   senza scroll orizzontale su schermi stretti (o finestre non massimizzate). */
-.log-session-stack {
+/* Sotto NARROW_TABLE_LAYOUT_QUERY (useIsNarrowViewport.ts) la tabella lascia
+   il posto a un blocco per esercizio con i campi impilati verticalmente:
+   la tabella, larga quanto Esercizio + N colonne Set + Kg + Recupero, non
+   ci starebbe senza scroll orizzontale su schermi stretti (o finestre non
+   massimizzate). Standard condiviso da ogni pagina con questa tabella. */
+.stack-table {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-.log-exercise-block {
+.stack-block {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   padding: var(--space-3) var(--space-4);
 }
 
-.log-exercise-block h3 {
+.stack-block h3 {
   margin: 0 0 var(--space-2);
   font-size: 1rem;
 }
 
-.log-stack-row {
+.stack-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -740,23 +744,23 @@ button.secondary:hover:not(:disabled) {
   padding: var(--space-2) 0;
 }
 
-.log-stack-row + .log-stack-row {
+.stack-row + .stack-row {
   border-top: 1px solid var(--color-border);
 }
 
-.log-stack-label {
+.stack-label {
   font-size: 0.85rem;
   color: var(--color-text-muted);
 }
 
-.log-stack-row input {
+.stack-row input {
   width: 6rem;
   padding: 0.4rem 0.5rem;
   text-align: right;
   flex-shrink: 0;
 }
 
-.log-rest-divider-stack {
+.rest-divider-stack {
   text-align: center;
 }
 

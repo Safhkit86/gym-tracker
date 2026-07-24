@@ -76,6 +76,16 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   PR di restyling, passa in rassegna ogni file in `src/pages/` e applica le
   stesse classi/pattern (es. `.card`) usate nelle altre pagine, così l'app non
   finisce con un mix di pagine vecchie e nuove.
+- La gestione della larghezza di pagina e della responsività è uno standard
+  unico per tutta la webapp, non una scelta per-pagina: ogni pagina con una
+  tabella a colonne di larghezza fissa (es. Storico, Registra sessione) usa
+  lo stesso breakpoint (`NARROW_TABLE_LAYOUT_QUERY`, 1024px) e lo stesso hook
+  condiviso `useIsNarrowViewport` (`apps/web/src/hooks/useIsNarrowViewport.ts`)
+  per passare a un layout impilato senza scroll orizzontale sotto la soglia,
+  e la stessa classe `main-wide-table` (invece del generico `main-wide`,
+  troppo stretto per queste tabelle) sopra la soglia. Quando aggiungi una
+  nuova pagina con una tabella simile, riusa questo stesso hook/classe
+  invece di reinventare la soglia o il meccanismo.
 
 ## Commit e PR
 
