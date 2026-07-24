@@ -356,7 +356,7 @@ export function LogSessionPage() {
   const maxSets = Math.max(1, ...exercises.map((e) => e.sets.length));
 
   return (
-    <main className="main-wide">
+    <main className="main-wide main-log-session">
       <p>
         <Link to={`/workouts/${workout.id}`}>← {workout.name}</Link>
       </p>

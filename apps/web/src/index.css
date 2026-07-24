@@ -57,6 +57,15 @@ main.main-wide {
   max-width: 64rem;
 }
 
+/* La tabella di log (Esercizio + una colonna per Set + Kg + Recupero, tutte
+   a larghezza fissa per allineamento) supera 64rem gia' con 4 set: senza
+   piu' spazio finisce in scroll orizzontale anche su schermi larghi, dove
+   avanza spazio inutilizzato ai lati della card. Vince su .main-wide per
+   ordine (stessa specificita', dichiarata dopo). */
+main.main-log-session {
+  max-width: 80rem;
+}
+
 h1 {
   font-size: 1.75rem;
   font-weight: 700;
