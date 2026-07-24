@@ -443,7 +443,7 @@ export function ProfilePage() {
                   }
                 >
                   <option value="workout">Scheda + esercizio</option>
-                  <option value="exercise">Solo esercizio</option>
+                  <option value="exercise">Esercizio</option>
                 </select>
               </label>
               <label>
