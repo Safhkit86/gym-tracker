@@ -29,13 +29,11 @@ describe("GET /me/preferences", () => {
 describe("PUT /me/preferences", () => {
   it("richiede autenticazione", async () => {
     const { app } = buildTestApp();
-    const response = await request(app)
-      .put("/me/preferences")
-      .send({
-        requiredConsecutiveSessions: 3,
-        groupingScope: "exercise",
-        prefillScope: "exercise",
-      });
+    const response = await request(app).put("/me/preferences").send({
+      requiredConsecutiveSessions: 3,
+      groupingScope: "exercise",
+      prefillScope: "exercise",
+    });
     expect(response.status).toBe(401);
   });
 
