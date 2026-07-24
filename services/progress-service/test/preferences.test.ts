@@ -21,6 +21,7 @@ describe("GET /me/preferences", () => {
     expect(response.body).toEqual({
       requiredConsecutiveSessions: 2,
       groupingScope: "workout",
+      prefillScope: "workout",
     });
   });
 });
@@ -28,9 +29,11 @@ describe("GET /me/preferences", () => {
 describe("PUT /me/preferences", () => {
   it("richiede autenticazione", async () => {
     const { app } = buildTestApp();
-    const response = await request(app)
-      .put("/me/preferences")
-      .send({ requiredConsecutiveSessions: 3, groupingScope: "exercise" });
+    const response = await request(app).put("/me/preferences").send({
+      requiredConsecutiveSessions: 3,
+      groupingScope: "exercise",
+      prefillScope: "exercise",
+    });
     expect(response.status).toBe(401);
   });
 
@@ -41,15 +44,44 @@ describe("PUT /me/preferences", () => {
     const response = await request(app)
       .put("/me/preferences")
       .set("Authorization", `Bearer ${token}`)
-      .send({ requiredConsecutiveSessions: 3, groupingScope: "exercise" });
+      .send({
+        requiredConsecutiveSessions: 3,
+        groupingScope: "exercise",
+        prefillScope: "exercise",
+      });
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ requiredConsecutiveSessions: 3, groupingScope: "exercise" });
+    expect(response.body).toEqual({
+      requiredConsecutiveSessions: 3,
+      groupingScope: "exercise",
+      prefillScope: "exercise",
+    });
 
     const getResponse = await request(app)
       .get("/me/preferences")
       .set("Authorization", `Bearer ${token}`);
     expect(getResponse.body).toEqual(response.body);
+  });
+
+  it("groupingScope e prefillScope sono indipendenti tra loro", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor("u1");
+
+    const response = await request(app)
+      .put("/me/preferences")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        requiredConsecutiveSessions: 2,
+        groupingScope: "workout",
+        prefillScope: "exercise",
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      requiredConsecutiveSessions: 2,
+      groupingScope: "workout",
+      prefillScope: "exercise",
+    });
   });
 
   it("risponde 400 per un requiredConsecutiveSessions fuori dai limiti", async () => {
@@ -59,7 +91,7 @@ describe("PUT /me/preferences", () => {
     const response = await request(app)
       .put("/me/preferences")
       .set("Authorization", `Bearer ${token}`)
-      .send({ requiredConsecutiveSessions: 0, groupingScope: "workout" });
+      .send({ requiredConsecutiveSessions: 0, groupingScope: "workout", prefillScope: "workout" });
 
     expect(response.status).toBe(400);
     expect(response.body.code).toBe("VALIDATION_ERROR");
@@ -72,7 +104,19 @@ describe("PUT /me/preferences", () => {
     const response = await request(app)
       .put("/me/preferences")
       .set("Authorization", `Bearer ${token}`)
-      .send({ requiredConsecutiveSessions: 2, groupingScope: "scheda" });
+      .send({ requiredConsecutiveSessions: 2, groupingScope: "scheda", prefillScope: "workout" });
+
+    expect(response.status).toBe(400);
+  });
+
+  it("risponde 400 per un prefillScope non valido", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor("u1");
+
+    const response = await request(app)
+      .put("/me/preferences")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ requiredConsecutiveSessions: 2, groupingScope: "workout", prefillScope: "scheda" });
 
     expect(response.status).toBe(400);
   });
@@ -82,15 +126,20 @@ describe("PUT /me/preferences", () => {
     const tokenA = await bearerFor("u1");
     const tokenB = await bearerFor("u2");
 
-    await request(app)
-      .put("/me/preferences")
-      .set("Authorization", `Bearer ${tokenA}`)
-      .send({ requiredConsecutiveSessions: 5, groupingScope: "exercise" });
+    await request(app).put("/me/preferences").set("Authorization", `Bearer ${tokenA}`).send({
+      requiredConsecutiveSessions: 5,
+      groupingScope: "exercise",
+      prefillScope: "exercise",
+    });
 
     const responseB = await request(app)
       .get("/me/preferences")
       .set("Authorization", `Bearer ${tokenB}`);
 
-    expect(responseB.body).toEqual({ requiredConsecutiveSessions: 2, groupingScope: "workout" });
+    expect(responseB.body).toEqual({
+      requiredConsecutiveSessions: 2,
+      groupingScope: "workout",
+      prefillScope: "workout",
+    });
   });
 });

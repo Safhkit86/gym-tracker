@@ -4,6 +4,7 @@ import type { CreateSessionResponse, SessionDetail, WorkoutDetail } from "@gym-t
 import { useAuth } from "../auth/useAuth";
 import { getWorkout } from "../api/workouts";
 import { listSessions, logSession } from "../api/sessions";
+import { getProgressionPreferences } from "../api/profile";
 import { ApiRequestError } from "../api/client";
 import { NARROW_TABLE_LAYOUT_QUERY, useIsNarrowViewport } from "../hooks/useIsNarrowViewport";
 
@@ -96,18 +97,22 @@ function findPreviousExerciseValue(
   return null;
 }
 
-/** Stesso set (stesso numero) dell'ultima sessione registrata per la stessa
- *  scheda+esercizio: da qui vengono le rep effettive di default, non
- *  dall'obiettivo della scheda (vedi buildInitialExercises). null se quel
- *  set non e' mai stato registrato prima. */
+/** Stesso set (stesso numero) dell'ultima sessione registrata per lo stesso
+ *  esercizio: da qui vengono le rep effettive di default, non dall'obiettivo
+ *  della scheda (vedi buildInitialExercises). `scope` e' la preferenza
+ *  utente "Riporta ultime ripetizioni effettive di default da" (Profilo >
+ *  Preferenze): `"workout"` (default) considera solo le sessioni della
+ *  stessa scheda, `"exercise"` l'esercizio ovunque compaia. null se quel
+ *  set non e' mai stato registrato prima nello scope scelto. */
 function findPreviousSetReps(
   previousSessions: SessionDetail[],
   workoutId: string,
   exerciseId: string,
-  setNumber: number
+  setNumber: number,
+  scope: "workout" | "exercise"
 ): number | null {
   for (const session of previousSessions) {
-    if (session.workoutId !== workoutId) {
+    if (scope === "workout" && session.workoutId !== workoutId) {
       continue;
     }
     const exercise = session.exercises.find((e) => e.exerciseId === exerciseId);
@@ -124,10 +129,15 @@ function findPreviousSetReps(
  *  questa scheda (non dall'obiettivo) — se il range e' 6-10 e l'ultima volta
  *  si sono fatte 9 rep, riparte da 9. Solo se non c'e' ancora storico per
  *  quell'esercizio si ripiega sull'obiettivo della scheda (rep minime, peso
- *  target, recupero minimo). L'utente conferma o corregge. */
+ *  target, recupero minimo). L'utente conferma o corregge.
+ *
+ *  `repsPrefillScope` (preferenza utente) si applica SOLO alle rep: peso e
+ *  recupero restano cercati per scheda+esercizio come sempre, l'utente ha
+ *  chiesto la preferenza specificamente per le rep. */
 function buildInitialExercises(
   workout: WorkoutDetail,
-  previousSessions: SessionDetail[]
+  previousSessions: SessionDetail[],
+  repsPrefillScope: "workout" | "exercise"
 ): SessionExerciseForm[] {
   return workout.exercises.map((exercise) => {
     const firstSet = exercise.sets[0];
@@ -164,7 +174,8 @@ function buildInitialExercises(
           previousSessions,
           workout.id,
           exercise.exerciseId,
-          set.setNumber
+          set.setNumber,
+          repsPrefillScope
         );
         const actualReps =
           previousReps !== null
@@ -202,10 +213,10 @@ export function LogSessionPage() {
     if (!token || !id) {
       return;
     }
-    Promise.all([getWorkout(token, id), listSessions(token)])
-      .then(([detail, previousSessions]) => {
+    Promise.all([getWorkout(token, id), listSessions(token), getProgressionPreferences(token)])
+      .then(([detail, previousSessions, preferences]) => {
         setWorkout(detail);
-        setExercises(buildInitialExercises(detail, previousSessions));
+        setExercises(buildInitialExercises(detail, previousSessions, preferences.prefillScope));
       })
       .catch((err: unknown) => {
         setError(err instanceof ApiRequestError ? err.message : "Impossibile caricare la scheda.");
