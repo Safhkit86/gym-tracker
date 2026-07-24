@@ -5,6 +5,7 @@ import type { PasswordHasher } from "../src/domain/password.js";
 import type { Mailer, MailMessage } from "../src/domain/mailer.js";
 import { InMemoryUserRepository } from "../src/repositories/user-repository.js";
 import { InMemoryPasswordActionTokenRepository } from "../src/repositories/password-action-token-repository.js";
+import { InMemoryUserMeasurementsRepository } from "../src/repositories/user-measurements-repository.js";
 
 /**
  * Hasher finto, deterministico e veloce: evita di pagare il costo (voluto) di
@@ -65,6 +66,7 @@ export function buildTestApp(): {
   const deps: AppDeps = {
     users: new InMemoryUserRepository(),
     passwordActionTokens: new InMemoryPasswordActionTokenRepository(),
+    measurements: new InMemoryUserMeasurementsRepository(),
     passwords: fakeHasher,
     tokens: createAccessTokenService(TEST_JWT_SECRET),
     mailer,

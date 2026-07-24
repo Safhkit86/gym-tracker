@@ -6,6 +6,7 @@ import { argon2Hasher } from "./domain/password.js";
 import { createNodemailerMailer } from "./domain/mailer.js";
 import { KyselyUserRepository } from "./repositories/user-repository.js";
 import { KyselyPasswordActionTokenRepository } from "./repositories/password-action-token-repository.js";
+import { KyselyUserMeasurementsRepository } from "./repositories/user-measurements-repository.js";
 
 const config = loadConfig();
 const logger = createLogger("account-service");
@@ -15,6 +16,7 @@ const db = createDb(config.DATABASE_URL);
 const app = createApp({
   users: new KyselyUserRepository(db),
   passwordActionTokens: new KyselyPasswordActionTokenRepository(db),
+  measurements: new KyselyUserMeasurementsRepository(db),
   passwords: argon2Hasher,
   tokens: createAccessTokenService(config.JWT_SECRET),
   mailer: createNodemailerMailer({

@@ -12,8 +12,10 @@ import type { PasswordHasher } from "./domain/password.js";
 import type { Mailer } from "./domain/mailer.js";
 import type { UserRepository } from "./repositories/user-repository.js";
 import type { PasswordActionTokenRepository } from "./repositories/password-action-token-repository.js";
+import type { UserMeasurementsRepository } from "./repositories/user-measurements-repository.js";
 import { createAuthRoutes } from "./routes/auth-routes.js";
 import { createMeRoutes } from "./routes/me-routes.js";
+import { createMeasurementsRoutes } from "./routes/measurements-routes.js";
 import { errorHandler } from "./middleware/error-handler.js";
 
 const SERVICE_NAME = "account-service";
@@ -27,6 +29,7 @@ const SERVICE_VERSION = "0.1.0";
 export interface AppDeps {
   users: UserRepository;
   passwordActionTokens: PasswordActionTokenRepository;
+  measurements: UserMeasurementsRepository;
   passwords: PasswordHasher;
   tokens: AccessTokenService;
   mailer: Mailer;
@@ -61,6 +64,7 @@ export function createApp(deps: AppDeps): Express {
 
   app.use("/auth", createAuthRoutes(authService, passwordResetService));
   app.use(createMeRoutes(deps.users, deps.tokens, passwordChangeService));
+  app.use(createMeasurementsRoutes(deps.measurements, deps.tokens));
 
   // Error handler: registrato per ultimo, mappa gli errori in ApiError.
   app.use(errorHandler);
