@@ -110,7 +110,7 @@ export function SessionHistoryPage() {
 
       {orderedSessions && orderedSessions.length > 0 && (
         <>
-          <div className="toolbar">
+          <div className="toolbar toolbar--end">
             <button
               type="button"
               className="secondary"

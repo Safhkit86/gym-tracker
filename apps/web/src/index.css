@@ -376,6 +376,13 @@ button.secondary:hover:not(:disabled) {
   margin-bottom: var(--space-4);
 }
 
+/* Solo per lo Storico: il pulsante di ordinamento va a destra, allineato
+   al bordo destro delle card sottostanti (non tocca .toolbar in generale,
+   usato anche altrove con i pulsanti a sinistra, es. Profilo/Scheda). */
+.toolbar--end {
+  justify-content: flex-end;
+}
+
 .icon-btn {
   position: relative;
   display: inline-flex;
