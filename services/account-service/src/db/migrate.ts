@@ -4,7 +4,7 @@ import { loadConfig } from "../config.js";
 import { createDb } from "./client.js";
 import { migrations } from "./migrations/index.js";
 
-const logger = createLogger("auth-service");
+const logger = createLogger("account-service");
 
 /**
  * Applica tutte le migrazioni pendenti fino all'ultima.
@@ -21,8 +21,8 @@ async function migrateToLatest(): Promise<void> {
     // Postgres (vedi docker-compose.yml), quindi la tabella di tracking di
     // Kysely (default "kysely_migration") deve avere un nome per servizio
     // per non collidere con quella di workout-service e degli altri servizi.
-    migrationTableName: "kysely_migration_auth",
-    migrationLockTableName: "kysely_migration_lock_auth",
+    migrationTableName: "kysely_migration_account",
+    migrationLockTableName: "kysely_migration_lock_account",
   });
 
   const { error, results } = await migrator.migrateToLatest();

@@ -3,7 +3,7 @@ import { type Kysely, sql } from "kysely";
 /**
  * Schema iniziale di workout-service: catalogo esercizi + schede a 3 livelli
  * (workouts -> workout_exercises -> workout_sets). `gen_random_uuid()` e'
- * nativo in Postgres 13+. owner_id NON e' una FK verso auth-service (confine
+ * nativo in Postgres 13+. owner_id NON e' una FK verso account-service (confine
  * tra servizi): e' il `sub` del JWT.
  */
 export async function up(db: Kysely<unknown>): Promise<void> {

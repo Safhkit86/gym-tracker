@@ -9,7 +9,7 @@ describe("routing verso gli upstream", () => {
     await closeAll?.();
   });
 
-  it("inoltra POST /auth/login ad auth-service preservando path e body", async () => {
+  it("inoltra POST /auth/login ad account-service preservando path e body", async () => {
     const ctx = await buildTestApp();
     closeAll = ctx.closeAll;
 
@@ -27,7 +27,7 @@ describe("routing verso gli upstream", () => {
     expect(ctx.workout.lastRequest).toBeNull();
   });
 
-  it("inoltra GET /me ad auth-service", async () => {
+  it("inoltra GET /me ad account-service", async () => {
     const ctx = await buildTestApp();
     closeAll = ctx.closeAll;
     const token = await bearerFor("u1");
@@ -37,7 +37,7 @@ describe("routing verso gli upstream", () => {
     expect(ctx.auth.lastRequest?.url).toBe("/me");
   });
 
-  it("inoltra POST /me/password/change-request ad auth-service", async () => {
+  it("inoltra POST /me/password/change-request ad account-service", async () => {
     const ctx = await buildTestApp();
     closeAll = ctx.closeAll;
     const token = await bearerFor("u1");

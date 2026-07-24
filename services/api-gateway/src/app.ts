@@ -19,7 +19,7 @@ const SERVICE_VERSION = "0.1.0";
  * puntare a server finti/config diverse invece che ai servizi reali.
  */
 export interface AppDeps {
-  authServiceUrl: string;
+  accountServiceUrl: string;
   workoutServiceUrl: string;
   progressServiceUrl: string;
   notifyServiceUrl: string;
@@ -97,10 +97,10 @@ export function createApp(deps: AppDeps): Express {
 
   // /auth e' pubblico per intero (nessun token ancora disponibile prima di
   // login/registrazione): oggi ci vive solo POST /auth/register e
-  // POST /auth/login. Se auth-service guadagnasse in futuro una rotta da
+  // POST /auth/login. Se account-service guadagnasse in futuro una rotta da
   // proteggere sotto /auth/*, andrebbe gestita esplicitamente, non assunta
   // pubblica per prefisso.
-  app.use("/auth", rateLimiters.auth, proxyTo(deps.authServiceUrl));
+  app.use("/auth", rateLimiters.auth, proxyTo(deps.accountServiceUrl));
 
   // Verifica centralizzata del Bearer JWT: da qui in poi ogni rotta richiede
   // un token valido, verificato alla porta d'ingresso prima ancora di
@@ -110,8 +110,8 @@ export function createApp(deps: AppDeps): Express {
 
   // Piu' stringente del generico /me: azione sensibile sul proprio account.
   // Montata prima del blanket /me qui sotto, entrambe dopo requireAuth.
-  app.use("/me/password", rateLimiters.sensitive, proxyTo(deps.authServiceUrl));
-  app.use("/me", proxyTo(deps.authServiceUrl));
+  app.use("/me/password", rateLimiters.sensitive, proxyTo(deps.accountServiceUrl));
+  app.use("/me", proxyTo(deps.accountServiceUrl));
   app.use("/exercises", proxyTo(deps.workoutServiceUrl));
   app.use("/workouts", proxyTo(deps.workoutServiceUrl));
   app.use("/sessions", proxyTo(deps.progressServiceUrl));

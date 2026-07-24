@@ -26,7 +26,7 @@ function extractBearer(header: string | undefined): string | null {
 }
 
 /**
- * Verifica il Bearer JWT (emesso da auth-service, verificato qui con lo
+ * Verifica il Bearer JWT (emesso da account-service, verificato qui con lo
  * stesso AccessTokenService condiviso) e popola `req.userClaims`.
  */
 export function authenticate(tokens: AccessTokenService): RequestHandler {

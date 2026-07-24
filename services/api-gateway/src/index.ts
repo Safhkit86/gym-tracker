@@ -6,7 +6,7 @@ const config = loadConfig();
 const logger = createLogger("api-gateway");
 
 const app = createApp({
-  authServiceUrl: config.AUTH_SERVICE_URL,
+  accountServiceUrl: config.ACCOUNT_SERVICE_URL,
   workoutServiceUrl: config.WORKOUT_SERVICE_URL,
   progressServiceUrl: config.PROGRESS_SERVICE_URL,
   notifyServiceUrl: config.NOTIFY_SERVICE_URL,

@@ -69,7 +69,7 @@ export function buildTestApp(): {
     tokens: createAccessTokenService(TEST_JWT_SECRET),
     mailer,
     webAppUrl: TEST_WEB_APP_URL,
-    logger: createLogger("auth-service", { level: "silent" }),
+    logger: createLogger("account-service", { level: "silent" }),
   };
   return { app: createApp(deps), deps, mailer };
 }

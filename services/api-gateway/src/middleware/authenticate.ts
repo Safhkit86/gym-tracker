@@ -4,7 +4,7 @@ import type { AccessTokenService } from "@gym-tracker/shared";
 /**
  * Verifica centralizzata del Bearer JWT, prima ancora di inoltrare la
  * richiesta a un servizio a valle: una richiesta senza token valido non
- * raggiunge mai auth-service/workout-service/ecc. Non sostituisce la verifica
+ * raggiunge mai account-service/workout-service/ecc. Non sostituisce la verifica
  * che ogni servizio fa gia' per conto proprio (deve comunque decodificare
  * `sub` per lo scoping per-utente): e' un livello in piu' (difesa in
  * profondita'), non un'alternativa. Stile inline (nessun errors.ts/

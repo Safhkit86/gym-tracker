@@ -43,7 +43,7 @@ pattern di `workout-service`).
 
 ## Endpoint
 
-Tutti richiedono `Authorization: Bearer <token>` emesso da `auth-service`.
+Tutti richiedono `Authorization: Bearer <token>` emesso da `account-service`.
 
 | Metodo | Path            | Descrizione                             |
 | ------ | --------------- | --------------------------------------- |

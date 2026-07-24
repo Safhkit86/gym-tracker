@@ -16,7 +16,7 @@ import { createAuthRoutes } from "./routes/auth-routes.js";
 import { createMeRoutes } from "./routes/me-routes.js";
 import { errorHandler } from "./middleware/error-handler.js";
 
-const SERVICE_NAME = "auth-service";
+const SERVICE_NAME = "account-service";
 const SERVICE_VERSION = "0.1.0";
 
 /**

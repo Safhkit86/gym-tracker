@@ -56,7 +56,7 @@ export function createRateLimiters(config: RateLimitConfig = {}): RateLimiters {
 
   // Piu' stringente del generico: protegge le azioni sensibili sul proprio
   // account (cambio password) da tentativi ripetuti, oltre al blocco per
-  // troppi OTP falliti gia' applicato lato auth-service.
+  // troppi OTP falliti gia' applicato lato account-service.
   const sensitive = rateLimit({
     windowMs,
     limit: config.sensitiveMax ?? 20,

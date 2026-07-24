@@ -4,7 +4,7 @@
 
 ## Fase / servizio interessato
 
-<!-- es. Fase 1 - auth-service -->
+<!-- es. Fase 1 - account-service -->
 
 ## Checklist
 
