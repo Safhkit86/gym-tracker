@@ -470,20 +470,28 @@ export function LogSessionPage() {
                           );
                         })}
                         <td>
-                          {exercise.isBodyweight ? (
-                            "corpo libero"
-                          ) : (
-                            <input
-                              type="number"
-                              min={0}
-                              step="0.5"
-                              value={exercise.actualWeight}
-                              onChange={(event) =>
-                                updateExercise(exerciseIndex, { actualWeight: event.target.value })
-                              }
-                              aria-label={`${exercise.exerciseName} kg effettivi`}
-                            />
-                          )}
+                          <div className="log-cell">
+                            {/* Riga vuota: nessun obiettivo di peso mostrato qui, ma la
+                                stessa altezza della riga target di Set N/Recupero tiene
+                                la casella allineata verticalmente con quelle della riga. */}
+                            <span className="log-cell__target">&nbsp;</span>
+                            {exercise.isBodyweight ? (
+                              "corpo libero"
+                            ) : (
+                              <input
+                                type="number"
+                                min={0}
+                                step="0.5"
+                                value={exercise.actualWeight}
+                                onChange={(event) =>
+                                  updateExercise(exerciseIndex, {
+                                    actualWeight: event.target.value,
+                                  })
+                                }
+                                aria-label={`${exercise.exerciseName} kg effettivi`}
+                              />
+                            )}
+                          </div>
                         </td>
                         <td>
                           <div className="log-cell">
