@@ -57,6 +57,17 @@ main.main-wide {
   max-width: 64rem;
 }
 
+/* Standard condiviso da ogni pagina con una tabella a colonne di larghezza
+   fissa (Storico, Registra sessione, vedi CLAUDE.md): Esercizio + una
+   colonna per Set + Kg + Recupero supera 64rem gia' con 4 set, finendo in
+   scroll orizzontale anche su schermi larghi con spazio inutilizzato ai
+   lati della card. Vince su .main-wide per ordine (stessa specificita',
+   dichiarata dopo). Sotto NARROW_TABLE_LAYOUT_QUERY (useIsNarrowViewport.ts)
+   la tabella lascia comunque il posto allo ".stack-table" qui sotto. */
+main.main-wide-table {
+  max-width: 80rem;
+}
+
 h1 {
   font-size: 1.75rem;
   font-weight: 700;
@@ -463,7 +474,7 @@ button.secondary:hover:not(:disabled) {
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-5);
   text-decoration: none;
   transition:
     box-shadow 0.15s ease,
@@ -631,6 +642,130 @@ button.secondary:hover:not(:disabled) {
 .session-card th:last-child,
 .session-card td:last-child {
   width: 5rem;
+}
+
+/* --- Registra sessione --- */
+
+/* Stessa tabella dello storico, ma le celle ospitano un obiettivo (target)
+   + una casella di inserimento: colonne piu' larghe delle card di sola
+   lettura, e una sola tabella in pagina quindi nessun bisogno di allineare
+   Kg con altre card. Stessa specificita' delle regole generali di
+   .session-card (selettore + pseudo-classe): vince per ordine, essendo
+   dichiarata dopo. */
+.log-session-table th:first-child,
+.log-session-table td:first-child {
+  width: 13rem;
+}
+
+.log-session-table th:not(:first-child):not(:last-child),
+.log-session-table td:not(:first-child):not(:last-child) {
+  width: 8rem;
+}
+
+.log-session-table th:last-child,
+.log-session-table td:last-child {
+  width: 8rem;
+}
+
+.log-exercise-name {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.log-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.log-cell__target {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.log-cell input {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+}
+
+.log-session-table td input {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+}
+
+/* Riga separatrice tra un esercizio e il successivo: il recupero prima di
+   passare all'esercizio successivo (WorkoutExercise.restSeconds), non il
+   recupero tra i set dello stesso esercizio (colonna "Recupero"). Standard
+   condiviso da ogni pagina con questa tabella (Storico, Registra sessione). */
+.rest-divider-row td {
+  border-bottom: none;
+  padding: var(--space-2) var(--space-2);
+  text-align: right;
+}
+
+.rest-divider {
+  display: inline-block;
+  font-size: 0.8rem;
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+}
+
+/* Sotto NARROW_TABLE_LAYOUT_QUERY (useIsNarrowViewport.ts) la tabella lascia
+   il posto a un blocco per esercizio con i campi impilati verticalmente:
+   la tabella, larga quanto Esercizio + N colonne Set + Kg + Recupero, non
+   ci starebbe senza scroll orizzontale su schermi stretti (o finestre non
+   massimizzate). Standard condiviso da ogni pagina con questa tabella. */
+.stack-table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.stack-block {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+}
+
+.stack-block h3 {
+  margin: 0 0 var(--space-2);
+  font-size: 1rem;
+}
+
+.stack-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.stack-row + .stack-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.stack-label {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.stack-row input {
+  width: 6rem;
+  padding: 0.4rem 0.5rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.rest-divider-stack {
+  text-align: center;
+}
+
+.session-card__date-input {
+  width: auto;
 }
 
 .session-card__header {

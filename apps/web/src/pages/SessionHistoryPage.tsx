@@ -6,6 +6,7 @@ import { ApiRequestError } from "../api/client";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { IconButton } from "../components/IconButton";
 import { TrashIcon } from "../components/icons";
+import { NARROW_TABLE_LAYOUT_QUERY, useIsNarrowViewport } from "../hooks/useIsNarrowViewport";
 
 type SortOrder = "desc" | "asc";
 
@@ -14,6 +15,12 @@ type SortOrder = "desc" | "asc";
 function formatWeight(session: SessionDetail["exercises"][number]): string {
   const weight = session.sets[0]?.actualWeight ?? null;
   return weight !== null ? `${weight} kg` : "corpo libero";
+}
+
+/** Recupero prima di passare all'esercizio successivo (prescritto dalla
+ *  scheda al momento del log). */
+function formatRestSeconds(exercise: SessionDetail["exercises"][number]): string {
+  return exercise.restSeconds !== null ? `${exercise.restSeconds}s` : "—";
 }
 
 /** Numero di settimana per sessione, indipendente dall'ordinamento mostrato:
@@ -40,6 +47,7 @@ export function SessionHistoryPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const isNarrow = useIsNarrowViewport(NARROW_TABLE_LAYOUT_QUERY);
 
   useEffect(() => {
     if (!token) {
@@ -90,7 +98,7 @@ export function SessionHistoryPage() {
     : 1;
 
   return (
-    <main className="main-wide">
+    <main className="main-wide main-wide-table">
       <h1>Storico allenamenti</h1>
       {error && (
         <p role="alert" className="form-error">
@@ -138,36 +146,58 @@ export function SessionHistoryPage() {
                   </div>
                   {session.notes && <p className="session-card__notes">{session.notes}</p>}
 
-                  <div className="table-scroll">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Esercizio</th>
-                          {Array.from({ length: maxSets }, (_, i) => (
-                            <th key={i}>Set {i + 1}</th>
+                  {isNarrow ? (
+                    <div className="stack-table">
+                      {session.exercises.map((exercise) => (
+                        <div className="stack-block" key={exercise.exerciseId}>
+                          <h3>{exercise.exerciseName}</h3>
+                          {exercise.sets.map((set) => (
+                            <div className="stack-row" key={set.id}>
+                              <span className="stack-label">Set {set.setNumber}</span>
+                              <span>{set.actualReps}</span>
+                            </div>
                           ))}
-                          <th>Kg</th>
-                          <th>Recupero</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {session.exercises.map((exercise) => (
-                          <tr key={exercise.exerciseId}>
-                            <td>{exercise.exerciseName}</td>
+                          <div className="stack-row">
+                            <span className="stack-label">Kg</span>
+                            <span>{formatWeight(exercise)}</span>
+                          </div>
+                          <div className="stack-row">
+                            <span className="stack-label">Recupero</span>
+                            <span>{formatRestSeconds(exercise)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="table-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Esercizio</th>
                             {Array.from({ length: maxSets }, (_, i) => (
-                              <td key={i}>
-                                {exercise.sets[i] ? exercise.sets[i].actualReps : "—"}
-                              </td>
+                              <th key={i}>Set {i + 1}</th>
                             ))}
-                            <td>{formatWeight(exercise)}</td>
-                            <td>
-                              {exercise.restSeconds !== null ? `${exercise.restSeconds}s` : "—"}
-                            </td>
+                            <th>Kg</th>
+                            <th>Recupero</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {session.exercises.map((exercise) => (
+                            <tr key={exercise.exerciseId}>
+                              <td>{exercise.exerciseName}</td>
+                              {Array.from({ length: maxSets }, (_, i) => (
+                                <td key={i}>
+                                  {exercise.sets[i] ? exercise.sets[i].actualReps : "—"}
+                                </td>
+                              ))}
+                              <td>{formatWeight(exercise)}</td>
+                              <td>{formatRestSeconds(exercise)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
 
                   <div className="session-card__actions">
                     <IconButton

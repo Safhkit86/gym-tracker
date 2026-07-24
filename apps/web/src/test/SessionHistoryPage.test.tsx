@@ -5,6 +5,18 @@ import { SessionHistoryPage } from "../pages/SessionHistoryPage";
 
 const FAKE_USER = { id: "u1", email: "test@example.com", createdAt: new Date().toISOString() };
 
+function stubNarrowViewport(matches: boolean): void {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn().mockImplementation((query: string) => ({
+      matches,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+  );
+}
+
 const SESSION_OLDER = {
   id: "sess1",
   workoutId: "w1",
@@ -158,6 +170,24 @@ describe("SessionHistoryPage", () => {
 
     const dividers = screen.getAllByText(/Settimana \d/).map((el) => el.textContent);
     expect(dividers).toEqual(["Settimana 2", "Settimana 1"]);
+  });
+
+  it("su schermi stretti mostra un blocco per esercizio invece della tabella", async () => {
+    stubNarrowViewport(true);
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [SESSION_OLDER] },
+    ]);
+
+    renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+
+    await screen.findByText("Panca piana");
+    expect(document.querySelector("table")).not.toBeInTheDocument();
+    expect(document.querySelectorAll(".stack-block")).toHaveLength(1);
+    expect(screen.getByText("Set 1")).toBeInTheDocument();
+    expect(screen.getByText("10")).toBeInTheDocument();
+    expect(screen.getByText("80 kg")).toBeInTheDocument();
+    expect(screen.getByText("90s")).toBeInTheDocument();
   });
 
   it("elimina una sessione dopo conferma", async () => {

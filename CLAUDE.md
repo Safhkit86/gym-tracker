@@ -76,6 +76,16 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   PR di restyling, passa in rassegna ogni file in `src/pages/` e applica le
   stesse classi/pattern (es. `.card`) usate nelle altre pagine, così l'app non
   finisce con un mix di pagine vecchie e nuove.
+- La gestione della larghezza di pagina e della responsività è uno standard
+  unico per tutta la webapp, non una scelta per-pagina: ogni pagina con una
+  tabella a colonne di larghezza fissa (es. Storico, Registra sessione) usa
+  lo stesso breakpoint (`NARROW_TABLE_LAYOUT_QUERY`, 1024px) e lo stesso hook
+  condiviso `useIsNarrowViewport` (`apps/web/src/hooks/useIsNarrowViewport.ts`)
+  per passare a un layout impilato senza scroll orizzontale sotto la soglia,
+  e la stessa classe `main-wide-table` (invece del generico `main-wide`,
+  troppo stretto per queste tabelle) sopra la soglia. Quando aggiungi una
+  nuova pagina con una tabella simile, riusa questo stesso hook/classe
+  invece di reinventare la soglia o il meccanismo.
 
 ## Commit e PR
 
@@ -138,6 +148,23 @@ conversazione corrente:
   momento preciso (es. "il deploy è previsto per la settimana prossima"),
   riferimenti a sistemi esterni (dashboard, tracker). Non duplicare lì
   quello che si può già dedurre leggendo il codice o la git history.
+
+## Come collaborare (regola di processo)
+
+- Non fare mai più di quanto richiesto e non inventare soluzioni non
+  esplicitamente chieste, specialmente su dettagli di UI/UX (posizione di
+  un elemento, testo di un'etichetta, struttura di una tabella). Se emerge
+  un dubbio interpretativo, o si sta per aggiungere/cambiare qualcosa non
+  chiesto esplicitamente, fermarsi e chiedere invece di procedere per
+  ipotesi. Quando ci sono più alternative visive plausibili, preferire un
+  artifact (mockup/HTML) che l'utente possa guardare e scegliere, invece di
+  descriverle solo a parole o implementarne una a caso.
+- Dopo ogni modifica alla UI di `apps/web`, verificarla visivamente (screenshot
+  Playwright, non solo lint/test/build) prima di dichiararla completa — e
+  controllare più di una dimensione di schermo (es. viewport stretto tipo
+  mobile oltre a quello desktop), non solo quella comoda in cui è stata
+  sviluppata: un elemento può risultare tagliato/mal posizionato solo sotto
+  una certa larghezza.
 
 ## Cosa NON fare
 
