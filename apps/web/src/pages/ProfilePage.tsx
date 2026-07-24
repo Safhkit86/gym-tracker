@@ -51,6 +51,8 @@ export function ProfilePage() {
   const [requiredConsecutiveSessions, setRequiredConsecutiveSessions] = useState("2");
   const [groupingScope, setGroupingScope] =
     useState<ProgressionPreferences["groupingScope"]>("workout");
+  const [prefillScope, setPrefillScope] =
+    useState<ProgressionPreferences["prefillScope"]>("workout");
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [preferencesError, setPreferencesError] = useState<string | null>(null);
   const [preferencesMessage, setPreferencesMessage] = useState<string | null>(null);
@@ -64,6 +66,7 @@ export function ProfilePage() {
       .then((data) => {
         setRequiredConsecutiveSessions(String(data.requiredConsecutiveSessions));
         setGroupingScope(data.groupingScope);
+        setPrefillScope(data.prefillScope);
         setPreferencesLoaded(true);
       })
       .catch((err: unknown) => {
@@ -190,9 +193,11 @@ export function ProfilePage() {
       const result = await updateProgressionPreferences(token, {
         requiredConsecutiveSessions: Number(requiredConsecutiveSessions),
         groupingScope,
+        prefillScope,
       });
       setRequiredConsecutiveSessions(String(result.requiredConsecutiveSessions));
       setGroupingScope(result.groupingScope);
+      setPrefillScope(result.prefillScope);
       setPreferencesMessage("Preferenze salvate.");
     } catch (err) {
       setPreferencesError(
@@ -438,7 +443,19 @@ export function ProfilePage() {
                   }
                 >
                   <option value="workout">Scheda + esercizio</option>
-                  <option value="exercise">Solo esercizio</option>
+                  <option value="exercise">Esercizio</option>
+                </select>
+              </label>
+              <label>
+                Riporta ultime ripetizioni effettive di default da
+                <select
+                  value={prefillScope}
+                  onChange={(event) =>
+                    setPrefillScope(event.target.value as ProgressionPreferences["prefillScope"])
+                  }
+                >
+                  <option value="workout">Scheda + esercizio</option>
+                  <option value="exercise">Esercizio</option>
                 </select>
               </label>
               {preferencesError && (
