@@ -9,6 +9,19 @@ const FAKE_USER = {
   createdAt: new Date("2026-01-15").toISOString(),
 };
 
+const EMPTY_MEASUREMENTS = {
+  heightCm: null,
+  weightKg: null,
+  chestCm: null,
+  armCm: null,
+  waistCm: null,
+  legCm: null,
+};
+
+function measurementsHandler(body: unknown = EMPTY_MEASUREMENTS) {
+  return { match: (u: string, m: string) => u.endsWith("/me/measurements") && m === "GET", body };
+}
+
 describe("ProfilePage", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -20,7 +33,10 @@ describe("ProfilePage", () => {
   });
 
   it("mostra email e data di iscrizione", async () => {
-    mockFetchResponses([{ match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER }]);
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      measurementsHandler(),
+    ]);
 
     renderWithProviders(<ProfilePage />, ["/profile"]);
 
@@ -31,6 +47,7 @@ describe("ProfilePage", () => {
   it("invia password attuale+nuova, poi conferma con l'OTP", async () => {
     const fetchMock = mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      measurementsHandler(),
       {
         match: (u, m) => u.endsWith("/me/password/change-request") && m === "POST",
         body: { message: "Codice di conferma inviato via email." },
@@ -73,6 +90,7 @@ describe("ProfilePage", () => {
   it("mostra un errore se la password attuale e' sbagliata, senza passare all'OTP", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      measurementsHandler(),
       {
         match: (u, m) => u.endsWith("/me/password/change-request") && m === "POST",
         status: 400,
@@ -94,5 +112,87 @@ describe("ProfilePage", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Password attuale non corretta.");
     expect(screen.queryByLabelText(/codice ricevuto via email/i)).not.toBeInTheDocument();
+  });
+
+  it("mostra la sezione Account di default, con Misure raggiungibile da un pulsante", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      measurementsHandler(),
+    ]);
+
+    renderWithProviders(<ProfilePage />, ["/profile"]);
+
+    await screen.findByText(/test@example.com/);
+    expect(screen.queryByLabelText(/altezza/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Misure" }));
+
+    expect(await screen.findByLabelText(/altezza/i)).toBeInTheDocument();
+    expect(screen.queryByText(/test@example.com/)).not.toBeInTheDocument();
+  });
+
+  it("precompila le misure gia' salvate e permette di aggiornarle", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      measurementsHandler({
+        heightCm: 180,
+        weightKg: 78.5,
+        chestCm: 100,
+        armCm: 35,
+        waistCm: 85,
+        legCm: 55,
+      }),
+      {
+        match: (u, m) => u.endsWith("/me/measurements") && m === "PUT",
+        body: {
+          heightCm: 180,
+          weightKg: 76,
+          chestCm: 100,
+          armCm: 35,
+          waistCm: 85,
+          legCm: 55,
+        },
+      },
+    ]);
+
+    renderWithProviders(<ProfilePage />, ["/profile"]);
+
+    await screen.findByText(/test@example.com/);
+    fireEvent.click(screen.getByRole("button", { name: "Misure" }));
+
+    const weightInput = (await screen.findByLabelText(/peso/i)) as HTMLInputElement;
+    expect(weightInput.value).toBe("78.5");
+    expect((screen.getByLabelText(/altezza/i) as HTMLInputElement).value).toBe("180");
+
+    fireEvent.change(weightInput, { target: { value: "76" } });
+    fireEvent.click(screen.getByRole("button", { name: /salva misure/i }));
+
+    expect(await screen.findByText("Misure salvate.")).toBeInTheDocument();
+    const putCall = fetchMock.mock.calls.find(
+      ([u, init]) => String(u).endsWith("/me/measurements") && init?.method === "PUT"
+    );
+    expect(putCall).toBeDefined();
+    expect(JSON.parse((putCall?.[1]?.body as string) ?? "{}")).toMatchObject({ weightKg: 76 });
+  });
+
+  it("nessun campo delle misure e' obbligatorio", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      measurementsHandler(),
+      {
+        match: (u, m) => u.endsWith("/me/measurements") && m === "PUT",
+        body: EMPTY_MEASUREMENTS,
+      },
+    ]);
+
+    renderWithProviders(<ProfilePage />, ["/profile"]);
+
+    await screen.findByText(/test@example.com/);
+    fireEvent.click(screen.getByRole("button", { name: "Misure" }));
+
+    await screen.findByLabelText(/altezza/i);
+    fireEvent.click(screen.getByRole("button", { name: /salva misure/i }));
+
+    expect(await screen.findByText("Misure salvate.")).toBeInTheDocument();
   });
 });

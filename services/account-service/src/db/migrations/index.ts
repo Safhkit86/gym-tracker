@@ -1,6 +1,7 @@
 import type { Migration } from "kysely";
 import * as createUsers from "./001-create-users.js";
 import * as addPasswordActionTokens from "./002-add-password-action-tokens.js";
+import * as addUserMeasurements from "./003-add-user-measurements.js";
 
 /**
  * Registro statico delle migrazioni. Preferito a FileMigrationProvider perche'
@@ -10,4 +11,5 @@ import * as addPasswordActionTokens from "./002-add-password-action-tokens.js";
 export const migrations: Record<string, Migration> = {
   "001-create-users": createUsers,
   "002-add-password-action-tokens": addPasswordActionTokens,
+  "003-add-user-measurements": addUserMeasurements,
 };
