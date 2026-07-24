@@ -9,7 +9,7 @@ autenticazione propria — ogni servizio verifica il proprio JWT); l'hardening
 
 | Prefisso                      | Upstream          |
 | ----------------------------- | ----------------- |
-| `/auth/*`, `/me`              | `account-service`    |
+| `/auth/*`, `/me`              | `account-service` |
 | `/exercises/*`, `/workouts/*` | `workout-service` |
 
 `/health` è del gateway stesso e non viene proxato. Aggiungi un nuovo
