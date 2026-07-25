@@ -441,7 +441,6 @@ export function ProfilePage() {
                       onChange={(event) => setRequiredConsecutiveSessions(event.target.value)}
                       required
                     />
-                    <span>volte</span>
                   </div>
                 </div>
                 <div className="pref-row">
