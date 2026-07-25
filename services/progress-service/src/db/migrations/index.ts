@@ -8,6 +8,7 @@ import * as addActualRestSeconds from "./006-add-actual-rest-seconds.js";
 import * as addProgressionPreferences from "./007-add-progression-preferences.js";
 import * as addPrefillScope from "./008-add-prefill-scope.js";
 import * as addProgressionDefaults from "./009-add-progression-defaults.js";
+import * as addTimerSoundEnabled from "./010-add-timer-sound-enabled.js";
 
 /**
  * Registro statico delle migrazioni (chiavi ordinate). Preferito a
@@ -24,4 +25,5 @@ export const migrations: Record<string, Migration> = {
   "007-add-progression-preferences": addProgressionPreferences,
   "008-add-prefill-scope": addPrefillScope,
   "009-add-progression-defaults": addProgressionDefaults,
+  "010-add-timer-sound-enabled": addTimerSoundEnabled,
 };

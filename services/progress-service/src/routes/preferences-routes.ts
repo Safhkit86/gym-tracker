@@ -9,6 +9,7 @@ const preferencesSchema = z.object({
   requiredConsecutiveSessions: z.number().int().min(1).max(10),
   groupingScope: z.enum(["workout", "exercise"]),
   prefillScope: z.enum(["workout", "exercise"]),
+  timerSoundEnabled: z.boolean(),
 });
 
 /** Preferenze per-utente del motore di progressione (Profilo > Preferenze). */

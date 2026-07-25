@@ -22,6 +22,7 @@ describe("GET /me/preferences", () => {
       requiredConsecutiveSessions: 2,
       groupingScope: "workout",
       prefillScope: "workout",
+      timerSoundEnabled: false,
     });
   });
 });
@@ -33,6 +34,7 @@ describe("PUT /me/preferences", () => {
       requiredConsecutiveSessions: 3,
       groupingScope: "exercise",
       prefillScope: "exercise",
+      timerSoundEnabled: false,
     });
     expect(response.status).toBe(401);
   });
@@ -48,6 +50,7 @@ describe("PUT /me/preferences", () => {
         requiredConsecutiveSessions: 3,
         groupingScope: "exercise",
         prefillScope: "exercise",
+        timerSoundEnabled: true,
       });
 
     expect(response.status).toBe(200);
@@ -55,6 +58,7 @@ describe("PUT /me/preferences", () => {
       requiredConsecutiveSessions: 3,
       groupingScope: "exercise",
       prefillScope: "exercise",
+      timerSoundEnabled: true,
     });
 
     const getResponse = await request(app)
@@ -74,6 +78,7 @@ describe("PUT /me/preferences", () => {
         requiredConsecutiveSessions: 2,
         groupingScope: "workout",
         prefillScope: "exercise",
+        timerSoundEnabled: false,
       });
 
     expect(response.status).toBe(200);
@@ -81,6 +86,7 @@ describe("PUT /me/preferences", () => {
       requiredConsecutiveSessions: 2,
       groupingScope: "workout",
       prefillScope: "exercise",
+      timerSoundEnabled: false,
     });
   });
 
@@ -91,7 +97,12 @@ describe("PUT /me/preferences", () => {
     const response = await request(app)
       .put("/me/preferences")
       .set("Authorization", `Bearer ${token}`)
-      .send({ requiredConsecutiveSessions: 0, groupingScope: "workout", prefillScope: "workout" });
+      .send({
+        requiredConsecutiveSessions: 0,
+        groupingScope: "workout",
+        prefillScope: "workout",
+        timerSoundEnabled: false,
+      });
 
     expect(response.status).toBe(400);
     expect(response.body.code).toBe("VALIDATION_ERROR");
@@ -104,7 +115,12 @@ describe("PUT /me/preferences", () => {
     const response = await request(app)
       .put("/me/preferences")
       .set("Authorization", `Bearer ${token}`)
-      .send({ requiredConsecutiveSessions: 2, groupingScope: "scheda", prefillScope: "workout" });
+      .send({
+        requiredConsecutiveSessions: 2,
+        groupingScope: "scheda",
+        prefillScope: "workout",
+        timerSoundEnabled: false,
+      });
 
     expect(response.status).toBe(400);
   });
@@ -116,7 +132,29 @@ describe("PUT /me/preferences", () => {
     const response = await request(app)
       .put("/me/preferences")
       .set("Authorization", `Bearer ${token}`)
-      .send({ requiredConsecutiveSessions: 2, groupingScope: "workout", prefillScope: "scheda" });
+      .send({
+        requiredConsecutiveSessions: 2,
+        groupingScope: "workout",
+        prefillScope: "scheda",
+        timerSoundEnabled: false,
+      });
+
+    expect(response.status).toBe(400);
+  });
+
+  it("risponde 400 se timerSoundEnabled non e' un booleano", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor("u1");
+
+    const response = await request(app)
+      .put("/me/preferences")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        requiredConsecutiveSessions: 2,
+        groupingScope: "workout",
+        prefillScope: "workout",
+        timerSoundEnabled: "yes",
+      });
 
     expect(response.status).toBe(400);
   });
@@ -130,6 +168,7 @@ describe("PUT /me/preferences", () => {
       requiredConsecutiveSessions: 5,
       groupingScope: "exercise",
       prefillScope: "exercise",
+      timerSoundEnabled: true,
     });
 
     const responseB = await request(app)
@@ -140,6 +179,7 @@ describe("PUT /me/preferences", () => {
       requiredConsecutiveSessions: 2,
       groupingScope: "workout",
       prefillScope: "workout",
+      timerSoundEnabled: false,
     });
   });
 });

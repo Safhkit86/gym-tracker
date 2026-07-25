@@ -26,6 +26,7 @@ const DEFAULT_PREFERENCES = {
   requiredConsecutiveSessions: 2,
   groupingScope: "workout",
   prefillScope: "workout",
+  timerSoundEnabled: false,
 };
 
 function preferencesHandler(body: unknown = DEFAULT_PREFERENCES) {
@@ -263,6 +264,8 @@ describe("ProfilePage", () => {
       /riporta ultime ripetizioni effettive di default da/i
     ) as HTMLSelectElement;
     expect(prefillSelect.value).toBe("workout");
+    const timerSoundCheckbox = screen.getByLabelText(/suono sveglia/i) as HTMLInputElement;
+    expect(timerSoundCheckbox.checked).toBe(false);
   });
 
   it("salva le preferenze aggiornate (X, raggruppamento e scope di precompilazione)", async () => {
@@ -276,6 +279,7 @@ describe("ProfilePage", () => {
           requiredConsecutiveSessions: 3,
           groupingScope: "exercise",
           prefillScope: "exercise",
+          timerSoundEnabled: false,
         },
       },
     ]);
@@ -306,6 +310,36 @@ describe("ProfilePage", () => {
       requiredConsecutiveSessions: 3,
       groupingScope: "exercise",
       prefillScope: "exercise",
+      timerSoundEnabled: false,
+    });
+  });
+
+  it("salva la preferenza suono sveglia quando il checkbox viene attivato", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      measurementsHandler(),
+      preferencesHandler(),
+      {
+        match: (u, m) => u.endsWith("/me/preferences") && m === "PUT",
+        body: { ...DEFAULT_PREFERENCES, timerSoundEnabled: true },
+      },
+    ]);
+
+    renderWithProviders(<ProfilePage />, ["/profile"]);
+
+    await screen.findByText(/test@example.com/);
+    fireEvent.click(screen.getByRole("button", { name: "Preferenze" }));
+
+    const timerSoundCheckbox = await screen.findByLabelText(/suono sveglia/i);
+    fireEvent.click(timerSoundCheckbox);
+    fireEvent.click(screen.getByRole("button", { name: /salva preferenze/i }));
+
+    expect(await screen.findByText("Preferenze salvate.")).toBeInTheDocument();
+    const putCall = fetchMock.mock.calls.find(
+      ([u, init]) => String(u).endsWith("/me/preferences") && init?.method === "PUT"
+    );
+    expect(JSON.parse((putCall?.[1]?.body as string) ?? "{}")).toMatchObject({
+      timerSoundEnabled: true,
     });
   });
 });

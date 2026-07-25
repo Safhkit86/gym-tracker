@@ -5,12 +5,14 @@ export interface ProgressionPreferencesRecord {
   requiredConsecutiveSessions: number;
   groupingScope: GroupingScope;
   prefillScope: GroupingScope;
+  timerSoundEnabled: boolean;
 }
 
 const DEFAULT_PREFERENCES: ProgressionPreferencesRecord = {
   requiredConsecutiveSessions: 2,
   groupingScope: "workout",
   prefillScope: "workout",
+  timerSoundEnabled: false,
 };
 
 export interface ProgressionPreferencesRepository {
@@ -39,6 +41,7 @@ export class KyselyProgressionPreferencesRepository implements ProgressionPrefer
       requiredConsecutiveSessions: row.required_consecutive_sessions,
       groupingScope: row.grouping_scope,
       prefillScope: row.prefill_scope,
+      timerSoundEnabled: row.timer_sound_enabled,
     };
   }
 
@@ -53,12 +56,14 @@ export class KyselyProgressionPreferencesRepository implements ProgressionPrefer
         required_consecutive_sessions: values.requiredConsecutiveSessions,
         grouping_scope: values.groupingScope,
         prefill_scope: values.prefillScope,
+        timer_sound_enabled: values.timerSoundEnabled,
       })
       .onConflict((oc) =>
         oc.column("owner_id").doUpdateSet({
           required_consecutive_sessions: values.requiredConsecutiveSessions,
           grouping_scope: values.groupingScope,
           prefill_scope: values.prefillScope,
+          timer_sound_enabled: values.timerSoundEnabled,
           updated_at: new Date(),
         })
       )
@@ -68,6 +73,7 @@ export class KyselyProgressionPreferencesRepository implements ProgressionPrefer
       requiredConsecutiveSessions: row.required_consecutive_sessions,
       groupingScope: row.grouping_scope,
       prefillScope: row.prefill_scope,
+      timerSoundEnabled: row.timer_sound_enabled,
     };
   }
 }
