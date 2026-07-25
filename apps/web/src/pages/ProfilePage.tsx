@@ -53,6 +53,7 @@ export function ProfilePage() {
     useState<ProgressionPreferences["groupingScope"]>("workout");
   const [prefillScope, setPrefillScope] =
     useState<ProgressionPreferences["prefillScope"]>("workout");
+  const [timerSoundEnabled, setTimerSoundEnabled] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [preferencesError, setPreferencesError] = useState<string | null>(null);
   const [preferencesMessage, setPreferencesMessage] = useState<string | null>(null);
@@ -67,6 +68,7 @@ export function ProfilePage() {
         setRequiredConsecutiveSessions(String(data.requiredConsecutiveSessions));
         setGroupingScope(data.groupingScope);
         setPrefillScope(data.prefillScope);
+        setTimerSoundEnabled(data.timerSoundEnabled);
         setPreferencesLoaded(true);
       })
       .catch((err: unknown) => {
@@ -194,10 +196,12 @@ export function ProfilePage() {
         requiredConsecutiveSessions: Number(requiredConsecutiveSessions),
         groupingScope,
         prefillScope,
+        timerSoundEnabled,
       });
       setRequiredConsecutiveSessions(String(result.requiredConsecutiveSessions));
       setGroupingScope(result.groupingScope);
       setPrefillScope(result.prefillScope);
+      setTimerSoundEnabled(result.timerSoundEnabled);
       setPreferencesMessage("Preferenze salvate.");
     } catch (err) {
       setPreferencesError(
@@ -457,6 +461,14 @@ export function ProfilePage() {
                   <option value="workout">Scheda + esercizio</option>
                   <option value="exercise">Esercizio</option>
                 </select>
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={timerSoundEnabled}
+                  onChange={(event) => setTimerSoundEnabled(event.target.checked)}
+                />{" "}
+                Suono sveglia a fine recupero (timer in Registra sessione)
               </label>
               {preferencesError && (
                 <p role="alert" className="form-error">

@@ -24,6 +24,7 @@ function preferencesHandler(
     requiredConsecutiveSessions: 2,
     groupingScope: "workout",
     prefillScope: "workout",
+    timerSoundEnabled: false,
   }
 ) {
   return { match: (u: string, m: string) => u.endsWith("/me/preferences") && m === "GET", body };

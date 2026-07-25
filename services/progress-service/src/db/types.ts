@@ -81,6 +81,9 @@ export interface ProgressionPreferencesTable {
   /** Precompilazione delle rep effettive in Registra sessione: concetto
    *  distinto da grouping_scope (quello e' per il motore di suggerimento). */
   prefill_scope: Generated<GroupingScope>;
+  /** Timer di recupero in Registra sessione: se suonare un allarme a fine
+   *  conto alla rovescia (vedi useRestTimers.ts nel frontend). */
+  timer_sound_enabled: Generated<boolean>;
   updated_at: ColumnType<Date, Date | undefined, Date>;
 }
 

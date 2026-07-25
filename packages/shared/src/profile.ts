@@ -29,11 +29,16 @@ export type UpdateUserMeasurementsRequest = UserMeasurements;
  * Registra sessione, vedi LogSessionPage.tsx): se le ultime rep storicizzate
  * da riproporre vengono cercate per scheda+esercizio (comportamento
  * storico) o per solo esercizio, indipendentemente dalla scheda.
+ *
+ * `timerSoundEnabled` e' ancora distinto (niente a che vedere col motore di
+ * progressione): se il timer di recupero in Registra sessione deve suonare
+ * un allarme a fine conto alla rovescia, vedi useRestTimers.ts.
  */
 export interface ProgressionPreferences {
   requiredConsecutiveSessions: number;
   groupingScope: "workout" | "exercise";
   prefillScope: "workout" | "exercise";
+  timerSoundEnabled: boolean;
 }
 
 export type UpdateProgressionPreferencesRequest = ProgressionPreferences;

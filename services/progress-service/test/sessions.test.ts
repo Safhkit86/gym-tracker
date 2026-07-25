@@ -215,6 +215,7 @@ describe("POST /sessions", () => {
       requiredConsecutiveSessions: 2,
       groupingScope: "exercise",
       prefillScope: "workout",
+      timerSoundEnabled: false,
     });
 
     await request(app)
@@ -237,10 +238,12 @@ describe("POST /sessions", () => {
     const { app } = buildTestApp();
     const token = await bearerFor(OWNER_A);
 
-    await request(app)
-      .put("/me/preferences")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ requiredConsecutiveSessions: 1, groupingScope: "workout", prefillScope: "workout" });
+    await request(app).put("/me/preferences").set("Authorization", `Bearer ${token}`).send({
+      requiredConsecutiveSessions: 1,
+      groupingScope: "workout",
+      prefillScope: "workout",
+      timerSoundEnabled: false,
+    });
 
     const first = await request(app)
       .post("/sessions")
