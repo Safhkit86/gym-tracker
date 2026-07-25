@@ -1056,15 +1056,6 @@ button.secondary:hover:not(:disabled) {
 
 /* --- Toggle switch (Profilo > Preferenze) --- */
 
-/* label { flex-direction: column } di base va invertito qui: switch e
-   testo stanno affiancati su una riga, non impilati come le altre label. */
-.toggle-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--space-3);
-}
-
 .toggle-switch {
   position: relative;
   display: inline-flex;
@@ -1115,4 +1106,71 @@ button.secondary:hover:not(:disabled) {
 
 .toggle-switch input:focus-visible + .toggle-switch__track {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
+/* --- Righe di preferenza: domanda a sinistra, risposta a destra se c'e'
+   spazio (sotto altrimenti, es. su mobile) --- */
+
+.pref-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.pref-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pref-row__label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.pref-row__control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pref-row__control select,
+.pref-row__control input[type="number"] {
+  width: 100%;
+}
+
+@media (min-width: 700px) {
+  .pref-row {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-5);
+  }
+
+  .pref-row__label {
+    flex: 1 1 auto;
+    padding-top: 0.5rem;
+  }
+
+  .pref-row__control {
+    flex: 0 0 auto;
+  }
+
+  .pref-row__control select,
+  .pref-row__control input[type="number"] {
+    width: auto;
+    min-width: 12rem;
+  }
+}
+
+/* Staccato dalle righe sopra (non lo stesso gap di .pref-rows): e'
+   un'azione di conferma, non un'altra configurazione. */
+.pref-form__actions {
+  margin-top: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
 }
