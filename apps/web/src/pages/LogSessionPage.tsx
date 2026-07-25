@@ -7,6 +7,7 @@ import type {
   WorkoutDetail,
 } from "@gym-tracker/shared";
 import { useAuth } from "../auth/useAuth";
+import { useUnreadCount } from "../notifications/useUnreadCount";
 import { getWorkout } from "../api/workouts";
 import { listSessions, logSession } from "../api/sessions";
 import { getProgressionDefaults, getProgressionPreferences } from "../api/profile";
@@ -228,6 +229,7 @@ function buildInitialExercises(
 export function LogSessionPage() {
   const { token } = useAuth();
   const { id } = useParams<{ id: string }>();
+  const { refreshUnreadCount } = useUnreadCount();
 
   const [workout, setWorkout] = useState<WorkoutDetail | null>(null);
   const [exercises, setExercises] = useState<SessionExerciseForm[]>([]);
@@ -328,6 +330,12 @@ export function LogSessionPage() {
         }),
       });
       setResult(response);
+      if (response.suggestions.length > 0) {
+        // Restando su questa pagina (nessuna navigazione) il cambio di rotta
+        // in Layout non scatta da solo: senza questa chiamata il badge
+        // resterebbe fermo finche' l'utente non naviga altrove.
+        refreshUnreadCount();
+      }
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : "Errore imprevisto. Riprova.");
     } finally {

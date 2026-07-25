@@ -3,6 +3,7 @@ import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { renderWithProviders, seedAuthToken, mockFetchResponses } from "./helpers";
 import { LogSessionPage } from "../pages/LogSessionPage";
+import { Layout } from "../components/Layout";
 
 const FAKE_USER = { id: "u1", email: "test@example.com", createdAt: new Date().toISOString() };
 
@@ -439,6 +440,94 @@ describe("LogSessionPage", () => {
     expect(body.notes).toBeUndefined();
 
     expect(await screen.findByText(/aumenta il carico/i)).toBeInTheDocument();
+  });
+
+  it("aggiorna il badge in Layout quando la sessione registrata produce un suggerimento", async () => {
+    // Mock manuale (non mockFetchResponses) perche' serve stato: prima della
+    // POST /sessions non c'e' ancora nessuna notifica non letta, dopo si'
+    // (simula la notifica creata da notify-service a valle dell'evento).
+    let suggestionCreated = false;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      const method = (init?.method ?? "GET").toUpperCase();
+      const jsonResponse = (body: unknown, status = 200) => ({
+        ok: status < 300,
+        status,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => body,
+      });
+      if (url.endsWith("/me") && method === "GET") {
+        return jsonResponse(FAKE_USER);
+      }
+      if (url.endsWith("/workouts/w1") && method === "GET") {
+        return jsonResponse(WORKOUT_DETAIL);
+      }
+      if (url.endsWith("/sessions") && method === "GET") {
+        return jsonResponse([]);
+      }
+      if (url.endsWith("/me/preferences") && method === "GET") {
+        return jsonResponse({
+          requiredConsecutiveSessions: 2,
+          groupingScope: "workout",
+          prefillScope: "workout",
+        });
+      }
+      if (url.endsWith("/me/progression-defaults") && method === "GET") {
+        return jsonResponse([]);
+      }
+      if (url.includes("/notifications?unread=true") && method === "GET") {
+        return jsonResponse(suggestionCreated ? [{ id: "n1" }] : []);
+      }
+      if (url.endsWith("/sessions") && method === "POST") {
+        suggestionCreated = true;
+        return jsonResponse(
+          {
+            id: "sess1",
+            workoutId: "w1",
+            workoutName: "Push day",
+            workoutNotes: null,
+            performedAt: new Date().toISOString(),
+            notes: null,
+            exercises: [],
+            createdAt: new Date().toISOString(),
+            suggestions: [
+              {
+                id: "pe1",
+                exerciseId: "e1",
+                exerciseName: "Panca piana",
+                triggeringSessionId: "sess1",
+                suggestionType: "increase_weight",
+                previousValue: 80,
+                suggestedValue: 82.5,
+                reason:
+                  "Obiettivo di ripetizioni raggiunto per 2 sessioni consecutive a 80kg: aumenta il carico.",
+                source: "rule",
+                createdAt: new Date().toISOString(),
+              },
+            ],
+          },
+          201
+        );
+      }
+      throw new Error(`Nessun handler mockato per ${method} ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderWithProviders(
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+        </Route>
+      </Routes>,
+      ["/workouts/w1/log"]
+    );
+
+    await screen.findByLabelText(/panca piana set 1 rep effettive/i);
+    expect(screen.queryByText("1")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /registra sessione/i }));
+
+    expect(await screen.findByText("1")).toBeInTheDocument();
   });
 
   it("per un set a sforzo massimo mostra 'Max' come obiettivo e parte con rep effettive vuote", async () => {
