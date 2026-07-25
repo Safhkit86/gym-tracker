@@ -140,6 +140,99 @@ describe("NotificationsPage", () => {
     expect(await screen.findByText("10 → 11 rip.")).toBeInTheDocument();
   });
 
+  it("accetta una progressione: salva l'override e segna la notifica come letta", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      {
+        match: (u, m) => u.endsWith("/notifications") && m === "GET",
+        body: [NOTIFICATION_UNREAD],
+      },
+      {
+        match: (u, m) => u.endsWith("/me/progression-defaults") && m === "POST",
+        status: 204,
+      },
+      {
+        match: (u, m) => u.endsWith("/notifications/n1/read") && m === "PATCH",
+        status: 204,
+      },
+    ]);
+
+    renderWithProviders(<NotificationsPage />, ["/notifications"]);
+
+    fireEvent.click(await screen.findByRole("button", { name: /^accetta progressione$/i }));
+
+    await waitFor(() => {
+      const postCall = fetchMock.mock.calls.find(
+        ([url, init]) =>
+          typeof url === "string" &&
+          url.endsWith("/me/progression-defaults") &&
+          init?.method === "POST"
+      );
+      expect(postCall).toBeDefined();
+      expect(JSON.parse(postCall![1]!.body as string)).toEqual({
+        overrides: [{ exerciseId: "e1", suggestionType: "increase_weight", value: 82.5 }],
+      });
+      const patchCall = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
+      expect(patchCall).toBeDefined();
+    });
+  });
+
+  it("accetta tutte le progressioni: un solo POST con tutti gli override, poi segna tutte come lette", async () => {
+    const secondNotification = {
+      ...NOTIFICATION_UNREAD,
+      id: "n2",
+      exerciseId: "e2",
+      exerciseName: "Curl bicipiti",
+      suggestionType: "increase_reps",
+      previousValue: 10,
+      suggestedValue: 11,
+    };
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      {
+        match: (u, m) => u.endsWith("/notifications") && m === "GET",
+        body: [NOTIFICATION_UNREAD, secondNotification],
+      },
+      {
+        match: (u, m) => u.endsWith("/me/progression-defaults") && m === "POST",
+        status: 204,
+      },
+      {
+        match: (u, m) => u.endsWith("/notifications/read-all") && m === "POST",
+        body: { count: 2 },
+      },
+    ]);
+
+    renderWithProviders(<NotificationsPage />, ["/notifications"]);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /^accetta tutte le progressioni$/i })
+    );
+
+    await waitFor(() => {
+      const postCall = fetchMock.mock.calls.find(
+        ([url, init]) =>
+          typeof url === "string" &&
+          url.endsWith("/me/progression-defaults") &&
+          init?.method === "POST"
+      );
+      expect(postCall).toBeDefined();
+      expect(JSON.parse(postCall![1]!.body as string)).toEqual({
+        overrides: [
+          { exerciseId: "e1", suggestionType: "increase_weight", value: 82.5 },
+          { exerciseId: "e2", suggestionType: "increase_reps", value: 11 },
+        ],
+      });
+      const readAllCall = fetchMock.mock.calls.find(
+        ([url, init]) =>
+          typeof url === "string" &&
+          url.endsWith("/notifications/read-all") &&
+          init?.method === "POST"
+      );
+      expect(readAllCall).toBeDefined();
+    });
+  });
+
   it("aggiorna subito il badge in Layout dopo aver segnato una notifica come letta, senza cambiare pagina", async () => {
     // Mock manuale (non mockFetchResponses) perche' qui serve stato: dopo la
     // PATCH, le richieste successive di /notifications?unread=true devono

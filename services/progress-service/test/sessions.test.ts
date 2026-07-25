@@ -249,6 +249,28 @@ describe("POST /sessions", () => {
 
     expect(first.body.suggestions).toHaveLength(1);
   });
+
+  it("consuma l'override di progression-defaults dopo aver registrato una sessione per quell'esercizio", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+
+    await request(app)
+      .post("/me/progression-defaults")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        overrides: [{ exerciseId: EXERCISE_ID, suggestionType: "increase_weight", value: 82.5 }],
+      });
+
+    await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(sessionPayload({ performedAt: "2026-07-01T10:00:00.000Z" }));
+
+    const getResponse = await request(app)
+      .get("/me/progression-defaults")
+      .set("Authorization", `Bearer ${token}`);
+    expect(getResponse.body).toEqual([]);
+  });
 });
 
 describe("GET /sessions e /sessions/:id", () => {

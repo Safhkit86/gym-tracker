@@ -43,12 +43,15 @@ export function mockFetchResponses(handlers: FetchHandler[]) {
     const method = (init?.method ?? "GET").toUpperCase();
     const handler = handlers.find((h) => h.match(url, method));
     if (!handler) {
-      // NotificationsProvider (montato da renderWithProviders su ogni pagina,
-      // per il badge in Layout) fa sempre GET /notifications?unread=true al
-      // mount: senza questo fallback, ogni test che non se ne occupa
-      // esplicitamente fallirebbe per un dettaglio implementativo estraneo a
-      // cio' che sta verificando.
-      if (url.includes("/notifications?unread=true") && method === "GET") {
+      // Endpoint "ambiente" che molte pagine chiamano a prescindere da cosa
+      // il test sta verificando (badge non lette in Layout, override di
+      // prefill in LogSessionPage): senza questo fallback, ogni test che non
+      // se ne occupa esplicitamente fallirebbe per un dettaglio implementativo
+      // estraneo a cio' che sta verificando. Un test che vuole controllarne
+      // il contenuto puo' comunque passare il proprio handler, che vince
+      // perche' controllato prima di questo fallback.
+      const emptyListFallbackUrls = ["/notifications?unread=true", "/me/progression-defaults"];
+      if (method === "GET" && emptyListFallbackUrls.some((u) => url.includes(u))) {
         return {
           ok: true,
           status: 200,

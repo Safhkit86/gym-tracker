@@ -28,6 +28,13 @@ function preferencesHandler(
   return { match: (u: string, m: string) => u.endsWith("/me/preferences") && m === "GET", body };
 }
 
+function progressionDefaultsHandler(body: unknown = []) {
+  return {
+    match: (u: string, m: string) => u.endsWith("/me/progression-defaults") && m === "GET",
+    body,
+  };
+}
+
 const WORKOUT_DETAIL = {
   id: "w1",
   name: "Push day",
@@ -500,5 +507,104 @@ describe("LogSessionPage", () => {
 
     expect(await screen.findByText("corpo libero")).toBeInTheDocument();
     expect(screen.queryByLabelText(/panca piana kg effettivi/i)).not.toBeInTheDocument();
+  });
+
+  it("un override 'accetta progressione' di peso sovrascrive il prefill dall'ultima sessione", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+      {
+        match: (u, m) => u.endsWith("/sessions") && m === "GET",
+        body: [
+          {
+            id: "sess0",
+            workoutId: "w1",
+            workoutName: "Push day",
+            workoutNotes: null,
+            performedAt: "2026-07-01T10:00:00.000Z",
+            notes: null,
+            exercises: [
+              {
+                exerciseId: "e1",
+                exerciseName: "Panca piana",
+                workoutExerciseId: "we1",
+                progressionIncrement: 2.5,
+                restSeconds: 90,
+                sets: [
+                  {
+                    id: "set0",
+                    setNumber: 1,
+                    targetMinReps: 10,
+                    targetMaxReps: null,
+                    actualReps: 10,
+                    actualWeight: 80,
+                    actualRpe: null,
+                    targetRestMinSeconds: 90,
+                    targetRestMaxSeconds: 120,
+                    actualRestSeconds: 90,
+                  },
+                ],
+              },
+            ],
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      },
+      preferencesHandler(),
+      progressionDefaultsHandler([
+        { exerciseId: "e1", suggestionType: "increase_weight", value: 82.5 },
+      ]),
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+      </Routes>,
+      ["/workouts/w1/log"]
+    );
+
+    const weight = (await screen.findByLabelText(/panca piana kg effettivi/i)) as HTMLInputElement;
+    expect(weight.value).toBe("82.5");
+    // Le rep restano quelle dell'ultima sessione: l'override riguardava solo il peso.
+    const reps = screen.getByLabelText(/panca piana set 1 rep effettive/i) as HTMLInputElement;
+    expect(reps.value).toBe("10");
+  });
+
+  it("un override 'accetta progressione' di ripetizioni sovrascrive le rep di default su tutti i set", async () => {
+    const twoSetWorkout = {
+      ...WORKOUT_DETAIL,
+      exercises: [
+        {
+          ...WORKOUT_DETAIL.exercises[0],
+          sets: [
+            WORKOUT_DETAIL.exercises[0].sets[0],
+            { ...WORKOUT_DETAIL.exercises[0].sets[0], id: "s2", setNumber: 2 },
+          ],
+        },
+      ],
+    };
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: twoSetWorkout },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      preferencesHandler(),
+      progressionDefaultsHandler([
+        { exerciseId: "e1", suggestionType: "increase_reps", value: 11 },
+      ]),
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+      </Routes>,
+      ["/workouts/w1/log"]
+    );
+
+    const repsSet1 = (await screen.findByLabelText(
+      /panca piana set 1 rep effettive/i
+    )) as HTMLInputElement;
+    const repsSet2 = screen.getByLabelText(/panca piana set 2 rep effettive/i) as HTMLInputElement;
+    expect(repsSet1.value).toBe("11");
+    expect(repsSet2.value).toBe("11");
   });
 });

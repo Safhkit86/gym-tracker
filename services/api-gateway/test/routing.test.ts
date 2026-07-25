@@ -61,6 +61,17 @@ describe("routing verso gli upstream", () => {
     expect(ctx.auth.lastRequest).toBeNull();
   });
 
+  it("inoltra GET /me/progression-defaults a progress-service, non ad account-service", async () => {
+    const ctx = await buildTestApp();
+    closeAll = ctx.closeAll;
+    const token = await bearerFor("u1");
+
+    await request(ctx.app).get("/me/progression-defaults").set("Authorization", `Bearer ${token}`);
+
+    expect(ctx.progress.lastRequest?.url).toBe("/me/progression-defaults");
+    expect(ctx.auth.lastRequest).toBeNull();
+  });
+
   it("inoltra GET /exercises a workout-service", async () => {
     const ctx = await buildTestApp();
     closeAll = ctx.closeAll;

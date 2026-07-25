@@ -1,4 +1,6 @@
 import type {
+  AcceptProgressionDefaultsRequest,
+  ProgressionDefault,
   ProgressionPreferences,
   UpdateProgressionPreferencesRequest,
   UpdateUserMeasurementsRequest,
@@ -26,4 +28,16 @@ export function updateProgressionPreferences(
   body: UpdateProgressionPreferencesRequest
 ): Promise<ProgressionPreferences> {
   return apiRequest<ProgressionPreferences>("/me/preferences", { method: "PUT", body, token });
+}
+
+export function getProgressionDefaults(token: string): Promise<ProgressionDefault[]> {
+  return apiRequest<ProgressionDefault[]>("/me/progression-defaults", { token });
+}
+
+export function acceptProgressionDefaults(
+  token: string,
+  overrides: ProgressionDefault[]
+): Promise<void> {
+  const body: AcceptProgressionDefaultsRequest = { overrides };
+  return apiRequest<void>("/me/progression-defaults", { method: "POST", body, token });
 }
