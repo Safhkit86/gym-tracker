@@ -66,6 +66,23 @@ export function PlusIcon() {
   );
 }
 
+export function CheckIcon() {
+  return (
+    <svg {...iconProps()}>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+export function TrendingUpIcon() {
+  return (
+    <svg {...iconProps()}>
+      <path d="M23 6 13.5 15.5l-5-5L1 18" />
+      <path d="M17 6h6v6" />
+    </svg>
+  );
+}
+
 export function GripIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">

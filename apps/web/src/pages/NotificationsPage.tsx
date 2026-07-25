@@ -1,15 +1,33 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Notification } from "@gym-tracker/shared";
 import { useAuth } from "../auth/useAuth";
+import { useUnreadCount } from "../notifications/useUnreadCount";
 import {
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
 } from "../api/notifications";
 import { ApiRequestError } from "../api/client";
+import { IconButton } from "../components/IconButton";
+import { CheckIcon } from "../components/icons";
+
+/** "20kg -> 22kg" o "10 -> 11 rip.": entrambi i valori sono sempre presenti
+ *  quando il motore genera un suggerimento, ma restiamo difensivi (stringa
+ *  vuota, niente riga) se per qualche motivo mancano. */
+function formatSuggestionDelta(notification: Notification): string {
+  if (notification.previousValue === null || notification.suggestedValue === null) {
+    return "";
+  }
+  const previous = Math.round(notification.previousValue * 10) / 10;
+  const suggested = Math.round(notification.suggestedValue * 10) / 10;
+  return notification.suggestionType === "increase_weight"
+    ? `${previous}kg → ${suggested}kg`
+    : `${previous} → ${suggested} rip.`;
+}
 
 export function NotificationsPage() {
   const { token } = useAuth();
+  const { refreshUnreadCount } = useUnreadCount();
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,6 +54,7 @@ export function NotificationsPage() {
     try {
       await markNotificationRead(token, id);
       await refresh();
+      refreshUnreadCount();
     } catch (err) {
       setError(
         err instanceof ApiRequestError ? err.message : "Impossibile segnare la notifica come letta."
@@ -50,6 +69,7 @@ export function NotificationsPage() {
     try {
       await markAllNotificationsRead(token);
       await refresh();
+      refreshUnreadCount();
     } catch (err) {
       setError(
         err instanceof ApiRequestError
@@ -72,11 +92,13 @@ export function NotificationsPage() {
       {notifications === null && !error && <p>Caricamento…</p>}
       {notifications?.length === 0 && <p>Nessuna notifica.</p>}
       {hasUnread && (
-        <p>
-          <button type="button" className="secondary" onClick={handleMarkAllRead}>
-            Segna tutte come lette
-          </button>
-        </p>
+        <div className="toolbar toolbar--end">
+          <IconButton
+            icon={<CheckIcon />}
+            label="Segna tutte come lette"
+            onClick={handleMarkAllRead}
+          />
+        </div>
       )}
       {notifications && notifications.length > 0 && (
         <ul className="workout-list">
@@ -92,18 +114,19 @@ export function NotificationsPage() {
               <div>
                 <strong>{notification.exerciseName}</strong>
                 <p>{notification.reason}</p>
+                {formatSuggestionDelta(notification) && (
+                  <p className="notification-item__delta">{formatSuggestionDelta(notification)}</p>
+                )}
                 <span className="workout-list__meta">
                   {new Date(notification.createdAt).toLocaleString("it-IT")}
                 </span>
               </div>
               {notification.readAt === null && (
-                <button
-                  type="button"
-                  className="secondary"
+                <IconButton
+                  icon={<CheckIcon />}
+                  label="Segna come letta"
                   onClick={() => handleMarkRead(notification.id)}
-                >
-                  Segna come letta
-                </button>
+                />
               )}
             </li>
           ))}

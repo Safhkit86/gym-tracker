@@ -543,6 +543,11 @@ button.secondary:hover:not(:disabled) {
   margin: var(--space-1) 0;
 }
 
+.notification-item__delta {
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
 .workout-list__meta {
   color: var(--color-text-muted);
   font-size: 0.85rem;
