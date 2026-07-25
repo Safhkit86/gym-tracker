@@ -188,4 +188,96 @@ describe("evaluateProgression", () => {
     ];
     expect(evaluateProgression(history, 2.5, 3)).toBeNull();
   });
+
+  it("suggerisce anche se la sessione precedente non ha un obiettivo storicizzato (scheda configurata dopo)", () => {
+    // La sessione precedente e' stata registrata prima che l'esercizio avesse
+    // un obiettivo di ripetizioni configurato sulla scheda (targetMinReps
+    // null su tutti i set, come nello storico pre-esistente reale): le sue
+    // ripetizioni effettive vanno comunque confrontate con l'obiettivo
+    // ATTUALE (quello della sessione di oggi), non scartate.
+    const noTargetYet = [
+      { setNumber: 1, targetMinReps: null, actualReps: 12, actualWeight: 20 },
+      { setNumber: 2, targetMinReps: null, actualReps: 12, actualWeight: 20 },
+    ];
+    const withTarget = [
+      { setNumber: 1, targetMinReps: 8, targetMaxReps: 12, actualReps: 12, actualWeight: 20 },
+      { setNumber: 2, targetMinReps: 8, targetMaxReps: 12, actualReps: 12, actualWeight: 20 },
+    ];
+    const history = [
+      session("s2", "2026-07-20", withTarget),
+      session("s1", "2026-07-13", noTargetYet),
+    ];
+    const result = evaluateProgression(history, 2);
+    expect(result).toMatchObject({
+      suggestionType: "increase_weight",
+      previousValue: 20,
+      suggestedValue: 22,
+    });
+  });
+
+  describe("confronto del numero di set con l'ultima sessione precedente", () => {
+    const withTarget = (
+      actualReps: number,
+      count: number
+    ): Array<{
+      setNumber: number;
+      targetMinReps: number;
+      targetMaxReps: number;
+      actualReps: number;
+      actualWeight: number;
+    }> =>
+      Array.from({ length: count }, (_, i) => ({
+        setNumber: i + 1,
+        targetMinReps: 8,
+        targetMaxReps: 12,
+        actualReps,
+        actualWeight: 20,
+      }));
+
+    it("Es.1: finestra di 2, oggi con meno serie della precedente (4 -> 3): scatta", () => {
+      const history = [
+        session("oggi", "2026-07-27", withTarget(12, 3)),
+        session("prec", "2026-07-20", withTarget(12, 4)),
+      ];
+      expect(evaluateProgression(history, 2)).toMatchObject({ suggestionType: "increase_weight" });
+    });
+
+    it("Es.3: finestra di 2, oggi con piu' serie della precedente (3 -> 4): non scatta", () => {
+      const history = [
+        session("oggi", "2026-07-27", withTarget(12, 4)),
+        session("prec", "2026-07-20", withTarget(12, 3)),
+      ];
+      expect(evaluateProgression(history, 2)).toBeNull();
+    });
+
+    it("Es.2: finestra di 3 (penultima=3, ultima=4 serie), oggi con 3 o 4 serie: scatta in entrambi i casi", () => {
+      // history va ordinata dalla piu' recente alla meno recente: ultima
+      // (piu' recente) prima di penultima (piu' vecchia).
+      const olderHistory = [
+        session("ultima", "2026-07-20", withTarget(12, 4)),
+        session("penultima", "2026-07-13", withTarget(12, 3)),
+      ];
+      const history3 = [session("oggi", "2026-07-27", withTarget(12, 3)), ...olderHistory];
+      const history4 = [session("oggi", "2026-07-27", withTarget(12, 4)), ...olderHistory];
+      expect(evaluateProgression(history3, 2, 3)).toMatchObject({
+        suggestionType: "increase_weight",
+      });
+      expect(evaluateProgression(history4, 2, 3)).toMatchObject({
+        suggestionType: "increase_weight",
+      });
+    });
+
+    it("Es.4: finestra di 3 (penultima=4, ultima=3 serie), oggi con 3 serie scatta ma con 4 no", () => {
+      const olderHistory = [
+        session("ultima", "2026-07-20", withTarget(12, 3)),
+        session("penultima", "2026-07-13", withTarget(12, 4)),
+      ];
+      const history3 = [session("oggi", "2026-07-27", withTarget(12, 3)), ...olderHistory];
+      const history4 = [session("oggi", "2026-07-27", withTarget(12, 4)), ...olderHistory];
+      expect(evaluateProgression(history3, 2, 3)).toMatchObject({
+        suggestionType: "increase_weight",
+      });
+      expect(evaluateProgression(history4, 2, 3)).toBeNull();
+    });
+  });
 });
