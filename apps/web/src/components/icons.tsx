@@ -83,6 +83,16 @@ export function TrendingUpIcon() {
   );
 }
 
+export function TimerIcon() {
+  return (
+    <svg {...iconProps()}>
+      <circle cx="12" cy="13" r="8" />
+      <path d="M12 9v4l3 2" />
+      <path d="M9 2h6" />
+    </svg>
+  );
+}
+
 export function GripIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">

@@ -1,4 +1,4 @@
-import { afterEach, expect } from "vitest";
+import { afterEach, beforeEach, expect, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
 import * as matchers from "@testing-library/jest-dom/matchers";
 
@@ -17,4 +17,36 @@ expect.extend(matchers);
 // appena un file di test ha piu' di un `it`.
 afterEach(() => {
   cleanup();
+});
+
+// jsdom non implementa Web Audio: stub minimo globale cosi' il timer di
+// recupero (utils/alarm-sound.ts) non lanci un ReferenceError in nessun
+// test che arriva a far scattare l'allarme, senza doverlo ristubbare in
+// ogni singolo file di test. In un beforeEach (non a livello di modulo):
+// molti file di test chiamano vi.unstubAllGlobals() nel proprio afterEach,
+// il che cancellerebbe uno stub registrato una sola volta al caricamento.
+class FakeAudioContext {
+  state: "running" | "suspended" = "running";
+  currentTime = 0;
+  createOscillator() {
+    return {
+      connect: () => {},
+      start: () => {},
+      stop: () => {},
+      frequency: { value: 0 },
+      type: "sine" as const,
+    };
+  }
+  createGain() {
+    return {
+      connect: () => {},
+      gain: { setValueAtTime: () => {}, exponentialRampToValueAtTime: () => {} },
+    };
+  }
+  resume() {
+    return Promise.resolve();
+  }
+}
+beforeEach(() => {
+  vi.stubGlobal("AudioContext", FakeAudioContext);
 });

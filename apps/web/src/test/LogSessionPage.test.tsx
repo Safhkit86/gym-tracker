@@ -697,4 +697,97 @@ describe("LogSessionPage", () => {
     expect(repsSet1.value).toBe("11");
     expect(repsSet2.value).toBe("11");
   });
+
+  it("avvia un timer di recupero tra le serie col valore della casella e lo mostra nel tray", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      preferencesHandler(),
+      progressionDefaultsHandler(),
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+      </Routes>,
+      ["/workouts/w1/log"]
+    );
+
+    await screen.findByLabelText(/panca piana recupero effettivo/i);
+    fireEvent.click(screen.getByRole("button", { name: /avvia timer recupero/i }));
+
+    expect(await screen.findByText("Panca piana — recupero tra le serie")).toBeInTheDocument();
+    expect(screen.getByText("1:30")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^elimina$/i })).toBeInTheDocument();
+  });
+
+  it("disabilita il pulsante timer se la casella recupero e' vuota", async () => {
+    const noRestWorkout = {
+      ...WORKOUT_DETAIL,
+      exercises: [
+        {
+          ...WORKOUT_DETAIL.exercises[0],
+          sets: [{ ...WORKOUT_DETAIL.exercises[0].sets[0], restMinSeconds: null }],
+        },
+      ],
+    };
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: noRestWorkout },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      preferencesHandler(),
+      progressionDefaultsHandler(),
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+      </Routes>,
+      ["/workouts/w1/log"]
+    );
+
+    await screen.findByLabelText(/panca piana recupero effettivo/i);
+    expect(screen.getByRole("button", { name: /avvia timer recupero/i })).toBeDisabled();
+  });
+
+  it("avvia un timer di recupero tra esercizi con il valore fisso della scheda", async () => {
+    const twoExerciseWorkout = {
+      ...WORKOUT_DETAIL,
+      exercises: [
+        WORKOUT_DETAIL.exercises[0],
+        {
+          ...WORKOUT_DETAIL.exercises[0],
+          id: "we2",
+          exerciseId: "e2",
+          exerciseName: "Trazioni",
+          restSeconds: 120,
+        },
+      ],
+    };
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: twoExerciseWorkout },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      preferencesHandler(),
+      progressionDefaultsHandler(),
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+      </Routes>,
+      ["/workouts/w1/log"]
+    );
+
+    await screen.findByText("Trazioni");
+    const startButtons = screen.getAllByRole("button", { name: /avvia timer recupero/i });
+    // Il primo e' quello del recupero tra le serie di "Panca piana"; il
+    // secondo e' quello della riga separatrice "Recupero prima del
+    // prossimo esercizio" (90s, il restSeconds di Panca piana).
+    fireEvent.click(startButtons[1]);
+
+    expect(await screen.findByText("Prima di Trazioni")).toBeInTheDocument();
+    expect(screen.getByText("1:30")).toBeInTheDocument();
+  });
 });

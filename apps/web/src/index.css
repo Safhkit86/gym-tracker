@@ -718,14 +718,23 @@ button.secondary:hover:not(:disabled) {
   padding: 0.4rem 0.5rem;
 }
 
-/* Riga separatrice tra un esercizio e il successivo: il recupero prima di
-   passare all'esercizio successivo (WorkoutExercise.restSeconds), non il
-   recupero tra i set dello stesso esercizio (colonna "Recupero"). Standard
-   condiviso da ogni pagina con questa tabella (Storico, Registra sessione). */
+/* Riga separatrice tra un esercizio e il successivo, solo in Registra
+   sessione: il recupero prima di passare all'esercizio successivo
+   (WorkoutExercise.restSeconds), non il recupero tra i set dello stesso
+   esercizio (colonna "Recupero"). */
 .rest-divider-row td {
   border-bottom: none;
   padding: var(--space-2) var(--space-2);
-  text-align: right;
+}
+
+/* Wrapper interno (non il <td>, per non alterare il layout di tabella)
+   e la versione nel layout stretto: etichetta + pulsante "avvia timer". */
+.rest-divider-content,
+.rest-divider-stack {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
 }
 
 .rest-divider {
@@ -957,4 +966,89 @@ button.secondary:hover:not(:disabled) {
   border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-3);
   margin: var(--space-2) 0 0;
+}
+
+/* --- Timer di recupero (Registra sessione) --- */
+
+/* Affianca la casella del recupero al pulsante "avvia timer", in
+   .log-cell (colonna: target sopra, poi questa riga) e in .stack-row
+   (riga: label a sinistra, questo gruppo a destra) — vince per ordine nel
+   file su ".log-cell input"/".stack-row input" a parita' di specificita'. */
+.input-with-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.input-with-button input {
+  width: auto;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.rest-timer-tray {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: min(20rem, calc(100vw - 2 * var(--space-4)));
+}
+
+.rest-timer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-3) var(--space-4);
+}
+
+.rest-timer__label {
+  flex: 1 1 auto;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rest-timer__time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+/* Pulso di bordo/ombra, non una traslazione: uno shake vero e proprio
+   sposterebbe anche il pulsante "Interrompi sveglia", rendendolo instabile
+   da cliccare (oltre che piu' fastidioso da guardare per l'utente). */
+.rest-timer--ringing {
+  border-color: var(--color-danger);
+  animation: rest-timer-pulse 1s ease-in-out infinite;
+}
+
+.rest-timer--ringing .rest-timer__time {
+  color: var(--color-danger);
+}
+
+@keyframes rest-timer-pulse {
+  0%,
+  100% {
+    box-shadow: var(--shadow-card);
+  }
+  50% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 45%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rest-timer--ringing {
+    animation: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 45%, transparent);
+  }
 }
