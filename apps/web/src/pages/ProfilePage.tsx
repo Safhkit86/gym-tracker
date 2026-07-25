@@ -462,12 +462,15 @@ export function ProfilePage() {
                   <option value="exercise">Esercizio</option>
                 </select>
               </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={timerSoundEnabled}
-                  onChange={(event) => setTimerSoundEnabled(event.target.checked)}
-                />{" "}
+              <label className="toggle-row">
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={timerSoundEnabled}
+                    onChange={(event) => setTimerSoundEnabled(event.target.checked)}
+                  />
+                  <span className="toggle-switch__track" aria-hidden="true" />
+                </span>
                 Suono sveglia a fine recupero (timer in Registra sessione)
               </label>
               {preferencesError && (
