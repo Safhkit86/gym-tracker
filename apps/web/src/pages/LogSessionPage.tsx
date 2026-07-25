@@ -13,6 +13,10 @@ import { listSessions, logSession } from "../api/sessions";
 import { getProgressionDefaults, getProgressionPreferences } from "../api/profile";
 import { ApiRequestError } from "../api/client";
 import { NARROW_TABLE_LAYOUT_QUERY, useIsNarrowViewport } from "../hooks/useIsNarrowViewport";
+import { useRestTimers } from "../hooks/useRestTimers";
+import { RestTimerTray } from "../components/RestTimerTray";
+import { IconButton } from "../components/IconButton";
+import { TimerIcon } from "../components/icons";
 
 interface SessionSetForm {
   setNumber: number;
@@ -68,6 +72,13 @@ function formatSetTarget(set: SessionSetForm): string {
   return set.targetMaxReps !== null
     ? `${set.targetMinReps}-${set.targetMaxReps}`
     : String(set.targetMinReps);
+}
+
+/** true se la stringa rappresenta un numero di secondi valido per avviare
+ *  un timer (vuoto/0/negativo/non numerico -> pulsante disabilitato). */
+function isPositiveNumber(value: string): boolean {
+  const parsed = Number(value);
+  return value.trim() !== "" && !Number.isNaN(parsed) && parsed > 0;
 }
 
 function formatRestRange(target: RestRangeTarget): string {
@@ -237,7 +248,9 @@ export function LogSessionPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<CreateSessionResponse | null>(null);
+  const [timerSoundEnabled, setTimerSoundEnabled] = useState(false);
   const isNarrow = useIsNarrowViewport(NARROW_TABLE_LAYOUT_QUERY);
+  const { timers, startTimer, cancelTimer, snoozeTimer } = useRestTimers(timerSoundEnabled);
 
   useEffect(() => {
     if (!token || !id) {
@@ -259,6 +272,7 @@ export function LogSessionPage() {
             progressionDefaults
           )
         );
+        setTimerSoundEnabled(preferences.timerSoundEnabled);
       })
       .catch((err: unknown) => {
         setError(err instanceof ApiRequestError ? err.message : "Impossibile caricare la scheda.");
@@ -365,6 +379,7 @@ export function LogSessionPage() {
   if (result) {
     return (
       <main>
+        <RestTimerTray timers={timers} onCancel={cancelTimer} onSnooze={snoozeTimer} />
         <div className="card">
           <h1>Sessione registrata</h1>
           <p>
@@ -393,6 +408,7 @@ export function LogSessionPage() {
 
   return (
     <main className="main-wide main-wide-table">
+      <RestTimerTray timers={timers} onCancel={cancelTimer} onSnooze={snoozeTimer} />
       <p>
         <Link to={`/workouts/${workout.id}`}>← {workout.name}</Link>
       </p>
@@ -460,15 +476,30 @@ export function LogSessionPage() {
                         Recupero{" "}
                         <span className="log-cell__target">({formatRestRange(exercise)})</span>
                       </span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={exercise.actualRestSeconds}
-                        onChange={(event) =>
-                          updateExercise(exerciseIndex, { actualRestSeconds: event.target.value })
-                        }
-                        aria-label={`${exercise.exerciseName} recupero effettivo`}
-                      />
+                      <div className="input-with-button">
+                        <input
+                          type="number"
+                          min={0}
+                          value={exercise.actualRestSeconds}
+                          onChange={(event) =>
+                            updateExercise(exerciseIndex, {
+                              actualRestSeconds: event.target.value,
+                            })
+                          }
+                          aria-label={`${exercise.exerciseName} recupero effettivo`}
+                        />
+                        <IconButton
+                          icon={<TimerIcon />}
+                          label="Avvia timer recupero"
+                          disabled={!isPositiveNumber(exercise.actualRestSeconds)}
+                          onClick={() =>
+                            startTimer(
+                              Number(exercise.actualRestSeconds),
+                              `${exercise.exerciseName} — recupero tra le serie`
+                            )
+                          }
+                        />
+                      </div>
                     </div>
                   </div>
                   {exerciseIndex < exercises.length - 1 && exercise.restSeconds !== null && (
@@ -476,6 +507,17 @@ export function LogSessionPage() {
                       <span className="rest-divider">
                         Recupero prima del prossimo esercizio: {exercise.restSeconds}s
                       </span>
+                      <IconButton
+                        icon={<TimerIcon />}
+                        label="Avvia timer recupero"
+                        disabled={!exercise.restSeconds || exercise.restSeconds <= 0}
+                        onClick={() =>
+                          startTimer(
+                            exercise.restSeconds as number,
+                            `Prima di ${exercises[exerciseIndex + 1].exerciseName}`
+                          )
+                        }
+                      />
                     </div>
                   )}
                 </Fragment>
@@ -555,26 +597,52 @@ export function LogSessionPage() {
                         <td>
                           <div className="log-cell">
                             <span className="log-cell__target">{formatRestRange(exercise)}</span>
-                            <input
-                              type="number"
-                              min={0}
-                              value={exercise.actualRestSeconds}
-                              onChange={(event) =>
-                                updateExercise(exerciseIndex, {
-                                  actualRestSeconds: event.target.value,
-                                })
-                              }
-                              aria-label={`${exercise.exerciseName} recupero effettivo`}
-                            />
+                            <div className="input-with-button">
+                              <input
+                                type="number"
+                                min={0}
+                                value={exercise.actualRestSeconds}
+                                onChange={(event) =>
+                                  updateExercise(exerciseIndex, {
+                                    actualRestSeconds: event.target.value,
+                                  })
+                                }
+                                aria-label={`${exercise.exerciseName} recupero effettivo`}
+                              />
+                              <IconButton
+                                icon={<TimerIcon />}
+                                label="Avvia timer recupero"
+                                disabled={!isPositiveNumber(exercise.actualRestSeconds)}
+                                onClick={() =>
+                                  startTimer(
+                                    Number(exercise.actualRestSeconds),
+                                    `${exercise.exerciseName} — recupero tra le serie`
+                                  )
+                                }
+                              />
+                            </div>
                           </div>
                         </td>
                       </tr>
                       {exerciseIndex < exercises.length - 1 && exercise.restSeconds !== null && (
                         <tr className="rest-divider-row">
                           <td colSpan={maxSets + 3}>
-                            <span className="rest-divider">
-                              Recupero prima del prossimo esercizio: {exercise.restSeconds}s
-                            </span>
+                            <div className="rest-divider-content">
+                              <span className="rest-divider">
+                                Recupero prima del prossimo esercizio: {exercise.restSeconds}s
+                              </span>
+                              <IconButton
+                                icon={<TimerIcon />}
+                                label="Avvia timer recupero"
+                                disabled={!exercise.restSeconds || exercise.restSeconds <= 0}
+                                onClick={() =>
+                                  startTimer(
+                                    exercise.restSeconds as number,
+                                    `Prima di ${exercises[exerciseIndex + 1].exerciseName}`
+                                  )
+                                }
+                              />
+                            </div>
                           </td>
                         </tr>
                       )}
