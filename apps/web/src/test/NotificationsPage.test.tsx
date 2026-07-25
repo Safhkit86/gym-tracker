@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { Route, Routes } from "react-router-dom";
 import { renderWithProviders, seedAuthToken, mockFetchResponses } from "./helpers";
 import { NotificationsPage } from "../pages/NotificationsPage";
+import { Layout } from "../components/Layout";
 
 const FAKE_USER = { id: "u1", email: "test@example.com", createdAt: new Date().toISOString() };
 
@@ -100,6 +102,92 @@ describe("NotificationsPage", () => {
     await waitFor(() => {
       const postCall = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
       expect(postCall).toBeDefined();
+    });
+  });
+
+  it("mostra il delta 'da -> a' per un suggerimento di aumento peso", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      {
+        match: (u, m) => u.endsWith("/notifications") && m === "GET",
+        body: [NOTIFICATION_UNREAD],
+      },
+    ]);
+
+    renderWithProviders(<NotificationsPage />, ["/notifications"]);
+
+    expect(await screen.findByText("80kg → 82.5kg")).toBeInTheDocument();
+  });
+
+  it("mostra il delta in ripetizioni per un suggerimento a corpo libero", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      {
+        match: (u, m) => u.endsWith("/notifications") && m === "GET",
+        body: [
+          {
+            ...NOTIFICATION_UNREAD,
+            suggestionType: "increase_reps",
+            previousValue: 10,
+            suggestedValue: 11,
+          },
+        ],
+      },
+    ]);
+
+    renderWithProviders(<NotificationsPage />, ["/notifications"]);
+
+    expect(await screen.findByText("10 → 11 rip.")).toBeInTheDocument();
+  });
+
+  it("aggiorna subito il badge in Layout dopo aver segnato una notifica come letta, senza cambiare pagina", async () => {
+    // Mock manuale (non mockFetchResponses) perche' qui serve stato: dopo la
+    // PATCH, le richieste successive di /notifications?unread=true devono
+    // riflettere che la notifica non e' piu' non letta.
+    let isRead = false;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      const method = (init?.method ?? "GET").toUpperCase();
+      const jsonResponse = (body: unknown, status = 200) => ({
+        ok: status < 300,
+        status,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => body,
+      });
+      if (url.endsWith("/me") && method === "GET") {
+        return jsonResponse(FAKE_USER);
+      }
+      if (url.endsWith("/notifications/n1/read") && method === "PATCH") {
+        isRead = true;
+        return jsonResponse(undefined, 204);
+      }
+      if (url.includes("/notifications?unread=true") && method === "GET") {
+        return jsonResponse(isRead ? [] : [{ ...NOTIFICATION_UNREAD, readAt: null }]);
+      }
+      if (url.endsWith("/notifications") && method === "GET") {
+        return jsonResponse([
+          { ...NOTIFICATION_UNREAD, readAt: isRead ? new Date().toISOString() : null },
+        ]);
+      }
+      throw new Error(`Nessun handler mockato per ${method} ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderWithProviders(
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/notifications" element={<NotificationsPage />} />
+        </Route>
+      </Routes>,
+      ["/notifications"]
+    );
+
+    expect(await screen.findByText("1")).toBeInTheDocument();
+
+    fireEvent.click(await screen.findByRole("button", { name: /^segna come letta$/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("1")).not.toBeInTheDocument();
     });
   });
 });

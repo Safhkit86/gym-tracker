@@ -1,36 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
-import { listNotifications } from "../api/notifications";
+import { useUnreadCount } from "../notifications/useUnreadCount";
 
 /** Shell con barra di navigazione, usata dalle pagine protette. */
 export function Layout() {
-  const { user, token, logout } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
-  const [unreadCount, setUnreadCount] = useState(0);
+  const { unreadCount, refreshUnreadCount } = useUnreadCount();
 
-  // Il conteggio si ricalcola a ogni cambio di rotta (es. dopo aver segnato
-  // una notifica come letta e navigato altrove): Layout resta montato tra le
-  // pagine figlie, quindi senza questa dipendenza il badge resterebbe fermo
-  // al valore del primo caricamento.
+  // Rete di sicurezza: ricalcola il conteggio a ogni cambio di rotta (utile
+  // se e' cambiato da un'altra scheda/finestra). Il caso comune — segnare
+  // una notifica come letta restando sulla pagina Notifiche — e' gestito
+  // invece da NotificationsPage che chiama refreshUnreadCount() subito dopo
+  // l'azione, senza aspettare una navigazione.
   useEffect(() => {
-    if (!token) {
-      return;
-    }
-    let cancelled = false;
-    listNotifications(token, true)
-      .then((result) => {
-        if (!cancelled) {
-          setUnreadCount(result.length);
-        }
-      })
-      .catch(() => {
-        /* il badge e' un'aggiunta secondaria: un fallimento qui non deve rompere la navigazione */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token, location.pathname]);
+    refreshUnreadCount();
+  }, [location.pathname, refreshUnreadCount]);
 
   return (
     <>

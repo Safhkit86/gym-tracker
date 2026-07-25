@@ -3,12 +3,15 @@ import { vi } from "vitest";
 import { render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { AuthProvider } from "../auth/AuthProvider";
+import { NotificationsProvider } from "../notifications/NotificationsProvider";
 
-/** Renderizza un componente dentro Router + AuthProvider, come nell'app reale. */
+/** Renderizza un componente dentro Router + AuthProvider + NotificationsProvider, come nell'app reale. */
 export function renderWithProviders(ui: ReactElement, initialEntries: string[] = ["/"]) {
   return render(
     <MemoryRouter initialEntries={initialEntries}>
-      <AuthProvider>{ui}</AuthProvider>
+      <AuthProvider>
+        <NotificationsProvider>{ui}</NotificationsProvider>
+      </AuthProvider>
     </MemoryRouter>
   );
 }
@@ -40,6 +43,19 @@ export function mockFetchResponses(handlers: FetchHandler[]) {
     const method = (init?.method ?? "GET").toUpperCase();
     const handler = handlers.find((h) => h.match(url, method));
     if (!handler) {
+      // NotificationsProvider (montato da renderWithProviders su ogni pagina,
+      // per il badge in Layout) fa sempre GET /notifications?unread=true al
+      // mount: senza questo fallback, ogni test che non se ne occupa
+      // esplicitamente fallirebbe per un dettaglio implementativo estraneo a
+      // cio' che sta verificando.
+      if (url.includes("/notifications?unread=true") && method === "GET") {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ "content-type": "application/json" }),
+          json: async () => [],
+        } as Response;
+      }
       throw new Error(`Nessun handler mockato per ${method} ${url}`);
     }
     const status = handler.status ?? 200;
