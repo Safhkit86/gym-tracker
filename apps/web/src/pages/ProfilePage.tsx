@@ -425,63 +425,91 @@ export function ProfilePage() {
           {!preferencesLoaded && !preferencesError && <p>Caricamento…</p>}
           {preferencesLoaded && (
             <form onSubmit={handleSavePreferences}>
-              <label>
-                Suggerisci progressione quando raggiungi il massimo delle ripetizioni in tutti i set
-                per{" "}
-                <input
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={requiredConsecutiveSessions}
-                  onChange={(event) => setRequiredConsecutiveSessions(event.target.value)}
-                  required
-                />{" "}
-                volte
-              </label>
-              <label>
-                Suggerisci progressione considerando
-                <select
-                  value={groupingScope}
-                  onChange={(event) =>
-                    setGroupingScope(event.target.value as ProgressionPreferences["groupingScope"])
-                  }
-                >
-                  <option value="workout">Scheda + esercizio</option>
-                  <option value="exercise">Esercizio</option>
-                </select>
-              </label>
-              <label>
-                Riporta ultime ripetizioni effettive di default da
-                <select
-                  value={prefillScope}
-                  onChange={(event) =>
-                    setPrefillScope(event.target.value as ProgressionPreferences["prefillScope"])
-                  }
-                >
-                  <option value="workout">Scheda + esercizio</option>
-                  <option value="exercise">Esercizio</option>
-                </select>
-              </label>
-              <label className="toggle-row">
-                <span className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={timerSoundEnabled}
-                    onChange={(event) => setTimerSoundEnabled(event.target.checked)}
-                  />
-                  <span className="toggle-switch__track" aria-hidden="true" />
-                </span>
-                Suono sveglia a fine recupero (timer in Registra sessione)
-              </label>
-              {preferencesError && (
-                <p role="alert" className="form-error">
-                  {preferencesError}
-                </p>
-              )}
-              {preferencesMessage && <p role="status">{preferencesMessage}</p>}
-              <button type="submit" disabled={isSavingPreferences}>
-                {isSavingPreferences ? "Salvataggio…" : "Salva preferenze"}
-              </button>
+              <div className="pref-rows">
+                <div className="pref-row">
+                  <label htmlFor="pref-required-sessions" className="pref-row__label">
+                    Suggerisci progressione quando raggiungi il massimo delle ripetizioni in tutti i
+                    set per questo numero di sessioni consecutive
+                  </label>
+                  <div className="pref-row__control">
+                    <input
+                      id="pref-required-sessions"
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={requiredConsecutiveSessions}
+                      onChange={(event) => setRequiredConsecutiveSessions(event.target.value)}
+                      required
+                    />
+                    <span>volte</span>
+                  </div>
+                </div>
+                <div className="pref-row">
+                  <label htmlFor="pref-grouping-scope" className="pref-row__label">
+                    Suggerisci progressione considerando
+                  </label>
+                  <div className="pref-row__control">
+                    <select
+                      id="pref-grouping-scope"
+                      value={groupingScope}
+                      onChange={(event) =>
+                        setGroupingScope(
+                          event.target.value as ProgressionPreferences["groupingScope"]
+                        )
+                      }
+                    >
+                      <option value="workout">Scheda + esercizio</option>
+                      <option value="exercise">Esercizio</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="pref-row">
+                  <label htmlFor="pref-prefill-scope" className="pref-row__label">
+                    Riporta ultime ripetizioni effettive di default da
+                  </label>
+                  <div className="pref-row__control">
+                    <select
+                      id="pref-prefill-scope"
+                      value={prefillScope}
+                      onChange={(event) =>
+                        setPrefillScope(
+                          event.target.value as ProgressionPreferences["prefillScope"]
+                        )
+                      }
+                    >
+                      <option value="workout">Scheda + esercizio</option>
+                      <option value="exercise">Esercizio</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="pref-row">
+                  <label htmlFor="pref-timer-sound" className="pref-row__label">
+                    Suono sveglia a fine recupero (timer in Registra sessione)
+                  </label>
+                  <div className="pref-row__control">
+                    <span className="toggle-switch">
+                      <input
+                        id="pref-timer-sound"
+                        type="checkbox"
+                        checked={timerSoundEnabled}
+                        onChange={(event) => setTimerSoundEnabled(event.target.checked)}
+                      />
+                      <span className="toggle-switch__track" aria-hidden="true" />
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="pref-form__actions">
+                {preferencesError && (
+                  <p role="alert" className="form-error">
+                    {preferencesError}
+                  </p>
+                )}
+                {preferencesMessage && <p role="status">{preferencesMessage}</p>}
+                <button type="submit" disabled={isSavingPreferences}>
+                  {isSavingPreferences ? "Salvataggio…" : "Salva preferenze"}
+                </button>
+              </div>
             </form>
           )}
         </section>
