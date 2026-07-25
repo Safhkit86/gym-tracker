@@ -308,6 +308,12 @@ button.secondary:hover:not(:disabled) {
   margin-bottom: 0;
 }
 
+/* Senza questo margine il nome della scheda (h1, niente margine superiore
+   di default) risulta troppo vicino al bordo sotto la toolbar sticky. */
+.detail-sticky-toolbar + h1 {
+  margin-top: var(--space-4);
+}
+
 .app-nav__brand {
   font-weight: 700;
   font-size: 1.05rem;
