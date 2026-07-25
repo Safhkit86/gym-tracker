@@ -177,27 +177,31 @@ describe("WorkoutDetailPage", () => {
     expect(link).toHaveAttribute("href", "/workouts/w1/edit");
   });
 
-  it("mostra un suggerimento di progressione quando presente per un esercizio", async () => {
+  const PROGRESSION_EVENT_E1 = {
+    id: "pe1",
+    exerciseId: "e1",
+    exerciseName: "Panca piana",
+    triggeringSessionId: "s1",
+    suggestionType: "increase_weight",
+    previousValue: 40,
+    suggestedValue: 42.5,
+    reason:
+      "Obiettivo di ripetizioni raggiunto per 2 sessioni consecutive a 40kg: aumenta il carico.",
+    source: "rule",
+    createdAt: new Date().toISOString(),
+  };
+
+  it("mostra il promemoria di progressione se la notifica per l'esercizio non e' ancora letta", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
       {
-        match: (u, m) => u.includes("/progression") && m === "GET",
-        body: [
-          {
-            id: "pe1",
-            exerciseId: "e1",
-            exerciseName: "Panca piana",
-            triggeringSessionId: "s1",
-            suggestionType: "increase_weight",
-            previousValue: 40,
-            suggestedValue: 42.5,
-            reason:
-              "Obiettivo di ripetizioni raggiunto per 2 sessioni consecutive a 40kg: aumenta il carico.",
-            source: "rule",
-            createdAt: new Date().toISOString(),
-          },
-        ],
+        match: (u, m) => u.endsWith("/progression") && m === "GET",
+        body: [PROGRESSION_EVENT_E1],
+      },
+      {
+        match: (u, m) => u.includes("/notifications?unread=true") && m === "GET",
+        body: [{ id: "n1", exerciseId: "e1" }],
       },
     ]);
 
@@ -209,6 +213,54 @@ describe("WorkoutDetailPage", () => {
     );
 
     expect(await screen.findByText(/aumenta il carico/i)).toBeInTheDocument();
+  });
+
+  it("mostra il promemoria di progressione se c'e' un override 'accetta progressione' pendente per l'esercizio", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+      {
+        match: (u, m) => u.endsWith("/progression") && m === "GET",
+        body: [PROGRESSION_EVENT_E1],
+      },
+      {
+        match: (u, m) => u.endsWith("/me/progression-defaults") && m === "GET",
+        body: [{ exerciseId: "e1", suggestionType: "increase_weight", value: 42.5 }],
+      },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
+      </Routes>,
+      ["/workouts/w1"]
+    );
+
+    expect(await screen.findByText(/aumenta il carico/i)).toBeInTheDocument();
+  });
+
+  it("non mostra piu' il promemoria se la notifica e' stata letta senza accettare la progressione", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+      {
+        match: (u, m) => u.endsWith("/progression") && m === "GET",
+        body: [PROGRESSION_EVENT_E1],
+      },
+      // Notifica gia' letta (nessun unread), nessun override pendente: il
+      // promemoria non deve piu' comparire anche se progression_events lo
+      // conserva per sempre.
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
+      </Routes>,
+      ["/workouts/w1"]
+    );
+
+    await screen.findByText("Panca piana");
+    expect(screen.queryByText(/aumenta il carico/i)).not.toBeInTheDocument();
   });
 
   it("chiede conferma prima di eliminare la scheda e annulla su 'No'", async () => {

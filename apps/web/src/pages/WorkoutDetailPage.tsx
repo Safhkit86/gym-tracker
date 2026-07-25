@@ -4,6 +4,8 @@ import type { ProgressionEvent, WorkoutDetail } from "@gym-tracker/shared";
 import { useAuth } from "../auth/useAuth";
 import { createWorkout, deleteWorkout, getWorkout } from "../api/workouts";
 import { listProgressionEvents } from "../api/progression";
+import { listNotifications } from "../api/notifications";
+import { getProgressionDefaults } from "../api/profile";
 import { ApiRequestError } from "../api/client";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { PromptDialog } from "../components/PromptDialog";
@@ -17,6 +19,15 @@ export function WorkoutDetailPage() {
   const navigate = useNavigate();
   const [workout, setWorkout] = useState<WorkoutDetail | null>(null);
   const [suggestions, setSuggestions] = useState<ProgressionEvent[]>([]);
+  /** Esercizi per cui il promemoria di progressione va ancora mostrato: solo
+   *  se la notifica in Notifiche non e' ancora stata letta, o se e' stata
+   *  accettata e l'override deve ancora essere consumato (vedi Notifiche).
+   *  Senza questo filtro `suggestions` (storico permanente in progress-service)
+   *  mostrerebbe il promemoria per sempre, anche molto dopo che l'utente se
+   *  ne e' gia' occupato. */
+  const [activeSuggestionExerciseIds, setActiveSuggestionExerciseIds] = useState<Set<string>>(
+    new Set()
+  );
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -51,6 +62,20 @@ export function WorkoutDetailPage() {
       })
       .catch(() => {
         /* i suggerimenti sono opzionali: nessun errore bloccante */
+      });
+    Promise.all([listNotifications(token, true), getProgressionDefaults(token)])
+      .then(([unreadNotifications, progressionDefaults]) => {
+        if (!cancelled) {
+          setActiveSuggestionExerciseIds(
+            new Set([
+              ...unreadNotifications.map((n) => n.exerciseId),
+              ...progressionDefaults.map((d) => d.exerciseId),
+            ])
+          );
+        }
+      })
+      .catch(() => {
+        /* anche questo e' opzionale: nessun errore bloccante */
       });
     return () => {
       cancelled = true;
@@ -144,7 +169,9 @@ export function WorkoutDetailPage() {
       {workout.notes && <p>{workout.notes}</p>}
 
       {workout.exercises.map((exercise) => {
-        const suggestion = suggestions.find((s) => s.exerciseId === exercise.exerciseId);
+        const suggestion = activeSuggestionExerciseIds.has(exercise.exerciseId)
+          ? suggestions.find((s) => s.exerciseId === exercise.exerciseId)
+          : undefined;
         return (
           <section key={exercise.id} className="workout-exercise">
             <h2>{exercise.exerciseName}</h2>
