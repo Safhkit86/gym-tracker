@@ -1,3 +1,5 @@
+import type { ProgressionSuggestionType } from "./progress.js";
+
 /**
  * Misure fisiche dell'atleta: solo il valore corrente (nessuno storico),
  * tutte opzionali. Stessa forma per lettura e per l'update (replace
@@ -35,3 +37,21 @@ export interface ProgressionPreferences {
 }
 
 export type UpdateProgressionPreferencesRequest = ProgressionPreferences;
+
+/**
+ * Override "una tantum" del prefill di Registra sessione, creato quando
+ * l'utente preme "Accetta progressione" su una notifica: da quel momento la
+ * prossima registrazione di questo esercizio (in qualunque scheda in cui
+ * compare) parte gia' dal valore suggerito, invece che dall'ultima sessione
+ * effettivamente registrata. Consumato (eliminato) automaticamente alla
+ * prima registrazione successiva per quell'esercizio.
+ */
+export interface ProgressionDefault {
+  exerciseId: string;
+  suggestionType: ProgressionSuggestionType;
+  value: number;
+}
+
+export interface AcceptProgressionDefaultsRequest {
+  overrides: ProgressionDefault[];
+}

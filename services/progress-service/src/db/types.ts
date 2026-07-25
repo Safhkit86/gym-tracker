@@ -84,9 +84,19 @@ export interface ProgressionPreferencesTable {
   updated_at: ColumnType<Date, Date | undefined, Date>;
 }
 
+/** "increase_weight" | "increase_reps", come ProgressionEventsTable.suggestion_type. */
+export interface ProgressionDefaultsTable {
+  owner_id: string;
+  exercise_id: string;
+  suggestion_type: string;
+  value: ColumnType<string, number, number>;
+  created_at: Generated<Date>;
+}
+
 export interface Database {
   workout_sessions: WorkoutSessionsTable;
   session_sets: SessionSetsTable;
   progression_events: ProgressionEventsTable;
   progression_preferences: ProgressionPreferencesTable;
+  progression_defaults: ProgressionDefaultsTable;
 }

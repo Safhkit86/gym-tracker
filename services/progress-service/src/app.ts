@@ -10,9 +10,11 @@ import type { ProgressionEventPublisher } from "./events/publisher.js";
 import type { ProgressionEventRepository } from "./repositories/progression-event-repository.js";
 import type { SessionRepository } from "./repositories/session-repository.js";
 import type { ProgressionPreferencesRepository } from "./repositories/progression-preferences-repository.js";
+import type { ProgressionDefaultsRepository } from "./repositories/progression-defaults-repository.js";
 import { createProgressionRoutes } from "./routes/progression-routes.js";
 import { createSessionRoutes } from "./routes/session-routes.js";
 import { createPreferencesRoutes } from "./routes/preferences-routes.js";
+import { createProgressionDefaultsRoutes } from "./routes/progression-defaults-routes.js";
 import { errorHandler } from "./middleware/error-handler.js";
 
 const SERVICE_NAME = "progress-service";
@@ -26,6 +28,7 @@ export interface AppDeps {
   sessions: SessionRepository;
   progressionEvents: ProgressionEventRepository;
   progressionPreferences: ProgressionPreferencesRepository;
+  progressionDefaults: ProgressionDefaultsRepository;
   publisher: ProgressionEventPublisher;
   tokens: AccessTokenService;
   logger: Logger;
@@ -40,6 +43,7 @@ export function createApp(deps: AppDeps): Express {
     deps.sessions,
     deps.progressionEvents,
     deps.progressionPreferences,
+    deps.progressionDefaults,
     deps.publisher,
     deps.logger
   );
@@ -52,6 +56,7 @@ export function createApp(deps: AppDeps): Express {
   app.use(createSessionRoutes(sessionService, deps.tokens));
   app.use(createProgressionRoutes(deps.progressionEvents, deps.tokens));
   app.use(createPreferencesRoutes(deps.progressionPreferences, deps.tokens));
+  app.use(createProgressionDefaultsRoutes(deps.progressionDefaults, deps.tokens));
 
   // Error handler: registrato per ultimo, mappa gli errori in ApiError.
   app.use(errorHandler);

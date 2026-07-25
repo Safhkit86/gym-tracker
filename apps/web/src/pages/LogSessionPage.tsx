@@ -1,10 +1,15 @@
 import { Fragment, useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
-import type { CreateSessionResponse, SessionDetail, WorkoutDetail } from "@gym-tracker/shared";
+import type {
+  CreateSessionResponse,
+  ProgressionDefault,
+  SessionDetail,
+  WorkoutDetail,
+} from "@gym-tracker/shared";
 import { useAuth } from "../auth/useAuth";
 import { getWorkout } from "../api/workouts";
 import { listSessions, logSession } from "../api/sessions";
-import { getProgressionPreferences } from "../api/profile";
+import { getProgressionDefaults, getProgressionPreferences } from "../api/profile";
 import { ApiRequestError } from "../api/client";
 import { NARROW_TABLE_LAYOUT_QUERY, useIsNarrowViewport } from "../hooks/useIsNarrowViewport";
 
@@ -133,13 +138,22 @@ function findPreviousSetReps(
  *
  *  `repsPrefillScope` (preferenza utente) si applica SOLO alle rep: peso e
  *  recupero restano cercati per scheda+esercizio come sempre, l'utente ha
- *  chiesto la preferenza specificamente per le rep. */
+ *  chiesto la preferenza specificamente per le rep.
+ *
+ *  Un override "accetta progressione" pendente per un esercizio (vedi
+ *  Notifiche) ha priorita' assoluta sulle due fonti sopra per quell'unico
+ *  esercizio: `increase_weight` sostituisce il peso di default,
+ *  `increase_reps` sostituisce le rep di default su tutti i suoi set. */
 function buildInitialExercises(
   workout: WorkoutDetail,
   previousSessions: SessionDetail[],
-  repsPrefillScope: "workout" | "exercise"
+  repsPrefillScope: "workout" | "exercise",
+  progressionDefaults: ProgressionDefault[]
 ): SessionExerciseForm[] {
+  const defaultsByExerciseId = new Map(progressionDefaults.map((d) => [d.exerciseId, d]));
+
   return workout.exercises.map((exercise) => {
+    const override = defaultsByExerciseId.get(exercise.exerciseId);
     const firstSet = exercise.sets[0];
     const targetWeight = firstSet?.targetWeight ?? null;
     const previousWeight = findPreviousExerciseValue(
@@ -148,7 +162,10 @@ function buildInitialExercises(
       exercise.exerciseId,
       "actualWeight"
     );
-    const initialWeight = previousWeight ?? targetWeight;
+    const initialWeight =
+      override?.suggestionType === "increase_weight"
+        ? override.value
+        : (previousWeight ?? targetWeight);
 
     const previousRestSeconds = findPreviousExerciseValue(
       previousSessions,
@@ -170,6 +187,17 @@ function buildInitialExercises(
       isBodyweight: targetWeight === null,
       actualWeight: targetWeight !== null && initialWeight !== null ? String(initialWeight) : "",
       sets: exercise.sets.map((set) => {
+        if (override?.suggestionType === "increase_reps") {
+          return {
+            setNumber: set.setNumber,
+            targetMinReps: set.targetMinReps,
+            targetMaxReps: set.targetMaxReps,
+            isMaxEffort: set.isMaxEffort,
+            actualReps: String(override.value),
+            targetRestMinSeconds: set.restMinSeconds,
+            targetRestMaxSeconds: set.restMaxSeconds,
+          };
+        }
         const previousReps = findPreviousSetReps(
           previousSessions,
           workout.id,
@@ -213,10 +241,22 @@ export function LogSessionPage() {
     if (!token || !id) {
       return;
     }
-    Promise.all([getWorkout(token, id), listSessions(token), getProgressionPreferences(token)])
-      .then(([detail, previousSessions, preferences]) => {
+    Promise.all([
+      getWorkout(token, id),
+      listSessions(token),
+      getProgressionPreferences(token),
+      getProgressionDefaults(token),
+    ])
+      .then(([detail, previousSessions, preferences, progressionDefaults]) => {
         setWorkout(detail);
-        setExercises(buildInitialExercises(detail, previousSessions, preferences.prefillScope));
+        setExercises(
+          buildInitialExercises(
+            detail,
+            previousSessions,
+            preferences.prefillScope,
+            progressionDefaults
+          )
+        );
       })
       .catch((err: unknown) => {
         setError(err instanceof ApiRequestError ? err.message : "Impossibile caricare la scheda.");

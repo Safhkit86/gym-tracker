@@ -7,6 +7,7 @@ import * as addWorkoutNotesSnapshot from "./005-add-workout-notes-snapshot.js";
 import * as addActualRestSeconds from "./006-add-actual-rest-seconds.js";
 import * as addProgressionPreferences from "./007-add-progression-preferences.js";
 import * as addPrefillScope from "./008-add-prefill-scope.js";
+import * as addProgressionDefaults from "./009-add-progression-defaults.js";
 
 /**
  * Registro statico delle migrazioni (chiavi ordinate). Preferito a
@@ -22,4 +23,5 @@ export const migrations: Record<string, Migration> = {
   "006-add-actual-rest-seconds": addActualRestSeconds,
   "007-add-progression-preferences": addProgressionPreferences,
   "008-add-prefill-scope": addPrefillScope,
+  "009-add-progression-defaults": addProgressionDefaults,
 };

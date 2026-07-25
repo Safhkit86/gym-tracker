@@ -116,6 +116,9 @@ export function createApp(deps: AppDeps): Express {
   // diverso dal blanket /me qui sotto: va montata prima, altrimenti il
   // blanket la intercetterebbe per prima instradandola ad account-service.
   app.use("/me/preferences", proxyTo(deps.progressServiceUrl));
+  // Stesso motivo di /me/preferences: gli override di prefill "accetta
+  // progressione" vivono in progress-service, non in account-service.
+  app.use("/me/progression-defaults", proxyTo(deps.progressServiceUrl));
   app.use("/me", proxyTo(deps.accountServiceUrl));
   app.use("/exercises", proxyTo(deps.workoutServiceUrl));
   app.use("/workouts", proxyTo(deps.workoutServiceUrl));

@@ -5,6 +5,7 @@ import { InMemoryProgressionEventPublisher } from "../src/events/publisher.js";
 import { InMemoryProgressionEventRepository } from "../src/repositories/progression-event-repository.js";
 import { InMemorySessionRepository } from "../src/repositories/session-repository.js";
 import { InMemoryProgressionPreferencesRepository } from "../src/repositories/progression-preferences-repository.js";
+import { InMemoryProgressionDefaultsRepository } from "../src/repositories/progression-defaults-repository.js";
 
 export const TEST_JWT_SECRET = "test-secret-please-change";
 
@@ -14,6 +15,7 @@ export function buildTestApp(): { app: ReturnType<typeof createApp>; deps: AppDe
     sessions: new InMemorySessionRepository(),
     progressionEvents: new InMemoryProgressionEventRepository(),
     progressionPreferences: new InMemoryProgressionPreferencesRepository(),
+    progressionDefaults: new InMemoryProgressionDefaultsRepository(),
     publisher: new InMemoryProgressionEventPublisher(),
     tokens: createAccessTokenService(TEST_JWT_SECRET),
     logger: createLogger("progress-service", { level: "silent" }),

@@ -10,6 +10,7 @@ import type { ProgressionEventPublisher } from "../events/publisher.js";
 import type { ProgressionEventRepository } from "../repositories/progression-event-repository.js";
 import type { NormalizedSession, SessionRepository } from "../repositories/session-repository.js";
 import type { ProgressionPreferencesRepository } from "../repositories/progression-preferences-repository.js";
+import type { ProgressionDefaultsRepository } from "../repositories/progression-defaults-repository.js";
 import { evaluateProgression } from "./progression-rule-engine.js";
 
 /**
@@ -23,6 +24,7 @@ export class SessionService {
     private readonly sessions: SessionRepository,
     private readonly progressionEvents: ProgressionEventRepository,
     private readonly progressionPreferences: ProgressionPreferencesRepository,
+    private readonly progressionDefaults: ProgressionDefaultsRepository,
     private readonly publisher: ProgressionEventPublisher,
     private readonly logger: Logger
   ) {}
@@ -38,6 +40,13 @@ export class SessionService {
         continue;
       }
       seenExerciseIds.add(exercise.exerciseId);
+
+      // Un eventuale override "accetta progressione" pendente per questo
+      // esercizio ha gia' fatto il suo lavoro precompilando questo log (vedi
+      // LogSessionPage.tsx): da qui in poi il normale prefill (ultima
+      // sessione registrata) riflette gia' il nuovo valore, quindi si
+      // consuma subito, a prescindere dall'esito della valutazione sotto.
+      await this.progressionDefaults.consume(ownerId, exercise.exerciseId);
 
       const history = await this.sessions.findRecentSetsForExercise(
         ownerId,

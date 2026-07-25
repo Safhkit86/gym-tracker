@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Notification } from "@gym-tracker/shared";
+import type { Notification, ProgressionDefault } from "@gym-tracker/shared";
 import { useAuth } from "../auth/useAuth";
 import { useUnreadCount } from "../notifications/useUnreadCount";
 import {
@@ -7,9 +7,24 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "../api/notifications";
+import { acceptProgressionDefaults } from "../api/profile";
 import { ApiRequestError } from "../api/client";
 import { IconButton } from "../components/IconButton";
-import { CheckIcon } from "../components/icons";
+import { CheckIcon, TrendingUpIcon } from "../components/icons";
+
+/** Override "accetta progressione" da mandare per una notifica: assente se
+ *  per qualche motivo il suggerimento non ha un valore (non dovrebbe mai
+ *  succedere, il motore lo valorizza sempre quando genera un evento). */
+function toOverride(notification: Notification): ProgressionDefault | null {
+  if (notification.suggestedValue === null) {
+    return null;
+  }
+  return {
+    exerciseId: notification.exerciseId,
+    suggestionType: notification.suggestionType,
+    value: notification.suggestedValue,
+  };
+}
 
 /** "20kg -> 22kg" o "10 -> 11 rip.": entrambi i valori sono sempre presenti
  *  quando il motore genera un suggerimento, ma restiamo difensivi (stringa
@@ -79,6 +94,49 @@ export function NotificationsPage() {
     }
   }
 
+  async function handleAccept(notification: Notification): Promise<void> {
+    if (!token) {
+      return;
+    }
+    const override = toOverride(notification);
+    if (!override) {
+      return;
+    }
+    try {
+      await acceptProgressionDefaults(token, [override]);
+      await markNotificationRead(token, notification.id);
+      await refresh();
+      refreshUnreadCount();
+    } catch (err) {
+      setError(
+        err instanceof ApiRequestError ? err.message : "Impossibile accettare la progressione."
+      );
+    }
+  }
+
+  async function handleAcceptAll(): Promise<void> {
+    if (!token || !notifications) {
+      return;
+    }
+    const overrides = notifications
+      .filter((n) => n.readAt === null)
+      .map(toOverride)
+      .filter((o): o is ProgressionDefault => o !== null);
+    if (overrides.length === 0) {
+      return;
+    }
+    try {
+      await acceptProgressionDefaults(token, overrides);
+      await markAllNotificationsRead(token);
+      await refresh();
+      refreshUnreadCount();
+    } catch (err) {
+      setError(
+        err instanceof ApiRequestError ? err.message : "Impossibile accettare le progressioni."
+      );
+    }
+  }
+
   const hasUnread = notifications?.some((n) => n.readAt === null) ?? false;
 
   return (
@@ -93,6 +151,11 @@ export function NotificationsPage() {
       {notifications?.length === 0 && <p>Nessuna notifica.</p>}
       {hasUnread && (
         <div className="toolbar toolbar--end">
+          <IconButton
+            icon={<TrendingUpIcon />}
+            label="Accetta tutte le progressioni"
+            onClick={handleAcceptAll}
+          />
           <IconButton
             icon={<CheckIcon />}
             label="Segna tutte come lette"
@@ -122,11 +185,18 @@ export function NotificationsPage() {
                 </span>
               </div>
               {notification.readAt === null && (
-                <IconButton
-                  icon={<CheckIcon />}
-                  label="Segna come letta"
-                  onClick={() => handleMarkRead(notification.id)}
-                />
+                <div className="notification-item__actions">
+                  <IconButton
+                    icon={<TrendingUpIcon />}
+                    label="Accetta progressione"
+                    onClick={() => handleAccept(notification)}
+                  />
+                  <IconButton
+                    icon={<CheckIcon />}
+                    label="Segna come letta"
+                    onClick={() => handleMarkRead(notification.id)}
+                  />
+                </div>
               )}
             </li>
           ))}
