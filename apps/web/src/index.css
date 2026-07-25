@@ -396,6 +396,7 @@ button.secondary:hover:not(:disabled) {
   justify-content: center;
   width: 2.35rem;
   height: 2.35rem;
+  flex-shrink: 0;
   padding: 0;
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
@@ -1051,4 +1052,67 @@ button.secondary:hover:not(:disabled) {
     animation: none;
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 45%, transparent);
   }
+}
+
+/* --- Toggle switch (Profilo > Preferenze) --- */
+
+/* label { flex-direction: column } di base va invertito qui: switch e
+   testo stanno affiancati su una riga, non impilati come le altre label. */
+.toggle-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 1.5rem;
+}
+
+.toggle-switch input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.toggle-switch__track {
+  position: absolute;
+  inset: 0;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.toggle-switch__track::before {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--color-text);
+  transition: transform 0.15s ease;
+}
+
+.toggle-switch input:checked + .toggle-switch__track {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.toggle-switch input:checked + .toggle-switch__track::before {
+  transform: translateX(1.25rem);
+}
+
+.toggle-switch input:focus-visible + .toggle-switch__track {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 35%, transparent);
 }
