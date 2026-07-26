@@ -3,10 +3,13 @@ import type { AccessTokenService } from "@gym-tracker/shared";
 import { authenticate } from "../middleware/authenticate.js";
 import { UnauthorizedError } from "../errors.js";
 import type { ProgressionEventRepository } from "../repositories/progression-event-repository.js";
+import type { StatsRepository } from "../repositories/stats-repository.js";
 
-/** Suggerimenti di progressione generati dal motore di regole. */
+/** Suggerimenti di progressione generati dal motore di regole, piu' la
+ *  rilevazione dell'esercizio in stallo per la Dashboard. */
 export function createProgressionRoutes(
   progressionEvents: ProgressionEventRepository,
+  stats: StatsRepository,
   tokens: AccessTokenService
 ): Router {
   const router = Router();
@@ -19,6 +22,18 @@ export function createProgressionRoutes(
     }
     return id;
   }
+
+  // Registrata prima di "/progression" (che qui non ha un ":id", ma resta
+  // il percorso letterale piu' specifico da matchare per primo, stesso
+  // accorgimento gia' usato altrove per rotte letterali vs. parametriche).
+  router.get("/progression/stalled", async (req, res, next) => {
+    try {
+      const result = await stats.getStalledExercise(ownerId(req));
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
 
   router.get("/progression", async (req, res, next) => {
     try {

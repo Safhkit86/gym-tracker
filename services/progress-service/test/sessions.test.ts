@@ -38,7 +38,7 @@ function sessionPayload(overrides: {
             setNumber: 1,
             targetMinReps: overrides.targetMinReps ?? 10,
             actualReps: overrides.actualReps ?? 10,
-            actualWeight: overrides.actualWeight ?? 80,
+            actualWeight: overrides.actualWeight === undefined ? 80 : overrides.actualWeight,
             targetRestMinSeconds:
               overrides.targetRestMinSeconds === undefined ? 90 : overrides.targetRestMinSeconds,
             targetRestMaxSeconds:
@@ -332,6 +332,135 @@ describe("GET /sessions e /sessions/:id", () => {
       .set("Authorization", `Bearer ${tokenB}`);
     expect(response.status).toBe(404);
     expect(response.body.code).toBe("NOT_FOUND");
+  });
+});
+
+describe("GET /sessions?limit=", () => {
+  it("limita il numero di sessioni restituite, piu' recenti prima", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+
+    await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(sessionPayload({ performedAt: "2026-07-01T10:00:00.000Z" }));
+    await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(sessionPayload({ performedAt: "2026-07-08T10:00:00.000Z" }));
+
+    const response = await request(app)
+      .get("/sessions?limit=1")
+      .set("Authorization", `Bearer ${token}`);
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0].performedAt).toBe("2026-07-08T10:00:00.000Z");
+  });
+
+  it("senza limit torna tutto lo storico (comportamento invariato)", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+
+    await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(sessionPayload({ performedAt: "2026-07-01T10:00:00.000Z" }));
+    await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(sessionPayload({ performedAt: "2026-07-08T10:00:00.000Z" }));
+
+    const response = await request(app).get("/sessions").set("Authorization", `Bearer ${token}`);
+    expect(response.body).toHaveLength(2);
+  });
+});
+
+describe("GET /sessions/exercise-history", () => {
+  it("richiede autenticazione", async () => {
+    const { app } = buildTestApp();
+    const response = await request(app).get(`/sessions/exercise-history?exerciseId=${EXERCISE_ID}`);
+    expect(response.status).toBe(401);
+  });
+
+  it("richiede exerciseId con 400", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const response = await request(app)
+      .get("/sessions/exercise-history")
+      .set("Authorization", `Bearer ${token}`);
+    expect(response.status).toBe(400);
+  });
+
+  it("torna lo storico dal piu' vecchio al piu' recente, in kg quando l'esercizio prevede pesi", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+
+    await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(sessionPayload({ performedAt: "2026-07-01T10:00:00.000Z", actualWeight: 80 }));
+    await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(sessionPayload({ performedAt: "2026-07-08T10:00:00.000Z", actualWeight: 82.5 }));
+
+    const response = await request(app)
+      .get(`/sessions/exercise-history?exerciseId=${EXERCISE_ID}`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveLength(2);
+    expect(response.body[0]).toMatchObject({
+      performedAt: "2026-07-01T10:00:00.000Z",
+      value: 80,
+      unit: "kg",
+    });
+    expect(response.body[1]).toMatchObject({
+      performedAt: "2026-07-08T10:00:00.000Z",
+      value: 82.5,
+      unit: "kg",
+    });
+  });
+
+  it("usa le ripetizioni quando l'esercizio non prevede pesi (corpo libero)", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+
+    await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(
+        sessionPayload({
+          performedAt: "2026-07-01T10:00:00.000Z",
+          actualWeight: null,
+          actualReps: 12,
+        })
+      );
+
+    const response = await request(app)
+      .get(`/sessions/exercise-history?exerciseId=${EXERCISE_ID}`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(response.body[0]).toMatchObject({ value: 12, unit: "reps" });
+  });
+
+  it("ignora le sessioni di altre schede: lo storico e' per esercizio, non per scheda", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+
+    await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(sessionPayload({ performedAt: "2026-07-01T10:00:00.000Z", workoutId: WORKOUT_ID }));
+    await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(
+        sessionPayload({ performedAt: "2026-07-08T10:00:00.000Z", workoutId: OTHER_WORKOUT_ID })
+      );
+
+    const response = await request(app)
+      .get(`/sessions/exercise-history?exerciseId=${EXERCISE_ID}`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(response.body).toHaveLength(2);
   });
 });
 

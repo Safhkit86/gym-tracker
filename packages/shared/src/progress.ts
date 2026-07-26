@@ -137,3 +137,60 @@ export interface ProgressionEventMessage extends ProgressionEvent {
  * due, non un dettaglio implementativo di uno solo.
  */
 export const PROGRESSION_EVENTS_QUEUE = "progression-events";
+
+// --- Statistiche per la Dashboard (GET /stats, GET /sessions/exercise-history,
+// GET /progression/stalled) ---
+
+/** Volume di un esercizio nella settimana corrente. Il raggruppamento per
+ *  muscleGroup avviene lato client (progress-service non conosce il
+ *  catalogo esercizi di workout-service). */
+export interface MuscleGroupVolumeEntry {
+  exerciseId: string;
+  exerciseName: string;
+  setCount: number;
+  repCount: number;
+}
+
+/** Esercizio loggato di recente, candidato per il grafico "Progressioni per
+ *  esercizio" della Dashboard. */
+export interface RecentExerciseRef {
+  exerciseId: string;
+  exerciseName: string;
+}
+
+export interface DashboardStats {
+  sessionCount: number;
+  /** Settimane consecutive (Lun-Dom) con almeno una sessione, contate a
+   *  ritroso dalla settimana corrente (che non deve necessariamente averne
+   *  gia' una: e' ancora in corso). */
+  consecutiveWeeks: number;
+  /** Somma di peso*ripetizioni su tutti i set mai registrati; i set a corpo
+   *  libero (peso nullo) contano 0. */
+  totalKgLifted: number;
+  /** Volume per esercizio nella settimana corrente (Lun-Dom). */
+  currentWeekVolumeByExercise: MuscleGroupVolumeEntry[];
+  /** Esercizi loggati negli ultimi 35 giorni, piu' recenti prima, max 20:
+   *  il set su cui la Dashboard richiede lo storico per i grafici. */
+  recentExercises: RecentExerciseRef[];
+  /** Date (YYYY-MM-DD) con almeno una sessione, ultimi 35 giorni. */
+  streakCalendar: string[];
+}
+
+/** Un punto del grafico "Progressioni per esercizio": il valore e' il peso
+ *  massimo del set in quella sessione se l'esercizio prevede pesi,
+ *  altrimenti le ripetizioni massime. */
+export interface ExerciseHistoryPoint {
+  sessionId: string;
+  performedAt: string;
+  value: number;
+  unit: "kg" | "reps";
+}
+
+/** L'esercizio col maggior divario dall'ultima progressione (o dal primo
+ *  log, se non ne ha mai avuta una), oltre la soglia minima per essere
+ *  segnalato. */
+export interface StalledExercise {
+  exerciseId: string;
+  exerciseName: string;
+  daysSinceLastProgression: number;
+}

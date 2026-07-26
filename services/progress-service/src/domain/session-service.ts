@@ -1,5 +1,6 @@
 import type {
   CreateSessionResponse,
+  ExerciseHistoryPoint,
   Logger,
   ProgressionEvent,
   SessionDetail,
@@ -85,8 +86,35 @@ export class SessionService {
     return { ...session, suggestions };
   }
 
-  async list(ownerId: string): Promise<SessionDetail[]> {
-    return this.sessions.listByOwner(ownerId);
+  async list(ownerId: string, limit?: number): Promise<SessionDetail[]> {
+    return this.sessions.listByOwner(ownerId, limit);
+  }
+
+  /** Storico per il grafico "Progressioni per esercizio" della Dashboard:
+   *  peso massimo del set per sessione se l'esercizio prevede pesi,
+   *  altrimenti ripetizioni massime. Ordinato dal piu' vecchio al piu'
+   *  recente (pronto per l'asse X del grafico). */
+  async getExerciseHistory(
+    ownerId: string,
+    exerciseId: string,
+    limit = 10
+  ): Promise<ExerciseHistoryPoint[]> {
+    const snapshots = await this.sessions.findExerciseHistory(ownerId, exerciseId, limit);
+    const isWeighted = snapshots.some((snapshot) =>
+      snapshot.sets.some((set) => set.actualWeight !== null)
+    );
+
+    return snapshots
+      .slice()
+      .reverse()
+      .map((snapshot) => ({
+        sessionId: snapshot.sessionId,
+        performedAt: snapshot.performedAt,
+        unit: isWeighted ? ("kg" as const) : ("reps" as const),
+        value: isWeighted
+          ? Math.max(...snapshot.sets.map((set) => set.actualWeight ?? 0))
+          : Math.max(...snapshot.sets.map((set) => set.actualReps)),
+      }));
   }
 
   async get(ownerId: string, id: string): Promise<SessionDetail> {

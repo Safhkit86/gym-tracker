@@ -54,8 +54,10 @@ export interface ExerciseSessionSnapshot {
 export interface SessionRepository {
   create(ownerId: string, input: NormalizedSession): Promise<SessionDetail>;
   /** Storico completo (esercizi + set), non solo un riepilogo: la pagina
-   *  storico li mostra gia' espansi, senza un secondo giro per i dettagli. */
-  listByOwner(ownerId: string): Promise<SessionDetail[]>;
+   *  storico li mostra gia' espansi, senza un secondo giro per i dettagli.
+   *  `limit` opzionale (es. la Dashboard vuole solo l'ultima sessione, non
+   *  tutto lo storico) non cambia il comportamento di chi non lo passa. */
+  listByOwner(ownerId: string, limit?: number): Promise<SessionDetail[]>;
   findDetail(ownerId: string, id: string): Promise<SessionDetail | null>;
   delete(ownerId: string, id: string): Promise<boolean>;
   /**
@@ -72,6 +74,17 @@ export interface SessionRepository {
     exerciseId: string,
     limit: number,
     scope?: "workout" | "exercise"
+  ): Promise<ExerciseSessionSnapshot[]>;
+  /**
+   * Storico di un esercizio per il grafico "Progressioni per esercizio"
+   * della Dashboard: tutte le sessioni che lo contengono, a prescindere
+   * dalla scheda (a differenza di `findRecentSetsForExercise`, che e' per il
+   * motore di regole e rispetta la preferenza di scope dell'utente).
+   */
+  findExerciseHistory(
+    ownerId: string,
+    exerciseId: string,
+    limit: number
   ): Promise<ExerciseSessionSnapshot[]>;
 }
 
@@ -124,13 +137,14 @@ export class KyselySessionRepository implements SessionRepository {
     return (await this.findDetail(ownerId, id)) as SessionDetail;
   }
 
-  async listByOwner(ownerId: string): Promise<SessionDetail[]> {
+  async listByOwner(ownerId: string, limit?: number): Promise<SessionDetail[]> {
     const sessions = await this.db
       .selectFrom("workout_sessions")
       .selectAll()
       .where("owner_id", "=", ownerId)
       .orderBy("performed_at", "desc")
       .orderBy("created_at", "desc")
+      .$if(limit !== undefined, (qb) => qb.limit(limit as number))
       .execute();
     if (sessions.length === 0) {
       return [];
@@ -329,6 +343,16 @@ export class KyselySessionRepository implements SessionRepository {
       sets: setsBySession.get(s.id) ?? [],
     }));
   }
+
+  async findExerciseHistory(
+    ownerId: string,
+    exerciseId: string,
+    limit: number
+  ): Promise<ExerciseSessionSnapshot[]> {
+    // "" come workoutId: ignorato da findRecentSetsForExercise quando
+    // scope === "exercise" (vedi $if sopra), quindi innocuo qui.
+    return this.findRecentSetsForExercise(ownerId, "", exerciseId, limit, "exercise");
+  }
 }
 
 // --- Implementazione in memoria per i test ---
@@ -382,14 +406,14 @@ export class InMemorySessionRepository implements SessionRepository {
     return toDetail(stored);
   }
 
-  async listByOwner(ownerId: string): Promise<SessionDetail[]> {
-    return [...this.byId.values()]
+  async listByOwner(ownerId: string, limit?: number): Promise<SessionDetail[]> {
+    const sorted = [...this.byId.values()]
       .filter((s) => s.ownerId === ownerId)
       .sort((a, b) => {
         const byPerformed = b.performedAt.localeCompare(a.performedAt);
         return byPerformed !== 0 ? byPerformed : b.createdAt.getTime() - a.createdAt.getTime();
-      })
-      .map(toDetail);
+      });
+    return (limit !== undefined ? sorted.slice(0, limit) : sorted).map(toDetail);
   }
 
   async findDetail(ownerId: string, id: string): Promise<SessionDetail | null> {
@@ -439,6 +463,14 @@ export class InMemorySessionRepository implements SessionRepository {
           })),
         };
       });
+  }
+
+  async findExerciseHistory(
+    ownerId: string,
+    exerciseId: string,
+    limit: number
+  ): Promise<ExerciseSessionSnapshot[]> {
+    return this.findRecentSetsForExercise(ownerId, "", exerciseId, limit, "exercise");
   }
 }
 
