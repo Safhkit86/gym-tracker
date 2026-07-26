@@ -93,6 +93,38 @@ export function TimerIcon() {
   );
 }
 
+export function ChevronLeftIcon() {
+  return (
+    <svg {...iconProps()}>
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+
+export function ChevronRightIcon() {
+  return (
+    <svg {...iconProps()}>
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+
+export function ChevronUpIcon() {
+  return (
+    <svg {...iconProps()}>
+      <path d="m18 15-6-6-6 6" />
+    </svg>
+  );
+}
+
+export function ChevronDownIcon() {
+  return (
+    <svg {...iconProps()}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
 export function GripIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">

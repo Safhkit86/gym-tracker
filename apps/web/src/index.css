@@ -16,6 +16,7 @@
   --color-accent-contrast: #06211d;
   --color-danger: #f87171;
   --color-danger-bg: #2a1618;
+  --color-warning: #f5b942;
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 6px rgba(0, 0, 0, 0.35);
   --shadow-card-hover: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--color-accent);
 
@@ -1187,4 +1188,477 @@ button.secondary:hover:not(:disabled) {
   flex-direction: column;
   gap: var(--space-3);
   align-items: flex-start;
+}
+
+/* --- Dashboard --- */
+
+.page-subtitle {
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-5);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dashboard-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.dashboard-col .card {
+  min-width: 0;
+}
+
+.dashboard-col .card + .card {
+  margin-top: 0; /* .col usa gap, non il margin-top di ".card + .card" */
+}
+
+.card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-4);
+  min-width: 0;
+}
+
+.card__header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  min-width: 0;
+}
+
+.card__header a {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.card__header-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+/* Paginazione a frecce, mai scrollbar: riusata da tutti i widget della
+   Dashboard che mostrano solo una finestra di elementi alla volta. */
+.pager {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.pager__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+/* Senza dimensioni esplicite un <svg> senza width/height (come le nostre
+   icone inline) usa la dimensione intrinseca di default del browser
+   (300x150px), sfondando il pulsante 1.75rem invece di starci dentro.
+   flex-shrink: 0 e' necessario oltre a width/height: come figlio flex di
+   un contenitore inline-flex, altrimenti il browser puo' risolvere la
+   larghezza (asse principale) a 0 pur onorando l'altezza (asse
+   trasversale) — verificato empiricamente, non solo un'ipotesi. */
+.pager__btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.pager__btn:hover:not(:disabled) {
+  color: var(--color-text);
+  border-color: var(--color-accent);
+}
+
+.pager__btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pager__indicator {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-width: 3.4rem;
+  text-align: center;
+}
+
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-4);
+}
+
+.stat-tile__label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-1);
+}
+
+.stat-tile__value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-tile__value small {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.muscle-groups-block {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.muscle-groups-block__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-4);
+  min-width: 0;
+}
+
+.muscle-groups-block__header h3 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin: 0;
+  min-width: 0;
+}
+
+.muscle-groups {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.muscle-group {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.muscle-group h3 {
+  font-size: 0.9rem;
+  margin: 0 0 var(--space-2);
+}
+
+.muscle-group .row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding: 0.2rem 0;
+  color: var(--color-text-muted);
+  gap: var(--space-2);
+}
+
+.muscle-group .row strong {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.suggestion-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+  min-width: 0;
+}
+
+.suggestion-row:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.suggestion-row__text {
+  min-width: 0;
+}
+
+.suggestion-row__text strong {
+  display: block;
+  font-size: 0.9rem;
+  overflow-wrap: break-word;
+}
+
+.suggestion-row__text span {
+  font-size: 0.8rem;
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.btn-accept {
+  background: transparent;
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.suggestion-confirm {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.suggestion-empty {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  padding: var(--space-2) 0;
+  margin: 0;
+}
+
+details.muscle-accordion {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-3);
+  overflow: hidden;
+}
+
+details.muscle-accordion:last-child {
+  margin-bottom: 0;
+}
+
+details.muscle-accordion summary {
+  cursor: pointer;
+  list-style: none;
+  padding: var(--space-3) var(--space-4);
+  font-weight: 600;
+  font-size: 0.92rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-surface-2);
+}
+
+details.muscle-accordion summary::-webkit-details-marker {
+  display: none;
+}
+
+details.muscle-accordion summary::after {
+  content: "▾";
+  color: var(--color-text-muted);
+  transition: transform 0.15s ease;
+}
+
+details.muscle-accordion[open] summary::after {
+  transform: rotate(180deg);
+}
+
+.accordion-body {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.exercise-chart__title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.exercise-chart__title .latest {
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.chart-svg text {
+  font-family: inherit;
+  fill: var(--color-text-muted);
+}
+
+.chart-svg .axis-line {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.chart-svg .data-line {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.chart-svg .data-dot {
+  fill: var(--color-surface);
+  stroke: var(--color-accent);
+  stroke-width: 2;
+}
+
+.chart-svg .data-dot--last {
+  fill: var(--color-accent);
+}
+
+.chart-svg .value-label {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--color-text);
+}
+
+.chart-empty {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.streak-cal {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.streak-cal__cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  border: 1px solid var(--color-border);
+}
+
+.streak-cal__cell--trained {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.streak-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.streak-legend__swatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 3px;
+  border: 1px solid var(--color-border);
+  display: inline-block;
+}
+
+.streak-legend__swatch--on {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.session-exercise-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+}
+
+.session-exercise-list li {
+  list-style: none;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.session-exercise-list li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.session-exercise-list .ex-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: block;
+}
+
+.session-exercise-list .ex-detail {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.btn-start {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.7rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+}
+
+.stall-callout {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 35%, transparent);
+}
+
+.stall-callout__icon {
+  color: var(--color-warning);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.stall-callout strong {
+  display: block;
+  font-size: 0.88rem;
+}
+
+.stall-callout span {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.section-note {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin-top: var(--space-3);
 }

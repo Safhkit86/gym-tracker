@@ -75,6 +75,26 @@ describe("Layout", () => {
     expect(screen.getByRole("link", { name: /storico/i }).className).not.toContain("active");
   });
 
+  it("mostra 'Dashboard' come link del brand verso la home", async () => {
+    seedAuthToken();
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.includes("/notifications") && m === "GET", body: [] },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<p>Pagina</p>} />
+        </Route>
+      </Routes>,
+      ["/"]
+    );
+
+    const brandLink = await screen.findByRole("link", { name: "Dashboard" });
+    expect(brandLink).toHaveAttribute("href", "/");
+  });
+
   it("mostra l'email come link verso il profilo", async () => {
     seedAuthToken();
     mockFetchResponses([

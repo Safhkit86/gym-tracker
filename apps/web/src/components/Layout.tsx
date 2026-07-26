@@ -23,7 +23,7 @@ export function Layout() {
       <nav className="app-nav">
         <div className="app-nav__links">
           <Link to="/" className="app-nav__brand">
-            gym-tracker
+            Dashboard
           </Link>
           <NavLink to="/workouts">Schede</NavLink>
           <NavLink to="/sessions">Storico</NavLink>
