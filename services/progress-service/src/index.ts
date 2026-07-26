@@ -7,6 +7,7 @@ import { KyselyProgressionEventRepository } from "./repositories/progression-eve
 import { KyselySessionRepository } from "./repositories/session-repository.js";
 import { KyselyProgressionPreferencesRepository } from "./repositories/progression-preferences-repository.js";
 import { KyselyProgressionDefaultsRepository } from "./repositories/progression-defaults-repository.js";
+import { KyselyStatsRepository } from "./repositories/stats-repository.js";
 
 const config = loadConfig();
 const logger = createLogger("progress-service");
@@ -19,6 +20,7 @@ const app = createApp({
   progressionEvents: new KyselyProgressionEventRepository(db),
   progressionPreferences: new KyselyProgressionPreferencesRepository(db),
   progressionDefaults: new KyselyProgressionDefaultsRepository(db),
+  stats: new KyselyStatsRepository(db),
   publisher,
   tokens: createAccessTokenService(config.JWT_SECRET),
   logger,

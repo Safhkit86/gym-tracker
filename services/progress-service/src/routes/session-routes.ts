@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import type { AccessTokenService } from "@gym-tracker/shared";
 import { authenticate } from "../middleware/authenticate.js";
-import { UnauthorizedError } from "../errors.js";
+import { BadRequestError, UnauthorizedError } from "../errors.js";
 import type { SessionService } from "../domain/session-service.js";
 
 const setSchema = z
@@ -90,8 +90,29 @@ export function createSessionRoutes(sessions: SessionService, tokens: AccessToke
 
   router.get("/sessions", async (req, res, next) => {
     try {
-      const list = await sessions.list(ownerId(req));
+      const limit =
+        typeof req.query.limit === "string" && req.query.limit.trim() !== ""
+          ? Number(req.query.limit)
+          : undefined;
+      const list = await sessions.list(ownerId(req), limit);
       res.status(200).json(list);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Registrata prima di "/sessions/:id" per non essere intercettata da
+  // quella rotta parametrica (stesso accorgimento di PUT /workouts/reorder
+  // in workout-routes.ts).
+  router.get("/sessions/exercise-history", async (req, res, next) => {
+    try {
+      const exerciseId =
+        typeof req.query.exerciseId === "string" ? req.query.exerciseId : undefined;
+      if (!exerciseId) {
+        throw new BadRequestError("VALIDATION_ERROR", "exerciseId richiesto.");
+      }
+      const history = await sessions.getExerciseHistory(ownerId(req), exerciseId);
+      res.status(200).json(history);
     } catch (err) {
       next(err);
     }
