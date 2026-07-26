@@ -125,6 +125,7 @@ export function createApp(deps: AppDeps): Express {
   app.use("/sessions", proxyTo(deps.progressServiceUrl));
   app.use("/progression", proxyTo(deps.progressServiceUrl));
   app.use("/notifications", proxyTo(deps.notifyServiceUrl));
+  app.use("/stats", proxyTo(deps.progressServiceUrl));
 
   app.use((req, res) => {
     req.log.warn("rotta non trovata");
