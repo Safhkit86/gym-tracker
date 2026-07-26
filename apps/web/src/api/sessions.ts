@@ -2,9 +2,11 @@ import type { CreateSessionResponse, SessionDetail, SessionInput } from "@gym-tr
 import { apiRequest } from "./client";
 
 /** Storico gia' con esercizi/set inclusi: la pagina storico li mostra
- *  espansi, senza una seconda chiamata per sessione. */
-export function listSessions(token: string): Promise<SessionDetail[]> {
-  return apiRequest<SessionDetail[]>("/sessions", { token });
+ *  espansi, senza una seconda chiamata per sessione. `limit` opzionale (es.
+ *  la Dashboard vuole solo l'ultima sessione). */
+export function listSessions(token: string, limit?: number): Promise<SessionDetail[]> {
+  const query = limit !== undefined ? `?limit=${limit}` : "";
+  return apiRequest<SessionDetail[]>(`/sessions${query}`, { token });
 }
 
 export function logSession(token: string, body: SessionInput): Promise<CreateSessionResponse> {
