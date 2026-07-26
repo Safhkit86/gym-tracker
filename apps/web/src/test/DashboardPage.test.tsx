@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { screen, fireEvent, within } from "@testing-library/react";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { renderWithProviders, seedAuthToken, mockFetchResponses } from "./helpers";
 import { DashboardPage } from "../pages/DashboardPage";
@@ -53,6 +53,15 @@ function workoutExercise(id: string, exerciseId: string, exerciseName: string) {
     ],
   };
 }
+
+const WORKOUT_W1_DETAIL = {
+  id: "w1",
+  name: "Push day",
+  notes: null,
+  exercises: [workoutExercise("we0", "e1", "Dip")],
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+};
 
 const WORKOUT_W2_DETAIL = {
   id: "w2",
@@ -128,6 +137,10 @@ function baseHandlers(
     {
       match: (u: string, m: string) => u.includes("/sessions?limit=1") && m === "GET",
       body: [LAST_SESSION],
+    },
+    {
+      match: (u: string, m: string) => u.endsWith("/workouts/w1") && m === "GET",
+      body: WORKOUT_W1_DETAIL,
     },
     {
       match: (u: string, m: string) => u.endsWith("/workouts/w2") && m === "GET",
@@ -352,5 +365,230 @@ describe("DashboardPage", () => {
     expect(await within(suggestionsCard).findByText("✓ Accettato")).toBeInTheDocument();
     expect(within(suggestionsCard).getByText("Curl a martello")).toBeInTheDocument();
     expect(within(suggestionsCard).getByRole("button", { name: "Accetta" })).toBeInTheDocument();
+  });
+
+  it("apre un solo accordion di 'Progressioni per esercizio' alla volta", async () => {
+    seedAuthToken();
+    const exercisesFixture = [
+      {
+        id: "e1",
+        ownerId: null,
+        name: "Dip",
+        muscleGroup: "Petto",
+        description: null,
+        sourceUrl: null,
+      },
+      {
+        id: "e2",
+        ownerId: null,
+        name: "Curl a martello",
+        muscleGroup: "Braccia",
+        description: null,
+        sourceUrl: null,
+      },
+    ];
+    const workoutsFixture = [
+      { id: "w1", name: "Push day", notes: null, exerciseCount: 2, createdAt: "", updatedAt: "" },
+    ];
+    const workoutDetail = {
+      id: "w1",
+      name: "Push day",
+      notes: null,
+      exercises: [
+        workoutExercise("we1", "e1", "Dip"),
+        workoutExercise("we2", "e2", "Curl a martello"),
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const statsFixture = {
+      sessionCount: 0,
+      consecutiveWeeks: 0,
+      totalKgLifted: 0,
+      currentWeekVolumeByExercise: [],
+      recentExercises: [],
+      streakCalendar: [],
+    };
+
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/stats") && m === "GET", body: statsFixture },
+      { match: (u, m) => u.endsWith("/exercises") && m === "GET", body: exercisesFixture },
+      { match: (u, m) => u.endsWith("/workouts") && m === "GET", body: workoutsFixture },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: workoutDetail },
+      { match: (u, m) => u.includes("/sessions?limit=1") && m === "GET", body: [] },
+      { match: (u, m) => u.includes("/progression/stalled") && m === "GET", body: null },
+      { match: (u, m) => u.includes("/sessions/exercise-history") && m === "GET", body: [] },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/" element={<DashboardPage />} />
+      </Routes>
+    );
+
+    await screen.findByText("Braccia");
+    const braccia = screen.getByText("Braccia").closest("details") as HTMLDetailsElement;
+    const petto = screen.getByText("Petto").closest("details") as HTMLDetailsElement;
+    expect(braccia.open).toBe(true);
+    expect(petto.open).toBe(false);
+
+    fireEvent.click(screen.getByText("Petto"));
+    expect(petto.open).toBe(true);
+    expect(braccia.open).toBe(false);
+  });
+
+  it("unisce Polpacci nel gruppo muscolare Gambe", async () => {
+    seedAuthToken();
+    const exercisesFixture = [
+      {
+        id: "e1",
+        ownerId: null,
+        name: "Squat",
+        muscleGroup: "Gambe",
+        description: null,
+        sourceUrl: null,
+      },
+      {
+        id: "e2",
+        ownerId: null,
+        name: "Calf raise",
+        muscleGroup: "Polpacci",
+        description: null,
+        sourceUrl: null,
+      },
+    ];
+    const workoutsFixture = [
+      { id: "w1", name: "Leg day", notes: null, exerciseCount: 2, createdAt: "", updatedAt: "" },
+    ];
+    const workoutDetail = {
+      id: "w1",
+      name: "Leg day",
+      notes: null,
+      exercises: [
+        workoutExercise("we1", "e1", "Squat"),
+        workoutExercise("we2", "e2", "Calf raise"),
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const statsFixture = {
+      sessionCount: 0,
+      consecutiveWeeks: 0,
+      totalKgLifted: 0,
+      currentWeekVolumeByExercise: [
+        { exerciseId: "e1", exerciseName: "Squat", setCount: 3, repCount: 30 },
+        { exerciseId: "e2", exerciseName: "Calf raise", setCount: 2, repCount: 20 },
+      ],
+      recentExercises: [],
+      streakCalendar: [],
+    };
+
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/stats") && m === "GET", body: statsFixture },
+      { match: (u, m) => u.endsWith("/exercises") && m === "GET", body: exercisesFixture },
+      { match: (u, m) => u.endsWith("/workouts") && m === "GET", body: workoutsFixture },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: workoutDetail },
+      { match: (u, m) => u.includes("/sessions?limit=1") && m === "GET", body: [] },
+      { match: (u, m) => u.includes("/progression/stalled") && m === "GET", body: null },
+      { match: (u, m) => u.includes("/sessions/exercise-history") && m === "GET", body: [] },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/" element={<DashboardPage />} />
+      </Routes>
+    );
+
+    await screen.findByText("Sessioni registrate");
+    expect(screen.queryByText("Polpacci")).not.toBeInTheDocument();
+    const muscleGroupTile = document.querySelector(".muscle-group") as HTMLElement;
+    expect(within(muscleGroupTile).getByText("Gambe")).toBeInTheDocument();
+    expect(within(muscleGroupTile).getByText("5")).toBeInTheDocument();
+  });
+
+  it("mostra nei grafici solo gli esercizi ancora nelle schede attuali, il migliore in alto", async () => {
+    seedAuthToken();
+    const exercisesFixture = [
+      {
+        id: "e1",
+        ownerId: null,
+        name: "Dip",
+        muscleGroup: "Petto",
+        description: null,
+        sourceUrl: null,
+      },
+      {
+        id: "e2",
+        ownerId: null,
+        name: "Croci ai cavi",
+        muscleGroup: "Petto",
+        description: null,
+        sourceUrl: null,
+      },
+    ];
+    const workoutsFixture = [
+      { id: "w1", name: "Push day", notes: null, exerciseCount: 2, createdAt: "", updatedAt: "" },
+    ];
+    const workoutDetail = {
+      id: "w1",
+      name: "Push day",
+      notes: null,
+      exercises: [
+        workoutExercise("we1", "e1", "Dip"),
+        workoutExercise("we2", "e2", "Croci ai cavi"),
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const statsFixture = {
+      sessionCount: 0,
+      consecutiveWeeks: 0,
+      totalKgLifted: 0,
+      currentWeekVolumeByExercise: [],
+      // "Esercizio rimosso" non e' piu' in nessuna scheda attuale: non deve comparire.
+      recentExercises: [{ exerciseId: "e9", exerciseName: "Esercizio rimosso" }],
+      streakCalendar: [],
+    };
+
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/stats") && m === "GET", body: statsFixture },
+      { match: (u, m) => u.endsWith("/exercises") && m === "GET", body: exercisesFixture },
+      { match: (u, m) => u.endsWith("/workouts") && m === "GET", body: workoutsFixture },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: workoutDetail },
+      { match: (u, m) => u.includes("/sessions?limit=1") && m === "GET", body: [] },
+      { match: (u, m) => u.includes("/progression/stalled") && m === "GET", body: null },
+      {
+        match: (u, m) =>
+          u.includes("exerciseId=e1") && u.includes("exercise-history") && m === "GET",
+        body: [{ sessionId: "s1", performedAt: "2026-07-01T00:00:00.000Z", value: 40, unit: "kg" }],
+      },
+      {
+        match: (u, m) =>
+          u.includes("exerciseId=e2") && u.includes("exercise-history") && m === "GET",
+        body: [{ sessionId: "s2", performedAt: "2026-07-01T00:00:00.000Z", value: 90, unit: "kg" }],
+      },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/" element={<DashboardPage />} />
+      </Routes>
+    );
+
+    await screen.findByText("Petto");
+    expect(screen.queryByText(/Esercizio rimosso/)).not.toBeInTheDocument();
+
+    // Lo storico arriva in modo asincrono (secondo useEffect): l'ordine per
+    // risultato massimo si stabilizza solo dopo che entrambi sono arrivati,
+    // quindi va ri-controllato con waitFor invece di una singola lettura.
+    await waitFor(() => {
+      const titles = screen.getAllByText(/— (peso|ripetizioni)/);
+      expect(titles).toHaveLength(2);
+      expect(titles[0].textContent).toMatch(/Croci ai cavi/);
+      expect(titles[1].textContent).toMatch(/Dip/);
+    });
   });
 });

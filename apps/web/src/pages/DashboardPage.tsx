@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type {
   DashboardStats,
@@ -36,6 +35,17 @@ interface MuscleGroupSummary {
   muscleGroup: string;
   setCount: number;
   repCount: number;
+}
+
+interface ExerciseRef {
+  exerciseId: string;
+  exerciseName: string;
+}
+
+/** I polpacci sono un sotto-gruppo di Gambe nel catalogo esercizi, ma nella
+ *  Dashboard vanno mostrati insieme, non come gruppo a parte. */
+function normalizeMuscleGroup(muscleGroup: string): string {
+  return muscleGroup === "Polpacci" ? "Gambe" : muscleGroup;
 }
 
 function groupVolumeByMuscleGroup(
@@ -83,6 +93,11 @@ export function DashboardPage() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [nextWorkout, setNextWorkout] = useState<WorkoutDetail | null>(null);
   const [lastSession, setLastSession] = useState<SessionDetail | null>(null);
+  /** Esercizi che compaiono in almeno una scheda attuale (unione su tutte le
+   *  schede): "Progressioni per esercizio" mostra solo questi, non lo
+   *  storico di esercizi rimossi dalle schede/di schede passate (quello
+   *  andra' in una futura pagina Statistiche a parte). */
+  const [currentSchedeExercises, setCurrentSchedeExercises] = useState<ExerciseRef[]>([]);
   const [pendingSuggestions, setPendingSuggestions] = useState<Notification[]>([]);
   const [confirmingIds, setConfirmingIds] = useState<Set<string>>(new Set());
   const [stalledExercise, setStalledExercise] = useState<StalledExercise | null>(null);
@@ -114,14 +129,31 @@ export function DashboardPage() {
         setLastSession(last);
 
         if (workoutsResult.length > 0) {
+          const workoutDetails = await Promise.all(
+            workoutsResult.map((w: WorkoutSummary) => getWorkout(authToken, w.id))
+          );
+          if (cancelled) {
+            return;
+          }
+
           const lastIndex = last
             ? workoutsResult.findIndex((w: WorkoutSummary) => w.id === last.workoutId)
             : -1;
-          const nextSummary = workoutsResult[(lastIndex + 1) % workoutsResult.length];
-          const detail = await getWorkout(authToken, nextSummary.id);
-          if (!cancelled) {
-            setNextWorkout(detail);
+          const nextIndex = (lastIndex + 1) % workoutsResult.length;
+          setNextWorkout(workoutDetails[nextIndex]);
+
+          const exerciseUnion = new Map<string, string>();
+          for (const detail of workoutDetails) {
+            for (const ex of detail.exercises) {
+              exerciseUnion.set(ex.exerciseId, ex.exerciseName);
+            }
           }
+          setCurrentSchedeExercises(
+            [...exerciseUnion.entries()].map(([exerciseId, exerciseName]) => ({
+              exerciseId,
+              exerciseName,
+            }))
+          );
         }
       } catch (err) {
         if (!cancelled) {
@@ -153,15 +185,15 @@ export function DashboardPage() {
     };
   }, [token]);
 
-  // Storico per i grafici: solo dopo aver saputo quali sono gli esercizi
-  // recenti (dipende da `stats`), in parallelo, non bloccante.
+  // Storico per i grafici: solo dopo aver saputo quali esercizi fanno
+  // ancora parte delle schede attuali, in parallelo, non bloccante.
   useEffect(() => {
-    if (!token || !stats || stats.recentExercises.length === 0) {
+    if (!token || currentSchedeExercises.length === 0) {
       return;
     }
     let cancelled = false;
     Promise.all(
-      stats.recentExercises.map((ref) =>
+      currentSchedeExercises.map((ref) =>
         getExerciseHistory(token, ref.exerciseId).then(
           (points) => [ref.exerciseId, points] as const
         )
@@ -178,12 +210,12 @@ export function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, stats]);
+  }, [token, currentSchedeExercises]);
 
   const muscleGroupByExerciseId = useMemo(() => {
     const map = new Map<string, string>();
     for (const ex of exercises) {
-      map.set(ex.id, ex.muscleGroup ?? UNSPECIFIED_MUSCLE_GROUP);
+      map.set(ex.id, normalizeMuscleGroup(ex.muscleGroup ?? UNSPECIFIED_MUSCLE_GROUP));
     }
     return map;
   }, [exercises]);
@@ -194,18 +226,15 @@ export function DashboardPage() {
   );
 
   const exercisesByMuscleGroup = useMemo(() => {
-    const map = new Map<string, { exerciseId: string; exerciseName: string }[]>();
-    if (!stats) {
-      return map;
-    }
-    for (const ref of stats.recentExercises) {
+    const map = new Map<string, ExerciseRef[]>();
+    for (const ref of currentSchedeExercises) {
       const muscleGroup = muscleGroupByExerciseId.get(ref.exerciseId) ?? UNSPECIFIED_MUSCLE_GROUP;
       const list = map.get(muscleGroup) ?? [];
       list.push(ref);
       map.set(muscleGroup, list);
     }
     return map;
-  }, [stats, muscleGroupByExerciseId]);
+  }, [currentSchedeExercises, muscleGroupByExerciseId]);
 
   async function handleAccept(notification: Notification): Promise<void> {
     if (!token) {
@@ -422,10 +451,20 @@ function ProgressioniCard({
   exercisesByMuscleGroup,
   exerciseHistories,
 }: {
-  exercisesByMuscleGroup: Map<string, { exerciseId: string; exerciseName: string }[]>;
+  exercisesByMuscleGroup: Map<string, ExerciseRef[]>;
   exerciseHistories: Map<string, ExerciseHistoryPoint[]>;
 }) {
   const muscleGroups = [...exercisesByMuscleGroup.keys()].sort((a, b) => a.localeCompare(b, "it"));
+  // Solo un accordion aperto alla volta, altrimenti la card cresce troppo
+  // con molti gruppi muscolari. null = nessuna scelta esplicita ancora,
+  // apri il primo gruppo di default.
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const effectiveOpenGroup = openGroup ?? muscleGroups[0] ?? null;
+
+  function maxValueFor(exerciseId: string): number {
+    const points = exerciseHistories.get(exerciseId);
+    return points && points.length > 0 ? Math.max(...points.map((p) => p.value)) : -Infinity;
+  }
 
   return (
     <section className="card">
@@ -435,32 +474,51 @@ function ProgressioniCard({
       {muscleGroups.length === 0 ? (
         <p className="section-note">Non ci sono ancora abbastanza dati.</p>
       ) : (
-        muscleGroups.map((muscleGroup, index) => (
-          <details className="muscle-accordion" key={muscleGroup} open={index === 0}>
-            <summary>{muscleGroup}</summary>
-            <div className="accordion-body">
-              {(exercisesByMuscleGroup.get(muscleGroup) ?? []).map((ref) => {
-                const points = exerciseHistories.get(ref.exerciseId) ?? [];
-                const latest = points[points.length - 1];
-                return (
-                  <div key={ref.exerciseId}>
-                    <div className="exercise-chart__title">
-                      <span>
-                        {ref.exerciseName} — {latest?.unit === "reps" ? "ripetizioni" : "peso (kg)"}
-                      </span>
-                      {latest && (
-                        <span className="latest">
-                          {latest.unit === "kg" ? `${latest.value}kg` : `${latest.value} rip.`}
+        muscleGroups.map((muscleGroup) => {
+          // In alto l'esercizio col miglior risultato raggiunto, poi gli
+          // altri della scheda in ordine decrescente.
+          const exercisesInGroup = [...(exercisesByMuscleGroup.get(muscleGroup) ?? [])].sort(
+            (a, b) => maxValueFor(b.exerciseId) - maxValueFor(a.exerciseId)
+          );
+          return (
+            <details
+              className="muscle-accordion"
+              key={muscleGroup}
+              open={effectiveOpenGroup === muscleGroup}
+            >
+              <summary
+                onClick={(event) => {
+                  event.preventDefault();
+                  setOpenGroup(effectiveOpenGroup === muscleGroup ? null : muscleGroup);
+                }}
+              >
+                {muscleGroup}
+              </summary>
+              <div className="accordion-body">
+                {exercisesInGroup.map((ref) => {
+                  const points = exerciseHistories.get(ref.exerciseId) ?? [];
+                  const latest = points[points.length - 1];
+                  return (
+                    <div key={ref.exerciseId}>
+                      <div className="exercise-chart__title">
+                        <span>
+                          {ref.exerciseName} —{" "}
+                          {latest?.unit === "reps" ? "ripetizioni" : "peso (kg)"}
                         </span>
-                      )}
+                        {latest && (
+                          <span className="latest">
+                            {latest.unit === "kg" ? `${latest.value}kg` : `${latest.value} rip.`}
+                          </span>
+                        )}
+                      </div>
+                      <MiniLineChart points={points} />
                     </div>
-                    <MiniLineChart points={points} />
-                  </div>
-                );
-              })}
-            </div>
-          </details>
-        ))
+                  );
+                })}
+              </div>
+            </details>
+          );
+        })
       )}
     </section>
   );
@@ -487,63 +545,38 @@ function CostanzaCard({ streakCalendar }: { streakCalendar: string[] }) {
   );
 }
 
-function PaginatedExerciseList<T>({
-  items,
-  pageSize,
-  renderItem,
-  keyFor,
-}: {
-  items: T[];
-  pageSize: number;
-  renderItem: (item: T) => ReactNode;
-  keyFor: (item: T) => string;
-}) {
-  const pager = usePager(items, pageSize);
-  return (
-    <>
-      <ul className="session-exercise-list">
-        {pager.visible.map((item) => (
-          <li key={keyFor(item)}>{renderItem(item)}</li>
-        ))}
-      </ul>
-      {items.length > pageSize && (
-        <PagerControls
-          start={pager.start}
-          pageSize={pageSize}
-          total={pager.total}
-          canPrev={pager.canPrev}
-          canNext={pager.canNext}
-          onPrev={pager.prev}
-          onNext={pager.next}
-          orientation="vertical"
-          prevLabel="Esercizi precedenti"
-          nextLabel="Esercizi successivi"
-        />
-      )}
-    </>
-  );
-}
-
 function ProssimaSessioneCard({ workout }: { workout: WorkoutDetail }) {
+  const pager = usePager(workout.exercises, 3);
   return (
     <section className="card">
       <div className="card__header">
         <h2>Prossima sessione</h2>
+        {workout.exercises.length > 3 && (
+          <PagerControls
+            start={pager.start}
+            pageSize={3}
+            total={pager.total}
+            canPrev={pager.canPrev}
+            canNext={pager.canNext}
+            onPrev={pager.prev}
+            onNext={pager.next}
+            orientation="vertical"
+            prevLabel="Esercizi precedenti"
+            nextLabel="Esercizi successivi"
+          />
+        )}
       </div>
       <p className="page-subtitle" style={{ margin: "calc(-1 * var(--space-2)) 0 var(--space-3)" }}>
         {workout.name}
       </p>
-      <PaginatedExerciseList
-        items={workout.exercises}
-        pageSize={3}
-        keyFor={(exercise) => exercise.id}
-        renderItem={(exercise) => (
-          <>
+      <ul className="session-exercise-list">
+        {pager.visible.map((exercise) => (
+          <li key={exercise.id}>
             <span className="ex-name">{exercise.exerciseName}</span>
             <span className="ex-detail">{formatWorkoutPrescription(exercise)}</span>
-          </>
-        )}
-      />
+          </li>
+        ))}
+      </ul>
       <Link to={`/workouts/${workout.id}/log`} className="btn-start">
         Avvia sessione
       </Link>
@@ -552,25 +585,37 @@ function ProssimaSessioneCard({ workout }: { workout: WorkoutDetail }) {
 }
 
 function UltimaSessioneCard({ session }: { session: SessionDetail }) {
+  const pager = usePager(session.exercises, 3);
   return (
     <section className="card">
       <div className="card__header">
         <h2>Ultima sessione</h2>
+        {session.exercises.length > 3 && (
+          <PagerControls
+            start={pager.start}
+            pageSize={3}
+            total={pager.total}
+            canPrev={pager.canPrev}
+            canNext={pager.canNext}
+            onPrev={pager.prev}
+            onNext={pager.next}
+            orientation="vertical"
+            prevLabel="Esercizi precedenti"
+            nextLabel="Esercizi successivi"
+          />
+        )}
       </div>
       <p className="page-subtitle" style={{ margin: "calc(-1 * var(--space-2)) 0 var(--space-3)" }}>
         {session.workoutName} · {new Date(session.performedAt).toLocaleDateString("it-IT")}
       </p>
-      <PaginatedExerciseList
-        items={session.exercises}
-        pageSize={3}
-        keyFor={(exercise) => exercise.exerciseId}
-        renderItem={(exercise) => (
-          <>
+      <ul className="session-exercise-list">
+        {pager.visible.map((exercise) => (
+          <li key={exercise.exerciseId}>
             <span className="ex-name">{exercise.exerciseName}</span>
             <span className="ex-detail">{formatSessionExerciseSummary(exercise)}</span>
-          </>
-        )}
-      />
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

@@ -1276,6 +1276,14 @@ button.secondary:hover:not(:disabled) {
   cursor: pointer;
 }
 
+/* Senza dimensioni esplicite un <svg> senza width/height (come le nostre
+   icone inline) usa la dimensione intrinseca di default del browser
+   (300x150px), sfondando il pulsante 1.75rem invece di starci dentro. */
+.pager__btn svg {
+  width: 16px;
+  height: 16px;
+}
+
 .pager__btn:hover:not(:disabled) {
   color: var(--color-text);
   border-color: var(--color-accent);
