@@ -1278,10 +1278,15 @@ button.secondary:hover:not(:disabled) {
 
 /* Senza dimensioni esplicite un <svg> senza width/height (come le nostre
    icone inline) usa la dimensione intrinseca di default del browser
-   (300x150px), sfondando il pulsante 1.75rem invece di starci dentro. */
+   (300x150px), sfondando il pulsante 1.75rem invece di starci dentro.
+   flex-shrink: 0 e' necessario oltre a width/height: come figlio flex di
+   un contenitore inline-flex, altrimenti il browser puo' risolvere la
+   larghezza (asse principale) a 0 pur onorando l'altezza (asse
+   trasversale) — verificato empiricamente, non solo un'ipotesi. */
 .pager__btn svg {
   width: 16px;
   height: 16px;
+  flex-shrink: 0;
 }
 
 .pager__btn:hover:not(:disabled) {
