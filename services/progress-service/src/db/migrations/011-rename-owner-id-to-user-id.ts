@@ -15,9 +15,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .execute();
   await db.schema.alterTable("progression_defaults").renameColumn("owner_id", "user_id").execute();
 
-  await sql`ALTER INDEX workout_sessions_owner_idx RENAME TO workout_sessions_user_idx`.execute(
-    db
-  );
+  await sql`ALTER INDEX workout_sessions_owner_idx RENAME TO workout_sessions_user_idx`.execute(db);
   await sql`ALTER INDEX workout_sessions_owner_workout_idx RENAME TO workout_sessions_user_workout_idx`.execute(
     db
   );

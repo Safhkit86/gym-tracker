@@ -42,10 +42,7 @@ export class KyselyProgressionEventRepository implements ProgressionEventReposit
   }
 
   async listByOwner(userId: string, exerciseId?: string): Promise<ProgressionEvent[]> {
-    let query = this.db
-      .selectFrom("progression_events")
-      .selectAll()
-      .where("user_id", "=", userId);
+    let query = this.db.selectFrom("progression_events").selectAll().where("user_id", "=", userId);
     if (exerciseId) {
       query = query.where("exercise_id", "=", exerciseId);
     }
