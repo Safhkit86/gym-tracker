@@ -1,4 +1,4 @@
-import type { Migration } from "kysely";
+import type { Migration } from "kysely/migration";
 import * as createNotificationsTable from "./001-create-notifications-table.js";
 import * as renameOwnerIdToUserId from "./002-rename-owner-id-to-user-id.js";
 

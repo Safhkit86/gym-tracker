@@ -1,4 +1,4 @@
-import { Migrator } from "kysely";
+import { Migrator } from "kysely/migration";
 import { createLogger } from "@gym-tracker/shared";
 import { loadConfig } from "../config.js";
 import { createDb } from "./client.js";

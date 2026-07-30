@@ -1,4 +1,4 @@
-import type { Migration } from "kysely";
+import type { Migration } from "kysely/migration";
 import * as createUsers from "./001-create-users.js";
 import * as addPasswordActionTokens from "./002-add-password-action-tokens.js";
 import * as addUserMeasurements from "./003-add-user-measurements.js";
