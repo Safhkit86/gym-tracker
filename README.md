@@ -169,6 +169,39 @@ http://localhost:15672 (utente/password di default: `gymtracker`/`gymtracker`).
 | `npm run build`  | Build su tutti i workspace      |
 | `npm run format` | Formatta il codice con Prettier |
 
+## Log
+
+Ogni servizio logga in JSON strutturato (`pino`, vedi "Architettura" sopra),
+non pensato per essere letto a occhio così com'è.
+
+Via Docker Compose (come girano normalmente i servizi):
+
+```bash
+docker compose logs -f                    # tutti i servizi, interlacciati, segue in tempo reale
+docker compose logs -f account-service    # solo un servizio
+docker compose logs --tail 100 api-gateway  # ultime 100 righe, senza seguire
+```
+
+Per un formato leggibile invece del JSON grezzo:
+
+```bash
+docker compose logs -f api-gateway | npx pino-pretty
+```
+
+Per seguire una singola richiesta attraverso più servizi (es. capire perché
+una chiamata dal gateway è arrivata "storta" a un servizio a valle): ogni
+richiesta porta un `X-Request-Id` propagato invariato (vedi "Architettura"),
+prendine uno dai log o dalla risposta HTTP e filtra:
+
+```bash
+docker compose logs | grep <request-id>
+```
+
+Se un servizio gira sull'host (`npm run dev`, fuori da Docker) i log JSON
+escono direttamente sul terminale di quel processo, stesso formato.
+L'header `Authorization` è sempre redatto (`[Redacted]`) nei log, anche
+sulle risposte 401, quindi è sicuro incollarli altrove senza esporre token.
+
 ## CI/CD
 
 Ogni Pull Request verso `master` esegue automaticamente (`.github/workflows/ci.yml`):
@@ -204,10 +237,10 @@ entrambi.
 - ✅ **Fase 4** — notify-service
   - ✅ Backend
   - ✅ UI (badge notifiche non lette, elenco, segna come letta/tutte lette)
-- **Fase 5** — hardening API Gateway (autenticazione centralizzata, rate
+- ✅ **Fase 5** — hardening API Gateway (autenticazione centralizzata, rate
   limiting) + rifinitura webapp
   - ✅ Hardening API Gateway
-  - ⬜ Rifinitura webapp
+  - ✅ Rifinitura webapp
 - ✅ **Fase 6** — osservabilità leggera (log strutturati + correlation ID)
 - ⬜ **Fase 7** — Kubernetes (opzionale)
 - ⬜ **Fase 8** — app Android
@@ -215,9 +248,10 @@ entrambi.
 L'API Gateway in versione minima (solo reverse-proxy, vedi `services/api-gateway`)
 è stato anticipato rispetto alla Fase 5 originale: serviva da subito per non
 far parlare la webapp direttamente con i singoli servizi (vedi "Cosa NON fare"
-in `CLAUDE.md`). L'hardening (autenticazione centralizzata, rate limiting) è
-arrivato in Fase 5; la "rifinitura webapp" resta da fare, senza uno scope
-preciso ancora definito.
+in `CLAUDE.md`). L'hardening (autenticazione centralizzata, rate limiting) e
+la rifinitura webapp (restyling "Night Track" completo su tutte le pagine,
+standard responsive unico per le tabelle a larghezza fissa, storico misure)
+sono entrambi arrivati in Fase 5.
 
 Vedi `CLAUDE.md` per le convenzioni di codice usate da Claude Code in questo
 repo.
