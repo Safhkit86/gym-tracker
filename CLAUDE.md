@@ -57,16 +57,15 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   `kysely_migration_account`, `kysely_migration_workout`), altrimenti la tabella
   di tracking migrazioni di default (`kysely_migration`) collide tra servizi
   e la migrazione fallisce con "corrupted migrations".
-- `apps/web` usa una versione di `vitest` diversa da quella dei servizi
-  backend (backend su v2, frontend su v4, per compatibilità con Vite 8): npm
-  tiene due copie separate (una in root, una annidata in `apps/web`). Un
-  pacchetto hoisted in root che fa `expect.extend(...)` o `declare module
-"vitest"` (es. `@testing-library/jest-dom`) risolve `vitest` da dove _lui_
-  vive, non da dove girano i test — se le due copie non coincidono, i matcher
-  non vengono registrati/i tipi non combaciano a runtime pur passando il
-  typecheck. Vedi `apps/web/src/test/setup.ts` e `jest-dom.d.ts` per il
-  workaround (importare `expect` ed estenderlo a mano dentro il workspace,
-  invece di affidarsi all'entry point `/vitest` del pacchetto).
+- Tutti i workspace (servizi backend + `apps/web`) usano la stessa major di
+  `vitest` (v4, una sola copia hoisted in root — fino all'aggiornamento per
+  una CVE di esbuild/vitest il backend era fermo alla v2, con due copie npm
+  separate). `apps/web/src/test/setup.ts`/`jest-dom.d.ts` importano ed
+  estendono `expect` a mano invece di affidarsi all'entry point `/vitest` di
+  `@testing-library/jest-dom`: non e' piu' strettamente necessario ora che
+  c'e' una sola copia di `vitest`, ma il workaround resta comunque corretto
+  e non e' stato rimosso (nessun bisogno di toccare l'infrastruttura di test
+  funzionante insieme a un fix di sicurezza).
 - `api-gateway` ha `cors()` globale perché la webapp (altra origine: Vite dev
   o un dominio statico) lo chiama via fetch da browser: senza CORS le
   richieste vengono bloccate lato client. Nessun altro servizio ne ha bisogno,
