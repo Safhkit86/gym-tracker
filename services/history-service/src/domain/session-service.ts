@@ -1,89 +1,56 @@
 import type {
-  CreateSessionResponse,
   ExerciseHistoryPoint,
   Logger,
-  ProgressionEvent,
   SessionDetail,
   SessionInput,
 } from "@gym-tracker/shared";
 import { NotFoundError } from "../errors.js";
-import type { ProgressionEventPublisher } from "../events/publisher.js";
-import type { ProgressionEventRepository } from "../repositories/progression-event-repository.js";
+import type { SessionEventPublisher } from "../events/publisher.js";
 import type { NormalizedSession, SessionRepository } from "../repositories/session-repository.js";
-import type { ProgressionPreferencesRepository } from "../repositories/progression-preferences-repository.js";
-import type { ProgressionDefaultsRepository } from "../repositories/progression-defaults-repository.js";
-import { evaluateProgression } from "./progression-rule-engine.js";
 
 /**
  * Logica delle sessioni. Nessuna validazione contro workout-service (il
  * client invia uno snapshot autosufficiente, vedi @gym-tracker/shared -- non
- * viene mai fatta una chiamata HTTP tra i due servizi): solo owner-scoping e
- * valutazione del motore di regole dopo un log riuscito.
+ * viene mai fatta una chiamata HTTP tra i due servizi): solo owner-scoping.
+ * Nessuna logica di progressione qui (vive in progress-service, che valuta
+ * il motore di regole consumando `session-logged` in modo asincrono).
  */
 export class SessionService {
   constructor(
     private readonly sessions: SessionRepository,
-    private readonly progressionEvents: ProgressionEventRepository,
-    private readonly progressionPreferences: ProgressionPreferencesRepository,
-    private readonly progressionDefaults: ProgressionDefaultsRepository,
-    private readonly publisher: ProgressionEventPublisher,
+    private readonly publisher: SessionEventPublisher,
     private readonly logger: Logger
   ) {}
 
-  async logSession(userId: string, input: SessionInput): Promise<CreateSessionResponse> {
+  async logSession(userId: string, input: SessionInput): Promise<SessionDetail> {
     const session = await this.sessions.create(userId, normalize(input));
-    const preferences = await this.progressionPreferences.find(userId);
 
-    const suggestions: ProgressionEvent[] = [];
-    const seenExerciseIds = new Set<string>();
-    for (const exercise of session.exercises) {
-      if (seenExerciseIds.has(exercise.exerciseId)) {
-        continue;
-      }
-      seenExerciseIds.add(exercise.exerciseId);
-
-      // Un eventuale override "accetta progressione" pendente per questo
-      // esercizio ha gia' fatto il suo lavoro precompilando questo log (vedi
-      // LogSessionPage.tsx): da qui in poi il normale prefill (ultima
-      // sessione registrata) riflette gia' il nuovo valore, quindi si
-      // consuma subito, a prescindere dall'esito della valutazione sotto.
-      await this.progressionDefaults.consume(userId, exercise.exerciseId);
-
-      const history = await this.sessions.findRecentSetsForExercise(
+    try {
+      await this.publisher.publishSessionLogged({
+        sessionId: session.id,
         userId,
-        session.workoutId,
-        exercise.exerciseId,
-        preferences.requiredConsecutiveSessions,
-        preferences.groupingScope
-      );
-      const result = evaluateProgression(
-        history,
-        exercise.progressionIncrement,
-        preferences.requiredConsecutiveSessions
-      );
-      if (!result) {
-        continue;
-      }
-
-      const event = await this.progressionEvents.create({
-        userId,
-        exerciseId: exercise.exerciseId,
-        exerciseName: exercise.exerciseName,
-        triggeringSessionId: session.id,
-        ...result,
+        workoutId: session.workoutId,
+        performedAt: session.performedAt,
+        exercises: session.exercises.map((exercise) => ({
+          exerciseId: exercise.exerciseId,
+          exerciseName: exercise.exerciseName,
+          progressionIncrement: exercise.progressionIncrement,
+          sets: exercise.sets.map((set) => ({
+            setNumber: set.setNumber,
+            targetMinReps: set.targetMinReps,
+            targetMaxReps: set.targetMaxReps,
+            actualReps: set.actualReps,
+            actualWeight: set.actualWeight,
+          })),
+        })),
       });
-      suggestions.push(event);
-
-      try {
-        await this.publisher.publish({ ...event, userId });
-      } catch (err) {
-        // Best-effort: la sessione e' gia' salvata con successo, un
-        // fallimento di publish non deve far fallire la richiesta.
-        this.logger.error({ err }, "pubblicazione evento fallita");
-      }
+    } catch (err) {
+      // Best-effort: la sessione e' gia' salvata con successo, un
+      // fallimento di publish non deve far fallire la richiesta.
+      this.logger.error({ err }, "pubblicazione di session-logged fallita");
     }
 
-    return { ...session, suggestions };
+    return session;
   }
 
   async list(userId: string, limit?: number): Promise<SessionDetail[]> {
@@ -126,9 +93,25 @@ export class SessionService {
   }
 
   async delete(userId: string, id: string): Promise<void> {
+    // Serve PRIMA di cancellare: dopo, non sapremmo piu' quali esercizi
+    // erano nella sessione (necessario a progress-service per ripulire
+    // exercise_history_cache, vedi SessionDeletedEvent).
+    const detail = await this.sessions.findDetail(userId, id);
+    if (!detail) {
+      throw new NotFoundError("Sessione non trovata.");
+    }
     const deleted = await this.sessions.delete(userId, id);
     if (!deleted) {
       throw new NotFoundError("Sessione non trovata.");
+    }
+    try {
+      await this.publisher.publishSessionDeleted({
+        sessionId: id,
+        userId,
+        exerciseIds: detail.exercises.map((exercise) => exercise.exerciseId),
+      });
+    } catch (err) {
+      this.logger.error({ err }, "pubblicazione di session-deleted fallita");
     }
   }
 }

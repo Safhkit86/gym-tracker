@@ -1,4 +1,7 @@
-import type { ExerciseSessionSnapshot, HistoricalSet } from "../repositories/session-repository.js";
+import type {
+  ExerciseSessionSnapshot,
+  HistoricalSet,
+} from "../repositories/exercise-history-cache-repository.js";
 
 /**
  * Numero di default di sessioni consecutive che devono soddisfare

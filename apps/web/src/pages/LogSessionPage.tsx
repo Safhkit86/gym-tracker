@@ -1,15 +1,16 @@
 import { Fragment, useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import type {
-  CreateSessionResponse,
   ProgressionDefault,
+  ProgressionEvent,
   SessionDetail,
+  SessionProcessingStatus,
   WorkoutDetail,
 } from "@gym-tracker/shared";
 import { useAuth } from "../auth/useAuth";
 import { useUnreadCount } from "../notifications/useUnreadCount";
 import { getWorkout } from "../api/workouts";
-import { listSessions, logSession } from "../api/sessions";
+import { getSessionStatus, listSessions, logSession } from "../api/sessions";
 import { getAccountPreferences, getProgressionDefaults } from "../api/profile";
 import { ApiRequestError } from "../api/client";
 import { NARROW_TABLE_LAYOUT_QUERY, useIsNarrowViewport } from "../hooks/useIsNarrowViewport";
@@ -60,6 +61,18 @@ interface SessionExerciseForm {
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/** Il motore di regole valuta una sessione in modo asincrono (consumando
+ *  `session-logged` in progress-service, vedi history-service): questo
+ *  breve polling dopo il log simula la risposta sincrona che c'era prima
+ *  dello split tra i due servizi, cosi' la schermata di conferma puo'
+ *  continuare a mostrare subito l'eventuale suggerimento. */
+const SESSION_STATUS_POLL_INTERVAL_MS = 450;
+const SESSION_STATUS_MAX_ATTEMPTS = 10;
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function formatSetTarget(set: SessionSetForm): string {
@@ -247,7 +260,14 @@ export function LogSessionPage() {
   const [performedAt, setPerformedAt] = useState(today());
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [result, setResult] = useState<CreateSessionResponse | null>(null);
+  const [result, setResult] = useState<SessionDetail | null>(null);
+  /** "pending" mentre si fa polling; "timeout" se la finestra si esaurisce
+   *  senza una risposta definitiva dal motore di regole (fallback: il
+   *  suggerimento, se arriva poi, si vedra' tra le notifiche). */
+  const [suggestionStatus, setSuggestionStatus] = useState<SessionProcessingStatus | "timeout">(
+    "pending"
+  );
+  const [suggestions, setSuggestions] = useState<ProgressionEvent[]>([]);
   const [timerSoundEnabled, setTimerSoundEnabled] = useState(false);
   const isNarrow = useIsNarrowViewport(NARROW_TABLE_LAYOUT_QUERY);
   const { timers, startTimer, cancelTimer, snoozeTimer } = useRestTimers(timerSoundEnabled);
@@ -344,17 +364,39 @@ export function LogSessionPage() {
         }),
       });
       setResult(response);
-      if (response.suggestions.length > 0) {
-        // Restando su questa pagina (nessuna navigazione) il cambio di rotta
-        // in Layout non scatta da solo: senza questa chiamata il badge
-        // resterebbe fermo finche' l'utente non naviga altrove.
-        refreshUnreadCount();
-      }
+      setSuggestionStatus("pending");
+      void pollForSuggestions(token, response.id);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : "Errore imprevisto. Riprova.");
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  /** Interroga GET /sessions/:id/status a intervalli brevi finche' non arriva
+   *  un esito definitivo o si esaurisce la finestra (vedi costanti sopra). */
+  async function pollForSuggestions(authToken: string, sessionId: string): Promise<void> {
+    for (let attempt = 0; attempt < SESSION_STATUS_MAX_ATTEMPTS; attempt++) {
+      try {
+        const status = await getSessionStatus(authToken, sessionId);
+        if (status.status !== "pending") {
+          setSuggestionStatus(status.status);
+          setSuggestions(status.suggestions);
+          if (status.suggestions.length > 0) {
+            // Restando su questa pagina (nessuna navigazione) il cambio di
+            // rotta in Layout non scatta da solo: senza questa chiamata il
+            // badge resterebbe fermo finche' l'utente non naviga altrove.
+            refreshUnreadCount();
+          }
+          return;
+        }
+      } catch {
+        // Un singolo tentativo fallito non deve interrompere il polling:
+        // si riprova al prossimo giro, silenziosamente.
+      }
+      await wait(SESSION_STATUS_POLL_INTERVAL_MS);
+    }
+    setSuggestionStatus("timeout");
   }
 
   if (error && !workout) {
@@ -385,14 +427,20 @@ export function LogSessionPage() {
           <p>
             {workout.name} — {new Date(result.performedAt).toLocaleDateString("it-IT")}
           </p>
-          {result.suggestions.length === 0 ? (
+          {suggestionStatus === "pending" && <p>Verifica suggerimenti di progressione…</p>}
+          {suggestionStatus === "no-suggestion" && (
             <p>Nessun suggerimento di progressione questa volta.</p>
-          ) : (
-            result.suggestions.map((suggestion) => (
+          )}
+          {suggestionStatus === "with-suggestion" &&
+            suggestions.map((suggestion) => (
               <p key={suggestion.id} className="progression-suggestion">
                 <strong>{suggestion.exerciseName}</strong>: {suggestion.reason}
               </p>
-            ))
+            ))}
+          {suggestionStatus === "timeout" && (
+            <p>
+              Sessione registrata. Verifica in corso — se disponibile, lo vedrai tra le notifiche.
+            </p>
           )}
           <p>
             <Link to={`/workouts/${workout.id}`}>Torna alla scheda</Link>

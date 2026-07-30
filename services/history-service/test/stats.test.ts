@@ -49,57 +49,21 @@ describe("GET /stats", () => {
 
     const responseB = await request(app).get("/stats").set("Authorization", `Bearer ${tokenB}`);
     expect(responseB.body.sessionCount).toBe(0);
-    expect(responseB.body.totalKgLifted).toBe(0);
-  });
-});
-
-describe("GET /progression/stalled", () => {
-  it("richiede autenticazione", async () => {
-    const { app } = buildTestApp();
-    const response = await request(app).get("/progression/stalled");
-    expect(response.status).toBe(401);
   });
 
-  it("torna null senza alcuna sessione registrata", async () => {
-    const { app } = buildTestApp();
-    const token = await bearerFor(OWNER_A);
-    const response = await request(app)
-      .get("/progression/stalled")
-      .set("Authorization", `Bearer ${token}`);
-    expect(response.status).toBe(200);
-    expect(response.body).toBeNull();
-  });
-
-  it("segnala un esercizio loggato per l'ultima volta oltre 21 giorni fa e mai progredito", async () => {
-    const { app } = buildTestApp();
-    const token = await bearerFor(OWNER_A);
-    const fortyDaysAgo = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString();
-
-    await request(app)
-      .post("/sessions")
-      .set("Authorization", `Bearer ${token}`)
-      .send(sessionPayload(fortyDaysAgo));
-
-    const response = await request(app)
-      .get("/progression/stalled")
-      .set("Authorization", `Bearer ${token}`);
-    expect(response.status).toBe(200);
-    expect(response.body).toMatchObject({ exerciseId: EXERCISE_ID, exerciseName: "Panca piana" });
-    expect(response.body.daysSinceLastProgression).toBeGreaterThanOrEqual(40);
-  });
-
-  it("non segnala un esercizio loggato di recente", async () => {
+  it("torna zero se non e' mai stata registrata nessuna sessione", async () => {
     const { app } = buildTestApp();
     const token = await bearerFor(OWNER_A);
 
-    await request(app)
-      .post("/sessions")
-      .set("Authorization", `Bearer ${token}`)
-      .send(sessionPayload(new Date().toISOString()));
+    const response = await request(app).get("/stats").set("Authorization", `Bearer ${token}`);
 
-    const response = await request(app)
-      .get("/progression/stalled")
-      .set("Authorization", `Bearer ${token}`);
-    expect(response.body).toBeNull();
+    expect(response.body).toMatchObject({
+      sessionCount: 0,
+      consecutiveWeeks: 0,
+      totalKgLifted: 0,
+      currentWeekVolumeByExercise: [],
+      recentExercises: [],
+      streakCalendar: [],
+    });
   });
 });

@@ -12,18 +12,19 @@ Web app (apps/web) / Android app (futuro)
             │
        API Gateway            (minimo: reverse-proxy verso i servizi)
             │
-   ┌────────┼────────┬─────────┐
-   │        │        │         │
- Auth   Workout   Progress   Notify
-   │        │        │         │
-   └────────┴────────┴─────────┘
+   ┌────────┼────────┬──────────┬─────────┐
+   │        │        │          │         │
+ Auth   Workout   History   Progress   Notify
+   │        │        │          │         │
+   └────────┴────────┴──────────┴─────────┘
                 │
    PostgreSQL · Redis · RabbitMQ · Mailpit
 ```
 
 - **api-gateway** — unico punto di ingresso per i client: inoltra le richieste
   ai servizi (`/auth`, `/me` → account-service; `/exercises`, `/workouts` →
-  workout-service; `/sessions`, `/progression` → progress-service;
+  workout-service; `/sessions`, `/stats` → history-service;
+  `/sessions/:id/status`, `/progression` → progress-service;
   `/notifications` → notify-service). Verifica centralmente il Bearer JWT
   (401 prima ancora di raggiungere un servizio a valle, tranne su
   `/auth/register`, `/auth/login`, `/auth/forgot-password` e
@@ -31,12 +32,17 @@ Web app (apps/web) / Android app (futuro)
   (più stringente su `/auth` e su `/me/password`) — in aggiunta, non in
   sostituzione, alla verifica che ogni servizio fa comunque per conto proprio.
 - **account-service** — utenti, JWT, reset password via email, cambio password
-  con codice email come secondo fattore (Fase 1). Le email (reset password,
-  conferma cambio password) sono catturate in locale da **Mailpit**
-  (nessun vero SMTP in sviluppo): UI su http://localhost:8025.
+  con codice email come secondo fattore (Fase 1), preferenze utente. Le email
+  (reset password, conferma cambio password) sono catturate in locale da
+  **Mailpit** (nessun vero SMTP in sviluppo): UI su http://localhost:8025.
 - **workout-service** — schede, esercizi, set/reps/peso/recupero (Fase 2)
-- **progress-service** — storico allenamenti + motore di regole di
-  progressione (Fase 3)
+- **history-service** — storico delle sessioni eseguite e statistiche
+  aggregate (Dashboard). Pubblica `session-logged`/`session-deleted` su
+  RabbitMQ: progress-service li consuma per valutare il motore di regole in
+  modo asincrono, invece di farlo nella stessa richiesta HTTP.
+- **progress-service** — motore di regole di progressione (Fase 3): decide
+  solo _quando_ suggerire un aumento di carico/ripetizioni, non possiede più
+  lo storico delle sessioni (spostato in history-service).
 - **notify-service** — notifiche quando una regola di progressione scatta
   (Fase 4)
 
@@ -72,12 +78,14 @@ docker compose up -d postgres redis rabbitmq   # solo infrastruttura
 npm run build --workspace=@gym-tracker/shared
 npm run db:migrate --workspace=@gym-tracker/account-service      # crea le tabelle
 npm run db:migrate --workspace=@gym-tracker/workout-service   # crea le tabelle + seed catalogo
-npm run db:migrate --workspace=@gym-tracker/progress-service  # crea le tabelle
+npm run db:migrate --workspace=@gym-tracker/progress-service  # crea anche workout_sessions/session_sets
+npm run db:migrate --workspace=@gym-tracker/history-service   # nessuna tabella propria: le usa da progress-service, va DOPO
 npm run db:migrate --workspace=@gym-tracker/notify-service    # crea le tabelle
 cd services/account-service && npm run dev         # avvia account-service in watch mode
 # in altri terminali:
 #   cd services/workout-service && npm run dev
 #   cd services/progress-service && npm run dev
+#   cd services/history-service && npm run dev
 #   cd services/notify-service && npm run dev
 #   cd services/api-gateway && npm run dev
 #   cd apps/web && npm run dev             # webapp su http://localhost:5173
@@ -111,6 +119,7 @@ docker compose up -d   # infrastruttura + servizi
 npm run db:migrate --workspace=@gym-tracker/account-service
 npm run db:migrate --workspace=@gym-tracker/workout-service
 npm run db:migrate --workspace=@gym-tracker/progress-service
+npm run db:migrate --workspace=@gym-tracker/history-service
 npm run db:migrate --workspace=@gym-tracker/notify-service
 
 cd apps/web && npm run dev   # webapp su http://localhost:5173
@@ -161,7 +170,7 @@ Ogni Pull Request verso `master` esegue automaticamente (`.github/workflows/ci.y
 4. Format check (`npm run format:check`, Prettier) — verificare in locale con
    `npm run format:check` prima di aprire una PR, `npm run format` per
    correggere
-5. Build dell'immagine Docker di ogni servizio implementato (`account-service`, `workout-service`, `progress-service`, `notify-service`, `api-gateway`)
+5. Build dell'immagine Docker di ogni servizio implementato (`account-service`, `workout-service`, `progress-service`, `history-service`, `notify-service`, `api-gateway`)
 
 La validazione obbligatoria delle PR è **attiva**: su `master` è impostata una
 branch protection rule con il check `CI passed` (il job `ci-status` del workflow)

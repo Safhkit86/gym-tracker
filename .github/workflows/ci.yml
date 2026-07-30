@@ -46,7 +46,15 @@ jobs:
     needs: lint-test-build
     strategy:
       matrix:
-        service: [account-service, workout-service, progress-service, notify-service, api-gateway]
+        service:
+          [
+            account-service,
+            workout-service,
+            progress-service,
+            history-service,
+            notify-service,
+            api-gateway,
+          ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4

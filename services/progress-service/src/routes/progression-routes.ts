@@ -3,13 +3,13 @@ import type { AccessTokenService } from "@gym-tracker/shared";
 import { authenticate } from "../middleware/authenticate.js";
 import { UnauthorizedError } from "../errors.js";
 import type { ProgressionEventRepository } from "../repositories/progression-event-repository.js";
-import type { StatsRepository } from "../repositories/stats-repository.js";
+import type { ExerciseHistoryCacheRepository } from "../repositories/exercise-history-cache-repository.js";
 
 /** Suggerimenti di progressione generati dal motore di regole, piu' la
  *  rilevazione dell'esercizio in stallo per la Dashboard. */
 export function createProgressionRoutes(
   progressionEvents: ProgressionEventRepository,
-  stats: StatsRepository,
+  exerciseHistoryCache: ExerciseHistoryCacheRepository,
   tokens: AccessTokenService
 ): Router {
   const router = Router();
@@ -28,7 +28,7 @@ export function createProgressionRoutes(
   // accorgimento gia' usato altrove per rotte letterali vs. parametriche).
   router.get("/progression/stalled", async (req, res, next) => {
     try {
-      const result = await stats.getStalledExercise(userId(req));
+      const result = await exerciseHistoryCache.getStalledExercise(userId(req));
       res.status(200).json(result);
     } catch (err) {
       next(err);

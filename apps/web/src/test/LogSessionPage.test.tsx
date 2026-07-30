@@ -374,6 +374,12 @@ describe("LogSessionPage", () => {
           notes: null,
           exercises: [],
           createdAt: new Date().toISOString(),
+        },
+      },
+      {
+        match: (u, m) => u.endsWith("/sessions/sess1/status") && m === "GET",
+        body: {
+          status: "with-suggestion",
           suggestions: [
             {
               id: "pe1",
@@ -436,6 +442,47 @@ describe("LogSessionPage", () => {
     expect(await screen.findByText(/aumenta il carico/i)).toBeInTheDocument();
   });
 
+  it("mostra 'nessun suggerimento' quando il polling risolve senza suggerimenti", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      preferencesHandler(),
+      {
+        match: (u, m) => u.endsWith("/sessions") && m === "POST",
+        status: 201,
+        body: {
+          id: "sess1",
+          workoutId: "w1",
+          workoutName: "Push day",
+          workoutNotes: null,
+          performedAt: new Date().toISOString(),
+          notes: null,
+          exercises: [],
+          createdAt: new Date().toISOString(),
+        },
+      },
+      {
+        match: (u, m) => u.endsWith("/sessions/sess1/status") && m === "GET",
+        body: { status: "no-suggestion", suggestions: [] },
+      },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+      </Routes>,
+      ["/workouts/w1/log"]
+    );
+
+    await screen.findByLabelText(/panca piana set 1 rep effettive/i);
+    fireEvent.click(screen.getByRole("button", { name: /registra sessione/i }));
+
+    expect(
+      await screen.findByText("Nessun suggerimento di progressione questa volta.")
+    ).toBeInTheDocument();
+  });
+
   it("aggiorna il badge in Layout quando la sessione registrata produce un suggerimento", async () => {
     // Mock manuale (non mockFetchResponses) perche' serve stato: prima della
     // POST /sessions non c'e' ancora nessuna notifica non letta, dopo si'
@@ -480,24 +527,29 @@ describe("LogSessionPage", () => {
             notes: null,
             exercises: [],
             createdAt: new Date().toISOString(),
-            suggestions: [
-              {
-                id: "pe1",
-                exerciseId: "e1",
-                exerciseName: "Panca piana",
-                triggeringSessionId: "sess1",
-                suggestionType: "increase_weight",
-                previousValue: 80,
-                suggestedValue: 82.5,
-                reason:
-                  "Obiettivo di ripetizioni raggiunto per 2 sessioni consecutive a 80kg: aumenta il carico.",
-                source: "rule",
-                createdAt: new Date().toISOString(),
-              },
-            ],
           },
           201
         );
+      }
+      if (url.endsWith("/sessions/sess1/status") && method === "GET") {
+        return jsonResponse({
+          status: "with-suggestion",
+          suggestions: [
+            {
+              id: "pe1",
+              exerciseId: "e1",
+              exerciseName: "Panca piana",
+              triggeringSessionId: "sess1",
+              suggestionType: "increase_weight",
+              previousValue: 80,
+              suggestedValue: 82.5,
+              reason:
+                "Obiettivo di ripetizioni raggiunto per 2 sessioni consecutive a 80kg: aumenta il carico.",
+              source: "rule",
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        });
       }
       throw new Error(`Nessun handler mockato per ${method} ${url}`);
     });

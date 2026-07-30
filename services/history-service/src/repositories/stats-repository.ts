@@ -1,18 +1,12 @@
 import { type Kysely, sql } from "kysely";
-import type { DashboardStats, MuscleGroupVolumeEntry, StalledExercise } from "@gym-tracker/shared";
+import type { DashboardStats, MuscleGroupVolumeEntry } from "@gym-tracker/shared";
 import type { Database } from "../db/types.js";
 import type { SessionRepository } from "./session-repository.js";
-import type { ProgressionEventRepository } from "./progression-event-repository.js";
 
-/** Sotto questa soglia (giorni dall'ultima progressione, o dal primo log se
- *  non ne ha mai avuta una) un esercizio non viene segnalato come "in
- *  stallo": evita di marcare come tale un esercizio fatto pochi giorni fa. */
-const STALLED_THRESHOLD_DAYS = 21;
 /** Finestra per "esercizi recenti" (candidati per i grafici della Dashboard)
  *  e per il calendario di costanza: stessa ampiezza di entrambi i widget. */
 const RECENT_WINDOW_DAYS = 35;
 const MAX_RECENT_EXERCISES = 20;
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 function startOfWeekUtc(date: Date): Date {
   const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -34,7 +28,6 @@ function toDateOnly(date: Date): string {
 
 export interface StatsRepository {
   getStats(userId: string, now?: Date): Promise<DashboardStats>;
-  getStalledExercise(userId: string, now?: Date): Promise<StalledExercise | null>;
 }
 
 export class KyselyStatsRepository implements StatsRepository {
@@ -125,70 +118,18 @@ export class KyselyStatsRepository implements StatsRepository {
       streakCalendar: calendarRows.map((r) => toDateOnly(new Date(r.day))).sort(),
     };
   }
-
-  async getStalledExercise(
-    userId: string,
-    now: Date = new Date()
-  ): Promise<StalledExercise | null> {
-    const [firstLoggedRows, lastProgressionRows] = await Promise.all([
-      this.db
-        .selectFrom("session_sets as ss")
-        .innerJoin("workout_sessions as ws", "ws.id", "ss.session_id")
-        .select(["ss.exercise_id", "ss.exercise_name"])
-        .select((eb) => eb.fn.min("ws.performed_at").as("first_logged"))
-        .where("ws.user_id", "=", userId)
-        .groupBy(["ss.exercise_id", "ss.exercise_name"])
-        .execute(),
-      this.db
-        .selectFrom("progression_events")
-        .select("exercise_id")
-        .select((eb) => eb.fn.max("created_at").as("last_progression"))
-        .where("user_id", "=", userId)
-        .groupBy("exercise_id")
-        .execute(),
-    ]);
-
-    if (firstLoggedRows.length === 0) {
-      return null;
-    }
-
-    const lastProgressionByExercise = new Map(
-      lastProgressionRows.map((r) => [r.exercise_id, new Date(r.last_progression)])
-    );
-
-    let stalled: StalledExercise | null = null;
-    let maxGapDays = -1;
-    for (const row of firstLoggedRows) {
-      const anchor = lastProgressionByExercise.get(row.exercise_id) ?? new Date(row.first_logged);
-      const gapDays = Math.floor((now.getTime() - anchor.getTime()) / DAY_MS);
-      if (gapDays > maxGapDays) {
-        maxGapDays = gapDays;
-        stalled = {
-          exerciseId: row.exercise_id,
-          exerciseName: row.exercise_name,
-          daysSinceLastProgression: gapDays,
-        };
-      }
-    }
-
-    return stalled && stalled.daysSinceLastProgression >= STALLED_THRESHOLD_DAYS ? stalled : null;
-  }
 }
 
 // --- Implementazione in memoria per i test ---
 //
 // A differenza di KyselyStatsRepository (query SQL aggregate dirette sulle
-// tabelle, per evitare di caricare in memoria lo storico completo — vedi
-// nota su "Kg totali sollevati" nel piano), qui non ha senso duplicare uno
-// storage: si compone sugli stessi repository in memoria di sessioni ed
-// eventi di progressione gia' usati dal resto dell'app di test, e si
+// tabelle, per evitare di caricare in memoria lo storico completo), qui non
+// ha senso duplicare uno storage: si compone sullo stesso repository in
+// memoria delle sessioni gia' usato dal resto dell'app di test, e si
 // ricalcola in JS. Le due implementazioni condividono solo l'interfaccia
 // pubblica, non la strategia.
 export class InMemoryStatsRepository implements StatsRepository {
-  constructor(
-    private readonly sessions: SessionRepository,
-    private readonly progressionEvents: ProgressionEventRepository
-  ) {}
+  constructor(private readonly sessions: SessionRepository) {}
 
   async getStats(userId: string, now: Date = new Date()): Promise<DashboardStats> {
     const sessions = await this.sessions.listByOwner(userId);
@@ -262,58 +203,5 @@ export class InMemoryStatsRepository implements StatsRepository {
       recentExercises,
       streakCalendar: [...trainedDays].sort(),
     };
-  }
-
-  async getStalledExercise(
-    userId: string,
-    now: Date = new Date()
-  ): Promise<StalledExercise | null> {
-    const [sessions, events] = await Promise.all([
-      this.sessions.listByOwner(userId),
-      this.progressionEvents.listByOwner(userId),
-    ]);
-    if (sessions.length === 0) {
-      return null;
-    }
-
-    const firstLoggedByExercise = new Map<string, { exerciseName: string; firstLogged: Date }>();
-    for (const session of sessions) {
-      const performedAt = new Date(session.performedAt);
-      for (const exercise of session.exercises) {
-        const existing = firstLoggedByExercise.get(exercise.exerciseId);
-        if (!existing || performedAt < existing.firstLogged) {
-          firstLoggedByExercise.set(exercise.exerciseId, {
-            exerciseName: exercise.exerciseName,
-            firstLogged: performedAt,
-          });
-        }
-      }
-    }
-
-    const lastProgressionByExercise = new Map<string, Date>();
-    for (const event of events) {
-      const createdAt = new Date(event.createdAt);
-      const existing = lastProgressionByExercise.get(event.exerciseId);
-      if (!existing || createdAt > existing) {
-        lastProgressionByExercise.set(event.exerciseId, createdAt);
-      }
-    }
-
-    let stalled: StalledExercise | null = null;
-    let maxGapDays = -1;
-    for (const [exerciseId, info] of firstLoggedByExercise) {
-      const anchor = lastProgressionByExercise.get(exerciseId) ?? info.firstLogged;
-      const gapDays = Math.floor((now.getTime() - anchor.getTime()) / DAY_MS);
-      if (gapDays > maxGapDays) {
-        maxGapDays = gapDays;
-        stalled = {
-          exerciseId,
-          exerciseName: info.exerciseName,
-          daysSinceLastProgression: gapDays,
-        };
-      }
-    }
-
-    return stalled && stalled.daysSinceLastProgression >= STALLED_THRESHOLD_DAYS ? stalled : null;
   }
 }

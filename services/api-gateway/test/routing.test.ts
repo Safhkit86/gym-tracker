@@ -120,7 +120,7 @@ describe("routing verso gli upstream", () => {
     expect(ctx.workout.lastRequest?.url).toBe("/workouts/11111111-1111-1111-1111-111111111111");
   });
 
-  it("inoltra POST /sessions a progress-service preservando il body", async () => {
+  it("inoltra POST /sessions a history-service preservando il body", async () => {
     const ctx = await buildTestApp();
     closeAll = ctx.closeAll;
     const token = await bearerFor("u1");
@@ -130,11 +130,27 @@ describe("routing verso gli upstream", () => {
       .set("Authorization", `Bearer ${token}`)
       .send({ workoutId: "11111111-1111-1111-1111-111111111111" });
 
-    expect(ctx.progress.lastRequest?.url).toBe("/sessions");
-    expect(JSON.parse(ctx.progress.lastRequest?.body ?? "{}")).toMatchObject({
+    expect(ctx.history.lastRequest?.url).toBe("/sessions");
+    expect(JSON.parse(ctx.history.lastRequest?.body ?? "{}")).toMatchObject({
       workoutId: "11111111-1111-1111-1111-111111111111",
     });
     expect(ctx.workout.lastRequest).toBeNull();
+    expect(ctx.progress.lastRequest).toBeNull();
+  });
+
+  it("inoltra GET /sessions/:id/status a progress-service, non a history-service", async () => {
+    const ctx = await buildTestApp();
+    closeAll = ctx.closeAll;
+    const token = await bearerFor("u1");
+
+    await request(ctx.app)
+      .get("/sessions/11111111-1111-1111-1111-111111111111/status")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(ctx.progress.lastRequest?.url).toBe(
+      "/sessions/11111111-1111-1111-1111-111111111111/status"
+    );
+    expect(ctx.history.lastRequest).toBeNull();
   });
 
   it("inoltra GET /progression a progress-service", async () => {
@@ -149,16 +165,17 @@ describe("routing verso gli upstream", () => {
     expect(ctx.auth.lastRequest).toBeNull();
   });
 
-  it("inoltra GET /stats a progress-service", async () => {
+  it("inoltra GET /stats a history-service", async () => {
     const ctx = await buildTestApp();
     closeAll = ctx.closeAll;
     const token = await bearerFor("u1");
 
     await request(ctx.app).get("/stats").set("Authorization", `Bearer ${token}`);
 
-    expect(ctx.progress.lastRequest?.url).toBe("/stats");
+    expect(ctx.history.lastRequest?.url).toBe("/stats");
     expect(ctx.workout.lastRequest).toBeNull();
     expect(ctx.auth.lastRequest).toBeNull();
+    expect(ctx.progress.lastRequest).toBeNull();
   });
 
   it("inoltra GET /notifications a notify-service", async () => {
