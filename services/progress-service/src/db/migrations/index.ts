@@ -1,4 +1,4 @@
-import type { Migration } from "kysely";
+import type { Migration } from "kysely/migration";
 import * as createProgressTables from "./001-create-progress-tables.js";
 import * as addMinMaxReps from "./002-add-min-max-reps.js";
 import * as addRestSecondsSnapshot from "./003-add-rest-seconds-snapshot.js";

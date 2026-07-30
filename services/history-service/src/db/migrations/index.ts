@@ -1,4 +1,4 @@
-import type { Migration } from "kysely";
+import type { Migration } from "kysely/migration";
 import * as addMeasurementEntries from "./001-add-measurement-entries.js";
 
 /**
