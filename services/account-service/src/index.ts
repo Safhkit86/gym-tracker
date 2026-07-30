@@ -1,9 +1,12 @@
-import { createAccessTokenService, createLogger } from "@gym-tracker/shared";
+import {
+  createAccessTokenService,
+  createLogger,
+  createNodemailerMailer,
+} from "@gym-tracker/shared";
 import { createApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { createDb } from "./db/client.js";
 import { argon2Hasher } from "./domain/password.js";
-import { createNodemailerMailer } from "./domain/mailer.js";
 import { KyselyUserRepository } from "./repositories/user-repository.js";
 import { KyselyPasswordActionTokenRepository } from "./repositories/password-action-token-repository.js";
 import { KyselyUserMeasurementsRepository } from "./repositories/user-measurements-repository.js";

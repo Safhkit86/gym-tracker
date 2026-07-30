@@ -14,6 +14,12 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   JWT_SECRET: z.string().min(1, "JWT_SECRET non puo' essere vuoto"),
   RABBITMQ_URL: z.string().url(),
+  SMTP_HOST: z.string().min(1),
+  SMTP_PORT: z.coerce.number().int().positive(),
+  SMTP_FROM: z.string().min(1),
+  /** Contatto operativo avvisato quando un messaggio finisce in dead-letter
+   *  (nessun nuovo ruolo/utente applicativo: e' solo un indirizzo email). */
+  OPS_ALERT_EMAIL: z.string().email(),
 });
 
 export type Config = z.infer<typeof envSchema>;

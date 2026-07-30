@@ -1,8 +1,8 @@
 import { createAccessTokenService, createLogger } from "@gym-tracker/shared";
+import type { Mailer, MailMessage } from "@gym-tracker/shared";
 import { createApp } from "../src/app.js";
 import type { AppDeps } from "../src/app.js";
 import type { PasswordHasher } from "../src/domain/password.js";
-import type { Mailer, MailMessage } from "../src/domain/mailer.js";
 import { InMemoryUserRepository } from "../src/repositories/user-repository.js";
 import { InMemoryPasswordActionTokenRepository } from "../src/repositories/password-action-token-repository.js";
 import { InMemoryUserMeasurementsRepository } from "../src/repositories/user-measurements-repository.js";
