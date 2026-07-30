@@ -21,13 +21,14 @@ function stubNarrowViewport(matches: boolean): void {
 
 function preferencesHandler(
   body: unknown = {
-    requiredConsecutiveSessions: 2,
-    groupingScope: "workout",
     prefillScope: "workout",
     timerSoundEnabled: false,
   }
 ) {
-  return { match: (u: string, m: string) => u.endsWith("/me/preferences") && m === "GET", body };
+  return {
+    match: (u: string, m: string) => u.endsWith("/me/account-preferences") && m === "GET",
+    body,
+  };
 }
 
 function progressionDefaultsHandler(body: unknown = []) {
@@ -283,11 +284,7 @@ describe("LogSessionPage", () => {
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
       { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [otherWorkoutSession] },
-      preferencesHandler({
-        requiredConsecutiveSessions: 2,
-        groupingScope: "workout",
-        prefillScope: "workout",
-      }),
+      preferencesHandler({ prefillScope: "workout", timerSoundEnabled: false }),
     ]);
 
     renderWithProviders(
@@ -341,11 +338,7 @@ describe("LogSessionPage", () => {
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
       { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [otherWorkoutSession] },
-      preferencesHandler({
-        requiredConsecutiveSessions: 2,
-        groupingScope: "workout",
-        prefillScope: "exercise",
-      }),
+      preferencesHandler({ prefillScope: "exercise", timerSoundEnabled: false }),
     ]);
 
     renderWithProviders(
@@ -466,12 +459,8 @@ describe("LogSessionPage", () => {
       if (url.endsWith("/sessions") && method === "GET") {
         return jsonResponse([]);
       }
-      if (url.endsWith("/me/preferences") && method === "GET") {
-        return jsonResponse({
-          requiredConsecutiveSessions: 2,
-          groupingScope: "workout",
-          prefillScope: "workout",
-        });
+      if (url.endsWith("/me/account-preferences") && method === "GET") {
+        return jsonResponse({ prefillScope: "workout", timerSoundEnabled: false });
       }
       if (url.endsWith("/me/progression-defaults") && method === "GET") {
         return jsonResponse([]);

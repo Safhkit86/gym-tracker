@@ -1,18 +1,18 @@
 import { Router } from "express";
 import { z } from "zod";
 import type { AccessTokenService } from "@gym-tracker/shared";
-import { authenticate } from "../middleware/authenticate.js";
 import { UnauthorizedError } from "../errors.js";
-import type { ProgressionPreferencesRepository } from "../repositories/progression-preferences-repository.js";
+import type { AccountPreferencesRepository } from "../repositories/account-preferences-repository.js";
+import { authenticate } from "../middleware/authenticate.js";
 
-const preferencesSchema = z.object({
-  requiredConsecutiveSessions: z.number().int().min(1).max(10),
-  groupingScope: z.enum(["workout", "exercise"]),
+const accountPreferencesSchema = z.object({
+  prefillScope: z.enum(["workout", "exercise"]),
+  timerSoundEnabled: z.boolean(),
 });
 
-/** Preferenze per-utente del motore di progressione (Profilo > Preferenze). */
-export function createPreferencesRoutes(
-  preferences: ProgressionPreferencesRepository,
+/** Preferenze utente non legate al motore di progressione (Profilo > Preferenze). */
+export function createAccountPreferencesRoutes(
+  preferences: AccountPreferencesRepository,
   tokens: AccessTokenService
 ): Router {
   const router = Router();
@@ -26,7 +26,7 @@ export function createPreferencesRoutes(
     return id;
   }
 
-  router.get("/me/preferences", async (req, res, next) => {
+  router.get("/me/account-preferences", async (req, res, next) => {
     try {
       const record = await preferences.find(userId(req));
       res.status(200).json(record);
@@ -35,9 +35,9 @@ export function createPreferencesRoutes(
     }
   });
 
-  router.put("/me/preferences", async (req, res, next) => {
+  router.put("/me/account-preferences", async (req, res, next) => {
     try {
-      const body = preferencesSchema.parse(req.body);
+      const body = accountPreferencesSchema.parse(req.body);
       const record = await preferences.upsert(userId(req), body);
       res.status(200).json(record);
     } catch (err) {

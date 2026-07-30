@@ -10,7 +10,7 @@ import { useAuth } from "../auth/useAuth";
 import { useUnreadCount } from "../notifications/useUnreadCount";
 import { getWorkout } from "../api/workouts";
 import { listSessions, logSession } from "../api/sessions";
-import { getProgressionDefaults, getProgressionPreferences } from "../api/profile";
+import { getAccountPreferences, getProgressionDefaults } from "../api/profile";
 import { ApiRequestError } from "../api/client";
 import { NARROW_TABLE_LAYOUT_QUERY, useIsNarrowViewport } from "../hooks/useIsNarrowViewport";
 import { useRestTimers } from "../hooks/useRestTimers";
@@ -259,7 +259,7 @@ export function LogSessionPage() {
     Promise.all([
       getWorkout(token, id),
       listSessions(token),
-      getProgressionPreferences(token),
+      getAccountPreferences(token),
       getProgressionDefaults(token),
     ])
       .then(([detail, previousSessions, preferences, progressionDefaults]) => {

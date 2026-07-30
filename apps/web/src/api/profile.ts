@@ -1,7 +1,9 @@
 import type {
   AcceptProgressionDefaultsRequest,
+  AccountPreferences,
   ProgressionDefault,
   ProgressionPreferences,
+  UpdateAccountPreferencesRequest,
   UpdateProgressionPreferencesRequest,
   UpdateUserMeasurementsRequest,
   UserMeasurements,
@@ -28,6 +30,21 @@ export function updateProgressionPreferences(
   body: UpdateProgressionPreferencesRequest
 ): Promise<ProgressionPreferences> {
   return apiRequest<ProgressionPreferences>("/me/preferences", { method: "PUT", body, token });
+}
+
+export function getAccountPreferences(token: string): Promise<AccountPreferences> {
+  return apiRequest<AccountPreferences>("/me/account-preferences", { token });
+}
+
+export function updateAccountPreferences(
+  token: string,
+  body: UpdateAccountPreferencesRequest
+): Promise<AccountPreferences> {
+  return apiRequest<AccountPreferences>("/me/account-preferences", {
+    method: "PUT",
+    body,
+    token,
+  });
 }
 
 export function getProgressionDefaults(token: string): Promise<ProgressionDefault[]> {

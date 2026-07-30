@@ -23,25 +23,33 @@ export type UpdateUserMeasurementsRequest = UserMeasurements;
  * (comportamento storico) o per solo esercizio, indipendentemente dalla
  * scheda in cui compare (es. lo stesso esercizio in due schede diverse
  * della settimana).
- *
- * `prefillScope` e' un concetto distinto (non riguarda il motore di
- * suggerimento, ma la precompilazione delle rep effettive quando si apre
- * Registra sessione, vedi LogSessionPage.tsx): se le ultime rep storicizzate
- * da riproporre vengono cercate per scheda+esercizio (comportamento
- * storico) o per solo esercizio, indipendentemente dalla scheda.
- *
- * `timerSoundEnabled` e' ancora distinto (niente a che vedere col motore di
- * progressione): se il timer di recupero in Registra sessione deve suonare
- * un allarme a fine conto alla rovescia, vedi useRestTimers.ts.
  */
 export interface ProgressionPreferences {
   requiredConsecutiveSessions: number;
   groupingScope: "workout" | "exercise";
+}
+
+export type UpdateProgressionPreferencesRequest = ProgressionPreferences;
+
+/**
+ * Preferenze utente non legate al motore di progressione (account-service,
+ * Profilo > Preferenze): niente a che vedere con lo storico o col motore di
+ * suggerimento, solo consumate lato client.
+ *
+ * `prefillScope`: se le ultime rep storicizzate da riproporre in Registra
+ * sessione (vedi LogSessionPage.tsx) vengono cercate per scheda+esercizio
+ * (comportamento storico) o per solo esercizio, indipendentemente dalla
+ * scheda.
+ *
+ * `timerSoundEnabled`: se il timer di recupero in Registra sessione deve
+ * suonare un allarme a fine conto alla rovescia, vedi useRestTimers.ts.
+ */
+export interface AccountPreferences {
   prefillScope: "workout" | "exercise";
   timerSoundEnabled: boolean;
 }
 
-export type UpdateProgressionPreferencesRequest = ProgressionPreferences;
+export type UpdateAccountPreferencesRequest = AccountPreferences;
 
 /**
  * Override "una tantum" del prefill di Registra sessione, creato quando

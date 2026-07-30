@@ -6,6 +6,7 @@ import type { Mailer, MailMessage } from "../src/domain/mailer.js";
 import { InMemoryUserRepository } from "../src/repositories/user-repository.js";
 import { InMemoryPasswordActionTokenRepository } from "../src/repositories/password-action-token-repository.js";
 import { InMemoryUserMeasurementsRepository } from "../src/repositories/user-measurements-repository.js";
+import { InMemoryAccountPreferencesRepository } from "../src/repositories/account-preferences-repository.js";
 
 /**
  * Hasher finto, deterministico e veloce: evita di pagare il costo (voluto) di
@@ -67,6 +68,7 @@ export function buildTestApp(): {
     users: new InMemoryUserRepository(),
     passwordActionTokens: new InMemoryPasswordActionTokenRepository(),
     measurements: new InMemoryUserMeasurementsRepository(),
+    accountPreferences: new InMemoryAccountPreferencesRepository(),
     passwords: fakeHasher,
     tokens: createAccessTokenService(TEST_JWT_SECRET),
     mailer,

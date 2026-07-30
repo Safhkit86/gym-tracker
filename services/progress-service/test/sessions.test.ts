@@ -214,8 +214,6 @@ describe("POST /sessions", () => {
     await request(app).put("/me/preferences").set("Authorization", `Bearer ${token}`).send({
       requiredConsecutiveSessions: 2,
       groupingScope: "exercise",
-      prefillScope: "workout",
-      timerSoundEnabled: false,
     });
 
     await request(app)
@@ -241,8 +239,6 @@ describe("POST /sessions", () => {
     await request(app).put("/me/preferences").set("Authorization", `Bearer ${token}`).send({
       requiredConsecutiveSessions: 1,
       groupingScope: "workout",
-      prefillScope: "workout",
-      timerSoundEnabled: false,
     });
 
     const first = await request(app)

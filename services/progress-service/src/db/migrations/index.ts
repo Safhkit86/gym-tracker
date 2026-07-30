@@ -10,6 +10,7 @@ import * as addPrefillScope from "./008-add-prefill-scope.js";
 import * as addProgressionDefaults from "./009-add-progression-defaults.js";
 import * as addTimerSoundEnabled from "./010-add-timer-sound-enabled.js";
 import * as renameOwnerIdToUserId from "./011-rename-owner-id-to-user-id.js";
+import * as dropPrefillScopeAndTimerSound from "./012-drop-prefill-scope-and-timer-sound.js";
 
 /**
  * Registro statico delle migrazioni (chiavi ordinate). Preferito a
@@ -28,4 +29,5 @@ export const migrations: Record<string, Migration> = {
   "009-add-progression-defaults": addProgressionDefaults,
   "010-add-timer-sound-enabled": addTimerSoundEnabled,
   "011-rename-owner-id-to-user-id": renameOwnerIdToUserId,
+  "012-drop-prefill-scope-and-timer-sound": dropPrefillScopeAndTimerSound,
 };

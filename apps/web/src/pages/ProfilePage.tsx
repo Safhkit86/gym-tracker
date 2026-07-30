@@ -1,10 +1,12 @@
 import { useEffect, useState, type FormEvent } from "react";
-import type { ProgressionPreferences } from "@gym-tracker/shared";
+import type { AccountPreferences, ProgressionPreferences } from "@gym-tracker/shared";
 import { useAuth } from "../auth/useAuth";
 import { confirmPasswordChange, requestPasswordChange } from "../api/auth";
 import {
+  getAccountPreferences,
   getMeasurements,
   getProgressionPreferences,
+  updateAccountPreferences,
   updateMeasurements,
   updateProgressionPreferences,
 } from "../api/profile";
@@ -51,8 +53,7 @@ export function ProfilePage() {
   const [requiredConsecutiveSessions, setRequiredConsecutiveSessions] = useState("2");
   const [groupingScope, setGroupingScope] =
     useState<ProgressionPreferences["groupingScope"]>("workout");
-  const [prefillScope, setPrefillScope] =
-    useState<ProgressionPreferences["prefillScope"]>("workout");
+  const [prefillScope, setPrefillScope] = useState<AccountPreferences["prefillScope"]>("workout");
   const [timerSoundEnabled, setTimerSoundEnabled] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [preferencesError, setPreferencesError] = useState<string | null>(null);
@@ -63,12 +64,12 @@ export function ProfilePage() {
     if (!token) {
       return;
     }
-    getProgressionPreferences(token)
-      .then((data) => {
-        setRequiredConsecutiveSessions(String(data.requiredConsecutiveSessions));
-        setGroupingScope(data.groupingScope);
-        setPrefillScope(data.prefillScope);
-        setTimerSoundEnabled(data.timerSoundEnabled);
+    Promise.all([getProgressionPreferences(token), getAccountPreferences(token)])
+      .then(([progression, account]) => {
+        setRequiredConsecutiveSessions(String(progression.requiredConsecutiveSessions));
+        setGroupingScope(progression.groupingScope);
+        setPrefillScope(account.prefillScope);
+        setTimerSoundEnabled(account.timerSoundEnabled);
         setPreferencesLoaded(true);
       })
       .catch((err: unknown) => {
@@ -192,16 +193,20 @@ export function ProfilePage() {
 
     setIsSavingPreferences(true);
     try {
-      const result = await updateProgressionPreferences(token, {
-        requiredConsecutiveSessions: Number(requiredConsecutiveSessions),
-        groupingScope,
-        prefillScope,
-        timerSoundEnabled,
-      });
-      setRequiredConsecutiveSessions(String(result.requiredConsecutiveSessions));
-      setGroupingScope(result.groupingScope);
-      setPrefillScope(result.prefillScope);
-      setTimerSoundEnabled(result.timerSoundEnabled);
+      const [progressionResult, accountResult] = await Promise.all([
+        updateProgressionPreferences(token, {
+          requiredConsecutiveSessions: Number(requiredConsecutiveSessions),
+          groupingScope,
+        }),
+        updateAccountPreferences(token, {
+          prefillScope,
+          timerSoundEnabled,
+        }),
+      ]);
+      setRequiredConsecutiveSessions(String(progressionResult.requiredConsecutiveSessions));
+      setGroupingScope(progressionResult.groupingScope);
+      setPrefillScope(accountResult.prefillScope);
+      setTimerSoundEnabled(accountResult.timerSoundEnabled);
       setPreferencesMessage("Preferenze salvate.");
     } catch (err) {
       setPreferencesError(
@@ -471,9 +476,7 @@ export function ProfilePage() {
                       id="pref-prefill-scope"
                       value={prefillScope}
                       onChange={(event) =>
-                        setPrefillScope(
-                          event.target.value as ProgressionPreferences["prefillScope"]
-                        )
+                        setPrefillScope(event.target.value as AccountPreferences["prefillScope"])
                       }
                     >
                       <option value="workout">Scheda + esercizio</option>
