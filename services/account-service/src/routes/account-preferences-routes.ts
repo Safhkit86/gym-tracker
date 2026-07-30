@@ -8,6 +8,7 @@ import { authenticate } from "../middleware/authenticate.js";
 const accountPreferencesSchema = z.object({
   prefillScope: z.enum(["workout", "exercise"]),
   timerSoundEnabled: z.boolean(),
+  historicizeMeasurements: z.boolean(),
 });
 
 /** Preferenze utente non legate al motore di progressione (Profilo > Preferenze). */

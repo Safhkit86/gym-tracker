@@ -1,101 +1,62 @@
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 
-export interface UserMeasurements {
+/**
+ * Solo `heightCm`: l'unico valore davvero "corrente" (nessuno storico ha
+ * senso per l'altezza). Peso/petto/braccia/vita/gamba sono storicizzati in
+ * history-service (`measurement_entries`) e letti qui via cache Redis, vedi
+ * measurement-cache-repository.ts e measurements-routes.ts.
+ */
+export interface UserHeight {
   heightCm: number | null;
-  weightKg: number | null;
-  chestCm: number | null;
-  armCm: number | null;
-  waistCm: number | null;
-  legCm: number | null;
 }
 
-const EMPTY_MEASUREMENTS: UserMeasurements = {
-  heightCm: null,
-  weightKg: null,
-  chestCm: null,
-  armCm: null,
-  waistCm: null,
-  legCm: null,
-};
+const EMPTY_HEIGHT: UserHeight = { heightCm: null };
 
 export interface UserMeasurementsRepository {
-  /** Tutti i campi `null` se l'utente non ha ancora salvato nulla. */
-  find(userId: string): Promise<UserMeasurements>;
-  upsert(userId: string, values: UserMeasurements): Promise<UserMeasurements>;
-}
-
-interface UserMeasurementsRow {
-  height_cm: number | null;
-  weight_kg: string | null;
-  chest_cm: string | null;
-  arm_cm: string | null;
-  waist_cm: string | null;
-  leg_cm: string | null;
-}
-
-function toRecord(row: UserMeasurementsRow): UserMeasurements {
-  return {
-    heightCm: row.height_cm,
-    weightKg: row.weight_kg === null ? null : Number(row.weight_kg),
-    chestCm: row.chest_cm === null ? null : Number(row.chest_cm),
-    armCm: row.arm_cm === null ? null : Number(row.arm_cm),
-    waistCm: row.waist_cm === null ? null : Number(row.waist_cm),
-    legCm: row.leg_cm === null ? null : Number(row.leg_cm),
-  };
+  /** `heightCm: null` se l'utente non ha ancora salvato nulla. */
+  find(userId: string): Promise<UserHeight>;
+  upsert(userId: string, values: UserHeight): Promise<UserHeight>;
 }
 
 /** Implementazione su Postgres via Kysely. */
 export class KyselyUserMeasurementsRepository implements UserMeasurementsRepository {
   constructor(private readonly db: Kysely<Database>) {}
 
-  async find(userId: string): Promise<UserMeasurements> {
+  async find(userId: string): Promise<UserHeight> {
     const row = await this.db
       .selectFrom("user_measurements")
-      .selectAll()
+      .select("height_cm")
       .where("user_id", "=", userId)
       .executeTakeFirst();
-    return row ? toRecord(row) : EMPTY_MEASUREMENTS;
+    return row ? { heightCm: row.height_cm } : EMPTY_HEIGHT;
   }
 
-  async upsert(userId: string, values: UserMeasurements): Promise<UserMeasurements> {
+  async upsert(userId: string, values: UserHeight): Promise<UserHeight> {
     const row = await this.db
       .insertInto("user_measurements")
-      .values({
-        user_id: userId,
-        height_cm: values.heightCm,
-        weight_kg: values.weightKg,
-        chest_cm: values.chestCm,
-        arm_cm: values.armCm,
-        waist_cm: values.waistCm,
-        leg_cm: values.legCm,
-      })
+      .values({ user_id: userId, height_cm: values.heightCm })
       .onConflict((oc) =>
         oc.column("user_id").doUpdateSet({
           height_cm: values.heightCm,
-          weight_kg: values.weightKg,
-          chest_cm: values.chestCm,
-          arm_cm: values.armCm,
-          waist_cm: values.waistCm,
-          leg_cm: values.legCm,
           updated_at: new Date(),
         })
       )
-      .returningAll()
+      .returning("height_cm")
       .executeTakeFirstOrThrow();
-    return toRecord(row);
+    return { heightCm: row.height_cm };
   }
 }
 
 /** Implementazione in memoria: usata nei test per evitare un DB reale. */
 export class InMemoryUserMeasurementsRepository implements UserMeasurementsRepository {
-  private readonly byUserId = new Map<string, UserMeasurements>();
+  private readonly byUserId = new Map<string, UserHeight>();
 
-  async find(userId: string): Promise<UserMeasurements> {
-    return this.byUserId.get(userId) ?? EMPTY_MEASUREMENTS;
+  async find(userId: string): Promise<UserHeight> {
+    return this.byUserId.get(userId) ?? EMPTY_HEIGHT;
   }
 
-  async upsert(userId: string, values: UserMeasurements): Promise<UserMeasurements> {
+  async upsert(userId: string, values: UserHeight): Promise<UserHeight> {
     this.byUserId.set(userId, values);
     return values;
   }

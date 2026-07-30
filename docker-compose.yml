@@ -83,12 +83,18 @@ services:
       SMTP_PORT: 1025
       SMTP_FROM: ${SMTP_FROM:-no-reply@gym-tracker.local}
       WEB_APP_URL: ${WEB_APP_URL:-http://localhost:5173}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-gymtracker}:${RABBITMQ_PASSWORD:-gymtracker}@rabbitmq:5672
+      REDIS_URL: redis://redis:6379
     ports:
       - "${ACCOUNT_SERVICE_PORT:-4001}:4001"
     depends_on:
       postgres:
         condition: service_healthy
       mailpit:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   workout-service:

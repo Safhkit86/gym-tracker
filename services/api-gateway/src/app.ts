@@ -132,6 +132,10 @@ export function createApp(deps: AppDeps): Express {
   app.use("/progression", proxyTo(deps.progressServiceUrl));
   app.use("/notifications", proxyTo(deps.notifyServiceUrl));
   app.use("/stats", proxyTo(deps.historyServiceUrl));
+  // Storico misure (Storico > Misure): history-service. Le ultime misure
+  // "correnti" restano su account-service via il blanket /me qui sopra
+  // (GET/PUT /me/measurements), invariato.
+  app.use("/measurements", proxyTo(deps.historyServiceUrl));
 
   app.use((req, res) => {
     req.log.warn("rotta non trovata");

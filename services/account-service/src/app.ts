@@ -14,6 +14,8 @@ import type { UserRepository } from "./repositories/user-repository.js";
 import type { PasswordActionTokenRepository } from "./repositories/password-action-token-repository.js";
 import type { UserMeasurementsRepository } from "./repositories/user-measurements-repository.js";
 import type { AccountPreferencesRepository } from "./repositories/account-preferences-repository.js";
+import type { MeasurementCacheRepository } from "./repositories/measurement-cache-repository.js";
+import type { MeasurementEventPublisher } from "./events/measurement-events-publisher.js";
 import { createAuthRoutes } from "./routes/auth-routes.js";
 import { createMeRoutes } from "./routes/me-routes.js";
 import { createMeasurementsRoutes } from "./routes/measurements-routes.js";
@@ -32,6 +34,8 @@ export interface AppDeps {
   users: UserRepository;
   passwordActionTokens: PasswordActionTokenRepository;
   measurements: UserMeasurementsRepository;
+  measurementCache: MeasurementCacheRepository;
+  measurementEventPublisher: MeasurementEventPublisher;
   accountPreferences: AccountPreferencesRepository;
   passwords: PasswordHasher;
   tokens: AccessTokenService;
@@ -67,7 +71,14 @@ export function createApp(deps: AppDeps): Express {
 
   app.use("/auth", createAuthRoutes(authService, passwordResetService));
   app.use(createMeRoutes(deps.users, deps.tokens, passwordChangeService));
-  app.use(createMeasurementsRoutes(deps.measurements, deps.tokens));
+  app.use(
+    createMeasurementsRoutes(
+      deps.measurements,
+      deps.measurementCache,
+      deps.measurementEventPublisher,
+      deps.tokens
+    )
+  );
   app.use(createAccountPreferencesRoutes(deps.accountPreferences, deps.tokens));
 
   // Error handler: registrato per ultimo, mappa gli errori in ApiError.

@@ -4,11 +4,13 @@ import type { Database, PrefillScope } from "../db/types.js";
 export interface AccountPreferencesRecord {
   prefillScope: PrefillScope;
   timerSoundEnabled: boolean;
+  historicizeMeasurements: boolean;
 }
 
 const DEFAULT_PREFERENCES: AccountPreferencesRecord = {
   prefillScope: "workout",
   timerSoundEnabled: false,
+  historicizeMeasurements: true,
 };
 
 export interface AccountPreferencesRepository {
@@ -33,6 +35,7 @@ export class KyselyAccountPreferencesRepository implements AccountPreferencesRep
     return {
       prefillScope: row.prefill_scope,
       timerSoundEnabled: row.timer_sound_enabled,
+      historicizeMeasurements: row.historicize_measurements,
     };
   }
 
@@ -46,11 +49,13 @@ export class KyselyAccountPreferencesRepository implements AccountPreferencesRep
         user_id: userId,
         prefill_scope: values.prefillScope,
         timer_sound_enabled: values.timerSoundEnabled,
+        historicize_measurements: values.historicizeMeasurements,
       })
       .onConflict((oc) =>
         oc.column("user_id").doUpdateSet({
           prefill_scope: values.prefillScope,
           timer_sound_enabled: values.timerSoundEnabled,
+          historicize_measurements: values.historicizeMeasurements,
           updated_at: new Date(),
         })
       )
@@ -59,6 +64,7 @@ export class KyselyAccountPreferencesRepository implements AccountPreferencesRep
     return {
       prefillScope: row.prefill_scope,
       timerSoundEnabled: row.timer_sound_enabled,
+      historicizeMeasurements: row.historicize_measurements,
     };
   }
 }

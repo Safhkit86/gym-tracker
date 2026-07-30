@@ -194,3 +194,61 @@ export interface SessionDeletedEvent {
 
 export const SESSION_LOGGED_QUEUE = "session-logged";
 export const SESSION_DELETED_QUEUE = "session-deleted";
+
+// --- Storico misure (measurement_entries, GET/DELETE /measurements) ---
+
+/** Una misurazione storicizzata in una data specifica. Tutti i campi misura
+ *  sono nullable: un salvataggio puo' valorizzarne solo alcuni. Upsert per
+ *  (userId, measuredOn): salvare di nuovo sulla stessa data aggiorna questa
+ *  entry invece di crearne una nuova. */
+export interface MeasurementEntry {
+  id: string;
+  measuredOn: string;
+  weightKg: number | null;
+  chestCm: number | null;
+  armCm: number | null;
+  waistCm: number | null;
+  legCm: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// --- Eventi RabbitMQ (account-service <-> history-service) ---
+
+/**
+ * Pubblicato da account-service quando l'utente salva le misure via
+ * `PUT /me/measurements`. A differenza degli altri eventi di questo file
+ * (best-effort, la scrittura primaria e' gia' avvenuta localmente), qui il
+ * publish e' l'UNICA scrittura primaria: peso/petto/braccia/vita/gamba non
+ * hanno alcuna copia locale in account-service. Il publish deve quindi
+ * essere confermato (`waitForConfirms()`) e un suo fallimento deve far
+ * fallire la richiesta HTTP, non essere ignorato in log. `measuredOn`:
+ * sempre valorizzato dal chiamante (oggi se l'utente non ne ha scelta una).
+ */
+export interface MeasurementSaveRequestedEvent {
+  userId: string;
+  measuredOn: string;
+  weightKg: number | null;
+  chestCm: number | null;
+  armCm: number | null;
+  waistCm: number | null;
+  legCm: number | null;
+}
+
+/** Pubblicato da history-service dopo l'upsert in `measurement_entries`.
+ *  Consumato da account-service per aggiornare la cache Redis di lettura
+ *  veloce (`measurements:<userId>`) usata da `GET /me/measurements` — le
+ *  ultime misure note, non l'intera entry (niente id/measuredOn: la cache
+ *  serve solo a mostrare gli ultimi valori, lo storico con data si legge
+ *  sempre da `GET /measurements`). */
+export interface MeasurementRecordedEvent {
+  userId: string;
+  weightKg: number | null;
+  chestCm: number | null;
+  armCm: number | null;
+  waistCm: number | null;
+  legCm: number | null;
+}
+
+export const MEASUREMENT_SAVE_REQUESTED_QUEUE = "measurement-save-requested";
+export const MEASUREMENT_RECORDED_QUEUE = "measurement-recorded";

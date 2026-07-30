@@ -19,7 +19,11 @@ describe("GET /me/account-preferences", () => {
       .set("Authorization", `Bearer ${token}`);
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ prefillScope: "workout", timerSoundEnabled: false });
+    expect(response.body).toEqual({
+      prefillScope: "workout",
+      timerSoundEnabled: false,
+      historicizeMeasurements: true,
+    });
   });
 
   it("risponde 401 senza token", async () => {
@@ -39,10 +43,14 @@ describe("PUT /me/account-preferences", () => {
     const response = await request(app)
       .put("/me/account-preferences")
       .set("Authorization", `Bearer ${token}`)
-      .send({ prefillScope: "exercise", timerSoundEnabled: true });
+      .send({ prefillScope: "exercise", timerSoundEnabled: true, historicizeMeasurements: false });
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ prefillScope: "exercise", timerSoundEnabled: true });
+    expect(response.body).toEqual({
+      prefillScope: "exercise",
+      timerSoundEnabled: true,
+      historicizeMeasurements: false,
+    });
 
     const getResponse = await request(app)
       .get("/me/account-preferences")
@@ -57,14 +65,18 @@ describe("PUT /me/account-preferences", () => {
     await request(app)
       .put("/me/account-preferences")
       .set("Authorization", `Bearer ${token}`)
-      .send({ prefillScope: "exercise", timerSoundEnabled: true });
+      .send({ prefillScope: "exercise", timerSoundEnabled: true, historicizeMeasurements: false });
 
     const response = await request(app)
       .put("/me/account-preferences")
       .set("Authorization", `Bearer ${token}`)
-      .send({ prefillScope: "workout", timerSoundEnabled: false });
+      .send({ prefillScope: "workout", timerSoundEnabled: false, historicizeMeasurements: true });
 
-    expect(response.body).toEqual({ prefillScope: "workout", timerSoundEnabled: false });
+    expect(response.body).toEqual({
+      prefillScope: "workout",
+      timerSoundEnabled: false,
+      historicizeMeasurements: true,
+    });
   });
 
   it("risponde 400 per un prefillScope non valido", async () => {
@@ -74,7 +86,7 @@ describe("PUT /me/account-preferences", () => {
     const response = await request(app)
       .put("/me/account-preferences")
       .set("Authorization", `Bearer ${token}`)
-      .send({ prefillScope: "bogus", timerSoundEnabled: false });
+      .send({ prefillScope: "bogus", timerSoundEnabled: false, historicizeMeasurements: true });
 
     expect(response.status).toBe(400);
     expect(response.body.code).toBe("VALIDATION_ERROR");
@@ -85,7 +97,7 @@ describe("PUT /me/account-preferences", () => {
 
     const response = await request(app)
       .put("/me/account-preferences")
-      .send({ prefillScope: "workout", timerSoundEnabled: false });
+      .send({ prefillScope: "workout", timerSoundEnabled: false, historicizeMeasurements: true });
 
     expect(response.status).toBe(401);
   });

@@ -208,4 +208,101 @@ describe("SessionHistoryPage", () => {
       expect(screen.getByText(/non hai ancora registrato/i)).toBeInTheDocument();
     });
   });
+
+  describe("tab Misure", () => {
+    // Delta tutti diversi tra loro apposta: altrimenti piu' campi
+    // mostrerebbero lo stesso testo (es. "▲ 0.5") e getByText diventerebbe
+    // ambiguo (piu' elementi corrispondenti).
+    const ENTRY_NEWER = {
+      id: "m2",
+      measuredOn: "2026-07-20",
+      weightKg: 79.1,
+      chestCm: 101.5,
+      armCm: 35.8,
+      waistCm: 87,
+      legCm: 58.2,
+      createdAt: "2026-07-20T10:00:00.000Z",
+      updatedAt: "2026-07-20T10:00:00.000Z",
+    };
+    const ENTRY_OLDER = {
+      id: "m1",
+      measuredOn: "2026-07-13",
+      weightKg: 80,
+      chestCm: 101,
+      armCm: 35.5,
+      waistCm: 88,
+      legCm: 58,
+      createdAt: "2026-07-13T10:00:00.000Z",
+      updatedAt: "2026-07-13T10:00:00.000Z",
+    };
+
+    it("mostra un messaggio quando non ci sono misurazioni", async () => {
+      mockFetchResponses([
+        { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+        { match: (u, m) => u.endsWith("/measurements") && m === "GET", body: [] },
+      ]);
+
+      renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+      await screen.findByText(/non hai ancora registrato nessuna sessione/i);
+
+      fireEvent.click(screen.getByRole("button", { name: "Misure" }));
+
+      expect(
+        await screen.findByText(/non hai ancora registrato nessuna misurazione/i)
+      ).toBeInTheDocument();
+    });
+
+    it("elenca le misurazioni con le frecce di variazione mostrate sulla voce piu' nuova", async () => {
+      mockFetchResponses([
+        { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+        {
+          match: (u, m) => u.endsWith("/measurements") && m === "GET",
+          body: [ENTRY_NEWER, ENTRY_OLDER],
+        },
+      ]);
+
+      renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+      await screen.findByText(/non hai ancora registrato nessuna sessione/i);
+      fireEvent.click(screen.getByRole("button", { name: "Misure" }));
+
+      expect(await screen.findByText("20/07/2026")).toBeInTheDocument();
+      expect(screen.getByText("13/07/2026")).toBeInTheDocument();
+
+      // La voce piu' nuova (20/07, peso 79.1) confrontata con la precedente
+      // (13/07, peso 80) e' diminuita: freccia giu', mostrata sulla voce
+      // nuova (non su quella vecchia).
+      expect(screen.getByText("▼ 0.9")).toHaveClass("delta--down");
+      // Petto e' aumentato (101 -> 101.5): freccia su.
+      expect(screen.getByText("▲ 0.5")).toHaveClass("delta--up");
+      // Una freccia per campo sulla voce piu' nuova; la piu' vecchia non ha
+      // nulla con cui confrontarsi all'indietro, quindi nessuna freccia sua.
+      expect(document.querySelectorAll(".delta")).toHaveLength(5);
+    });
+
+    it("elimina una misurazione dopo conferma", async () => {
+      mockFetchResponses([
+        { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+        { match: (u, m) => u.endsWith("/measurements") && m === "GET", body: [ENTRY_OLDER] },
+        { match: (u, m) => u.endsWith("/measurements/m1") && m === "DELETE", status: 204 },
+      ]);
+
+      renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+      await screen.findByText(/non hai ancora registrato nessuna sessione/i);
+      fireEvent.click(screen.getByRole("button", { name: "Misure" }));
+      await screen.findByText("13/07/2026");
+
+      fireEvent.click(screen.getByRole("button", { name: /elimina misurazione/i }));
+      const dialog = await screen.findByRole("alertdialog");
+      fireEvent.click(within(dialog).getByRole("button", { name: "Sì" }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/non hai ancora registrato nessuna misurazione/i)
+        ).toBeInTheDocument();
+      });
+    });
+  });
 });

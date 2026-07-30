@@ -7,6 +7,8 @@ import { InMemoryUserRepository } from "../src/repositories/user-repository.js";
 import { InMemoryPasswordActionTokenRepository } from "../src/repositories/password-action-token-repository.js";
 import { InMemoryUserMeasurementsRepository } from "../src/repositories/user-measurements-repository.js";
 import { InMemoryAccountPreferencesRepository } from "../src/repositories/account-preferences-repository.js";
+import { InMemoryMeasurementCacheRepository } from "../src/repositories/measurement-cache-repository.js";
+import { InMemoryMeasurementEventPublisher } from "../src/events/measurement-events-publisher.js";
 
 /**
  * Hasher finto, deterministico e veloce: evita di pagare il costo (voluto) di
@@ -62,12 +64,16 @@ export function buildTestApp(): {
   app: ReturnType<typeof createApp>;
   deps: AppDeps;
   mailer: FakeMailer;
+  measurementEventPublisher: InMemoryMeasurementEventPublisher;
 } {
   const mailer = createFakeMailer();
+  const measurementEventPublisher = new InMemoryMeasurementEventPublisher();
   const deps: AppDeps = {
     users: new InMemoryUserRepository(),
     passwordActionTokens: new InMemoryPasswordActionTokenRepository(),
     measurements: new InMemoryUserMeasurementsRepository(),
+    measurementCache: new InMemoryMeasurementCacheRepository(),
+    measurementEventPublisher,
     accountPreferences: new InMemoryAccountPreferencesRepository(),
     passwords: fakeHasher,
     tokens: createAccessTokenService(TEST_JWT_SECRET),
@@ -75,5 +81,5 @@ export function buildTestApp(): {
     webAppUrl: TEST_WEB_APP_URL,
     logger: createLogger("account-service", { level: "silent" }),
   };
-  return { app: createApp(deps), deps, mailer };
+  return { app: createApp(deps), deps, mailer, measurementEventPublisher };
 }

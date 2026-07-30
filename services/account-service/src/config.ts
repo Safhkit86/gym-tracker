@@ -22,6 +22,8 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number().int().positive().default(1025),
   SMTP_FROM: z.string().min(1).default("no-reply@gym-tracker.local"),
   WEB_APP_URL: z.string().url().default("http://localhost:5173"),
+  RABBITMQ_URL: z.string().url(),
+  REDIS_URL: z.string().url(),
 });
 
 export type Config = z.infer<typeof envSchema>;

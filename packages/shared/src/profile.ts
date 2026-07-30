@@ -1,9 +1,13 @@
 import type { ProgressionSuggestionType } from "./progress.js";
 
 /**
- * Misure fisiche dell'atleta: solo il valore corrente (nessuno storico),
- * tutte opzionali. Stessa forma per lettura e per l'update (replace
- * completo, non patch parziale: il form invia sempre tutti i campi).
+ * Misure fisiche dell'atleta: `heightCm` e' l'unico valore "corrente" vero
+ * e proprio (account-service, nessuno storico). Le altre 5 sono le ultime
+ * misure storicizzate note (history-service, tabella `measurement_entries`,
+ * lette via cache Redis lato account-service) — vedi `MeasurementEntry` per
+ * lo storico completo con data. Tutte opzionali. Stessa forma per lettura e
+ * per l'update (replace completo, non patch parziale: il form invia sempre
+ * tutti i campi).
  */
 export interface UserMeasurements {
   heightCm: number | null;
@@ -14,7 +18,15 @@ export interface UserMeasurements {
   legCm: number | null;
 }
 
-export type UpdateUserMeasurementsRequest = UserMeasurements;
+/**
+ * `measuredOn`: data della misurazione (solo se `historicizeMeasurements` e'
+ * attivo e l'utente ne sceglie una diversa da oggi); omesso o assente =>
+ * oggi. Upsert per (userId, measuredOn) lato history-service: salvare di
+ * nuovo sulla stessa data aggiorna quell'entry invece di duplicarla.
+ */
+export type UpdateUserMeasurementsRequest = UserMeasurements & {
+  measuredOn?: string;
+};
 
 /**
  * Parametri per-utente del motore di progressione (progress-service):
@@ -43,10 +55,17 @@ export type UpdateProgressionPreferencesRequest = ProgressionPreferences;
  *
  * `timerSoundEnabled`: se il timer di recupero in Registra sessione deve
  * suonare un allarme a fine conto alla rovescia, vedi useRestTimers.ts.
+ *
+ * `historicizeMeasurements`: se true, il form Misure mostra il selettore
+ * data (la misurazione puo' essere salvata su una data passata); se false
+ * il selettore e' nascosto e si salva sempre su oggi. In entrambi i casi
+ * il salvataggio va sempre in `measurement_entries` (nessun cambio di
+ * percorso di scrittura, solo di UI) — vedi `MeasurementEntry`.
  */
 export interface AccountPreferences {
   prefillScope: "workout" | "exercise";
   timerSoundEnabled: boolean;
+  historicizeMeasurements: boolean;
 }
 
 export type UpdateAccountPreferencesRequest = AccountPreferences;

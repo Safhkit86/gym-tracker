@@ -165,6 +165,18 @@ conversazione corrente:
   mobile oltre a quello desktop), non solo quella comoda in cui è stata
   sviluppata: un elemento può risultare tagliato/mal posizionato solo sotto
   una certa larghezza.
+- Nessun MCP Playwright è configurato in questa macchina: per gli screenshot
+  di verifica usa il pacchetto `playwright` via Node/Bash. Non è una
+  dipendenza del repo — vive gia' installato (browser Chromium incluso)
+  nella cartella scratchpad della sessione (`node_modules/playwright`,
+  vedi `verify-app.js`/`verify-measurements-ui.js` li' per un esempio):
+  scrivi li' un piccolo script che lancia `chromium`, imposta
+  `localStorage.setItem("gym-tracker.token", token)` (token di un vero
+  login, non un JWT auto-firmato — vedi memoria "test-account") per saltare
+  il login via UI, e salva gli screenshot in una sottocartella dello
+  scratchpad. Se la cartella scratchpad di una nuova sessione non ha ancora
+  `playwright` installato, installalo li' (`npm install playwright` dentro
+  quella cartella, non nel repo) prima di scrivere lo script.
 
 ## Cosa NON fare
 
