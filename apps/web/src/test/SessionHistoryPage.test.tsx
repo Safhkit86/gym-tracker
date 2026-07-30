@@ -253,7 +253,7 @@ describe("SessionHistoryPage", () => {
       ).toBeInTheDocument();
     });
 
-    it("elenca le misurazioni con le frecce di variazione rispetto alla piu' recente", async () => {
+    it("elenca le misurazioni con le frecce di variazione mostrate sulla voce piu' nuova", async () => {
       mockFetchResponses([
         { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
         { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
@@ -270,13 +270,14 @@ describe("SessionHistoryPage", () => {
       expect(await screen.findByText("20/07/2026")).toBeInTheDocument();
       expect(screen.getByText("13/07/2026")).toBeInTheDocument();
 
-      // La voce piu' vecchia (13/07, peso 80) confrontata con la successiva
-      // piu' recente (20/07, peso 79.1) e' diminuita: freccia giu'.
+      // La voce piu' nuova (20/07, peso 79.1) confrontata con la precedente
+      // (13/07, peso 80) e' diminuita: freccia giu', mostrata sulla voce
+      // nuova (non su quella vecchia).
       expect(screen.getByText("▼ 0.9")).toHaveClass("delta--down");
       // Petto e' aumentato (101 -> 101.5): freccia su.
       expect(screen.getByText("▲ 0.5")).toHaveClass("delta--up");
-      // Una freccia per campo sulla voce piu' vecchia; la piu' recente non
-      // ha nulla con cui confrontarsi in avanti, quindi nessuna freccia sua.
+      // Una freccia per campo sulla voce piu' nuova; la piu' vecchia non ha
+      // nulla con cui confrontarsi all'indietro, quindi nessuna freccia sua.
       expect(document.querySelectorAll(".delta")).toHaveLength(5);
     });
 

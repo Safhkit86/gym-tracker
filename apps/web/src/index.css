@@ -1267,10 +1267,12 @@ button.secondary:hover:not(:disabled) {
 /* Il contenitore <main> di questa pagina resta sempre alla stessa larghezza
    (main-wide-table, serve alla tabella sessioni) cosi' titolo/toolbar non si
    spostano cambiando tab: questa vista non ha bisogno di quella larghezza,
-   quindi si auto-limita (non centrata: continua l'allineamento a sinistra
-   di titolo/toolbar) invece di allargare la measurement-grid a vuoto. */
+   quindi si auto-limita e si centra (titolo/toolbar restano allineati a
+   sinistra sopra, invariati) invece di allargare la measurement-grid a
+   vuoto o restare agganciata al bordo sinistro. */
 .measurements-view {
   max-width: 44rem;
+  margin: 0 auto;
 }
 
 .measurement-entry {

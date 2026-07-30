@@ -20,15 +20,17 @@ const MEASUREMENT_FIELDS = [
   { key: "legCm", label: "Gamba", unit: "cm" },
 ] as const;
 
-/** Differenza rispetto alla misurazione successiva (piu' recente): positiva
- *  se il valore e' aumentato nel tempo. Arrotondata a un decimale per evitare
- *  artefatti di virgola mobile (es. 79.1 - 78.4). null se uno dei due valori
- *  manca o non e' cambiato (nessuna freccia da mostrare). */
-function computeDelta(current: number | null, next: number | null): number | null {
-  if (current === null || next === null) {
+/** Differenza rispetto alla misurazione precedente: positiva se il valore e'
+ *  aumentato nel tempo. Mostrata sulla misurazione nuova (non su quella
+ *  vecchia): e' quella che racconta "rispetto a prima, ora sei cambiato
+ *  cosi'". Arrotondata a un decimale per evitare artefatti di virgola
+ *  mobile (es. 79.1 - 78.4). null se uno dei due valori manca o non e'
+ *  cambiato (nessuna freccia da mostrare). */
+function computeDelta(previous: number | null, current: number | null): number | null {
+  if (previous === null || current === null) {
     return null;
   }
-  const diff = Math.round((next - current) * 10) / 10;
+  const diff = Math.round((current - previous) * 10) / 10;
   return diff !== 0 ? diff : null;
 }
 
@@ -329,7 +331,11 @@ export function SessionHistoryPage() {
             <>
               <section className="card">
                 {measurements.map((entry, index) => {
-                  const next = measurements[index - 1] ?? null;
+                  // La misurazione precedente e' quella cronologicamente
+                  // prima (indice successivo, l'array e' piu' recenti
+                  // prima): la freccia va sulla misurazione nuova, non su
+                  // quella vecchia.
+                  const previous = measurements[index + 1] ?? null;
                   return (
                     <div className="measurement-entry" key={entry.id}>
                       <div className="session-card__header">
@@ -345,7 +351,7 @@ export function SessionHistoryPage() {
                       <div className="measurement-grid">
                         {MEASUREMENT_FIELDS.map(({ key, label, unit }) => {
                           const value = entry[key];
-                          const delta = computeDelta(value, next?.[key] ?? null);
+                          const delta = computeDelta(previous?.[key] ?? null, value);
                           return (
                             <div key={key}>
                               <div className="measurement-item__label">{label}</div>
@@ -374,7 +380,7 @@ export function SessionHistoryPage() {
               </section>
               <p className="section-note">
                 Più recenti prima. La freccia accanto a un valore lo confronta con la misurazione
-                successiva più recente.
+                precedente.
               </p>
             </>
           )}
