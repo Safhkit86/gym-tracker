@@ -45,8 +45,18 @@ export interface UserMeasurementsTable {
   updated_at: ColumnType<Date, Date | undefined, Date>;
 }
 
+export type PrefillScope = "workout" | "exercise";
+
+export interface AccountPreferencesTable {
+  user_id: string;
+  prefill_scope: Generated<PrefillScope>;
+  timer_sound_enabled: Generated<boolean>;
+  updated_at: ColumnType<Date, Date | undefined, Date>;
+}
+
 export interface Database {
   users: UsersTable;
   password_action_tokens: PasswordActionTokensTable;
   user_measurements: UserMeasurementsTable;
+  account_preferences: AccountPreferencesTable;
 }

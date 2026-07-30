@@ -4,15 +4,11 @@ import type { Database, GroupingScope } from "../db/types.js";
 export interface ProgressionPreferencesRecord {
   requiredConsecutiveSessions: number;
   groupingScope: GroupingScope;
-  prefillScope: GroupingScope;
-  timerSoundEnabled: boolean;
 }
 
 const DEFAULT_PREFERENCES: ProgressionPreferencesRecord = {
   requiredConsecutiveSessions: 2,
   groupingScope: "workout",
-  prefillScope: "workout",
-  timerSoundEnabled: false,
 };
 
 export interface ProgressionPreferencesRepository {
@@ -40,8 +36,6 @@ export class KyselyProgressionPreferencesRepository implements ProgressionPrefer
     return {
       requiredConsecutiveSessions: row.required_consecutive_sessions,
       groupingScope: row.grouping_scope,
-      prefillScope: row.prefill_scope,
-      timerSoundEnabled: row.timer_sound_enabled,
     };
   }
 
@@ -55,15 +49,11 @@ export class KyselyProgressionPreferencesRepository implements ProgressionPrefer
         user_id: userId,
         required_consecutive_sessions: values.requiredConsecutiveSessions,
         grouping_scope: values.groupingScope,
-        prefill_scope: values.prefillScope,
-        timer_sound_enabled: values.timerSoundEnabled,
       })
       .onConflict((oc) =>
         oc.column("user_id").doUpdateSet({
           required_consecutive_sessions: values.requiredConsecutiveSessions,
           grouping_scope: values.groupingScope,
-          prefill_scope: values.prefillScope,
-          timer_sound_enabled: values.timerSoundEnabled,
           updated_at: new Date(),
         })
       )
@@ -72,25 +62,23 @@ export class KyselyProgressionPreferencesRepository implements ProgressionPrefer
     return {
       requiredConsecutiveSessions: row.required_consecutive_sessions,
       groupingScope: row.grouping_scope,
-      prefillScope: row.prefill_scope,
-      timerSoundEnabled: row.timer_sound_enabled,
     };
   }
 }
 
 /** Implementazione in memoria: usata nei test per evitare un DB reale. */
 export class InMemoryProgressionPreferencesRepository implements ProgressionPreferencesRepository {
-  private readonly byOwnerId = new Map<string, ProgressionPreferencesRecord>();
+  private readonly byUserId = new Map<string, ProgressionPreferencesRecord>();
 
   async find(userId: string): Promise<ProgressionPreferencesRecord> {
-    return this.byOwnerId.get(userId) ?? DEFAULT_PREFERENCES;
+    return this.byUserId.get(userId) ?? DEFAULT_PREFERENCES;
   }
 
   async upsert(
     userId: string,
     values: ProgressionPreferencesRecord
   ): Promise<ProgressionPreferencesRecord> {
-    this.byOwnerId.set(userId, values);
+    this.byUserId.set(userId, values);
     return values;
   }
 }

@@ -13,9 +13,11 @@ import type { Mailer } from "./domain/mailer.js";
 import type { UserRepository } from "./repositories/user-repository.js";
 import type { PasswordActionTokenRepository } from "./repositories/password-action-token-repository.js";
 import type { UserMeasurementsRepository } from "./repositories/user-measurements-repository.js";
+import type { AccountPreferencesRepository } from "./repositories/account-preferences-repository.js";
 import { createAuthRoutes } from "./routes/auth-routes.js";
 import { createMeRoutes } from "./routes/me-routes.js";
 import { createMeasurementsRoutes } from "./routes/measurements-routes.js";
+import { createAccountPreferencesRoutes } from "./routes/account-preferences-routes.js";
 import { errorHandler } from "./middleware/error-handler.js";
 
 const SERVICE_NAME = "account-service";
@@ -30,6 +32,7 @@ export interface AppDeps {
   users: UserRepository;
   passwordActionTokens: PasswordActionTokenRepository;
   measurements: UserMeasurementsRepository;
+  accountPreferences: AccountPreferencesRepository;
   passwords: PasswordHasher;
   tokens: AccessTokenService;
   mailer: Mailer;
@@ -65,6 +68,7 @@ export function createApp(deps: AppDeps): Express {
   app.use("/auth", createAuthRoutes(authService, passwordResetService));
   app.use(createMeRoutes(deps.users, deps.tokens, passwordChangeService));
   app.use(createMeasurementsRoutes(deps.measurements, deps.tokens));
+  app.use(createAccountPreferencesRoutes(deps.accountPreferences, deps.tokens));
 
   // Error handler: registrato per ultimo, mappa gli errori in ApiError.
   app.use(errorHandler);

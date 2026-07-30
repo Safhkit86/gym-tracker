@@ -22,15 +22,25 @@ function measurementsHandler(body: unknown = EMPTY_MEASUREMENTS) {
   return { match: (u: string, m: string) => u.endsWith("/me/measurements") && m === "GET", body };
 }
 
-const DEFAULT_PREFERENCES = {
+const DEFAULT_PROGRESSION_PREFERENCES = {
   requiredConsecutiveSessions: 2,
   groupingScope: "workout",
+};
+
+const DEFAULT_ACCOUNT_PREFERENCES = {
   prefillScope: "workout",
   timerSoundEnabled: false,
 };
 
-function preferencesHandler(body: unknown = DEFAULT_PREFERENCES) {
+function preferencesHandler(body: unknown = DEFAULT_PROGRESSION_PREFERENCES) {
   return { match: (u: string, m: string) => u.endsWith("/me/preferences") && m === "GET", body };
+}
+
+function accountPreferencesHandler(body: unknown = DEFAULT_ACCOUNT_PREFERENCES) {
+  return {
+    match: (u: string, m: string) => u.endsWith("/me/account-preferences") && m === "GET",
+    body,
+  };
 }
 
 describe("ProfilePage", () => {
@@ -48,6 +58,7 @@ describe("ProfilePage", () => {
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
       preferencesHandler(),
+      accountPreferencesHandler(),
     ]);
 
     renderWithProviders(<ProfilePage />, ["/profile"]);
@@ -61,6 +72,7 @@ describe("ProfilePage", () => {
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
       preferencesHandler(),
+      accountPreferencesHandler(),
       {
         match: (u, m) => u.endsWith("/me/password/change-request") && m === "POST",
         body: { message: "Codice di conferma inviato via email." },
@@ -105,6 +117,7 @@ describe("ProfilePage", () => {
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
       preferencesHandler(),
+      accountPreferencesHandler(),
       {
         match: (u, m) => u.endsWith("/me/password/change-request") && m === "POST",
         status: 400,
@@ -133,6 +146,7 @@ describe("ProfilePage", () => {
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
       preferencesHandler(),
+      accountPreferencesHandler(),
     ]);
 
     renderWithProviders(<ProfilePage />, ["/profile"]);
@@ -158,6 +172,7 @@ describe("ProfilePage", () => {
         legCm: 55,
       }),
       preferencesHandler(),
+      accountPreferencesHandler(),
       {
         match: (u, m) => u.endsWith("/me/measurements") && m === "PUT",
         body: {
@@ -196,6 +211,7 @@ describe("ProfilePage", () => {
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
       preferencesHandler(),
+      accountPreferencesHandler(),
       {
         match: (u, m) => u.endsWith("/me/measurements") && m === "PUT",
         body: EMPTY_MEASUREMENTS,
@@ -218,6 +234,7 @@ describe("ProfilePage", () => {
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
       preferencesHandler(),
+      accountPreferencesHandler(),
       {
         match: (u, m) => u.endsWith("/me/measurements") && m === "PUT",
         body: EMPTY_MEASUREMENTS,
@@ -245,6 +262,7 @@ describe("ProfilePage", () => {
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
       preferencesHandler(),
+      accountPreferencesHandler(),
     ]);
 
     renderWithProviders(<ProfilePage />, ["/profile"]);
@@ -273,14 +291,14 @@ describe("ProfilePage", () => {
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
       preferencesHandler(),
+      accountPreferencesHandler(),
       {
         match: (u, m) => u.endsWith("/me/preferences") && m === "PUT",
-        body: {
-          requiredConsecutiveSessions: 3,
-          groupingScope: "exercise",
-          prefillScope: "exercise",
-          timerSoundEnabled: false,
-        },
+        body: { requiredConsecutiveSessions: 3, groupingScope: "exercise" },
+      },
+      {
+        match: (u, m) => u.endsWith("/me/account-preferences") && m === "PUT",
+        body: { prefillScope: "exercise", timerSoundEnabled: false },
       },
     ]);
 
@@ -302,13 +320,19 @@ describe("ProfilePage", () => {
     fireEvent.click(screen.getByRole("button", { name: /salva preferenze/i }));
 
     expect(await screen.findByText("Preferenze salvate.")).toBeInTheDocument();
-    const putCall = fetchMock.mock.calls.find(
+    const progressionPutCall = fetchMock.mock.calls.find(
       ([u, init]) => String(u).endsWith("/me/preferences") && init?.method === "PUT"
     );
-    expect(putCall).toBeDefined();
-    expect(JSON.parse((putCall?.[1]?.body as string) ?? "{}")).toEqual({
+    expect(progressionPutCall).toBeDefined();
+    expect(JSON.parse((progressionPutCall?.[1]?.body as string) ?? "{}")).toEqual({
       requiredConsecutiveSessions: 3,
       groupingScope: "exercise",
+    });
+    const accountPutCall = fetchMock.mock.calls.find(
+      ([u, init]) => String(u).endsWith("/me/account-preferences") && init?.method === "PUT"
+    );
+    expect(accountPutCall).toBeDefined();
+    expect(JSON.parse((accountPutCall?.[1]?.body as string) ?? "{}")).toEqual({
       prefillScope: "exercise",
       timerSoundEnabled: false,
     });
@@ -319,9 +343,14 @@ describe("ProfilePage", () => {
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
       preferencesHandler(),
+      accountPreferencesHandler(),
       {
         match: (u, m) => u.endsWith("/me/preferences") && m === "PUT",
-        body: { ...DEFAULT_PREFERENCES, timerSoundEnabled: true },
+        body: DEFAULT_PROGRESSION_PREFERENCES,
+      },
+      {
+        match: (u, m) => u.endsWith("/me/account-preferences") && m === "PUT",
+        body: { ...DEFAULT_ACCOUNT_PREFERENCES, timerSoundEnabled: true },
       },
     ]);
 
@@ -336,7 +365,7 @@ describe("ProfilePage", () => {
 
     expect(await screen.findByText("Preferenze salvate.")).toBeInTheDocument();
     const putCall = fetchMock.mock.calls.find(
-      ([u, init]) => String(u).endsWith("/me/preferences") && init?.method === "PUT"
+      ([u, init]) => String(u).endsWith("/me/account-preferences") && init?.method === "PUT"
     );
     expect(JSON.parse((putCall?.[1]?.body as string) ?? "{}")).toMatchObject({
       timerSoundEnabled: true,
