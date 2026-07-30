@@ -182,10 +182,13 @@ docker compose logs -f account-service    # solo un servizio
 docker compose logs --tail 100 api-gateway  # ultime 100 righe, senza seguire
 ```
 
-Per un formato leggibile invece del JSON grezzo:
+Per un formato leggibile invece del JSON grezzo (`--no-log-prefix` è
+necessario: senza, `docker compose logs` antepone `<servizio>-1  |` a ogni
+riga, che rompe il parsing JSON di pino-pretty e fa stampare le righe grezze
+invece di formattarle):
 
 ```bash
-docker compose logs -f api-gateway | npx pino-pretty
+docker compose logs -f --no-log-prefix api-gateway | npx pino-pretty
 ```
 
 Per seguire una singola richiesta attraverso più servizi (es. capire perché
