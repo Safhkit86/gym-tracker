@@ -170,7 +170,7 @@ export function SessionHistoryPage() {
     : 1;
 
   return (
-    <main className={tab === "sessions" ? "main-wide main-wide-table" : undefined}>
+    <main className="main-wide main-wide-table">
       <h1>Storico</h1>
       <div className="toolbar">
         <button
@@ -316,7 +316,7 @@ export function SessionHistoryPage() {
       )}
 
       {tab === "measurements" && (
-        <>
+        <div className="measurements-view">
           {measurementsError && (
             <p role="alert" className="form-error">
               {measurementsError}
@@ -385,7 +385,7 @@ export function SessionHistoryPage() {
             onConfirm={handleDeleteMeasurement}
             onCancel={() => setConfirmDeleteMeasurementId(null)}
           />
-        </>
+        </div>
       )}
     </main>
   );

@@ -36,6 +36,15 @@
   box-sizing: border-box;
 }
 
+/* Riserva sempre lo spazio della scrollbar verticale: senza questo, una
+   pagina il cui contenuto passa da "supera il viewport" a "ci sta dentro"
+   (es. cambio tab in Storico, da Sessioni a Misure) fa apparire/sparire la
+   scrollbar, restringendo/allargando la larghezza disponibile e spostando
+   lateralmente ogni <main> centrato con `margin: 0 auto`. */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -1254,6 +1263,15 @@ button.secondary:hover:not(:disabled) {
 }
 
 /* --- Storico > Misure: entry con delta rispetto alla misurazione precedente --- */
+
+/* Il contenitore <main> di questa pagina resta sempre alla stessa larghezza
+   (main-wide-table, serve alla tabella sessioni) cosi' titolo/toolbar non si
+   spostano cambiando tab: questa vista non ha bisogno di quella larghezza,
+   quindi si auto-limita (non centrata: continua l'allineamento a sinistra
+   di titolo/toolbar) invece di allargare la measurement-grid a vuoto. */
+.measurements-view {
+  max-width: 44rem;
+}
 
 .measurement-entry {
   padding: var(--space-4) 0;
