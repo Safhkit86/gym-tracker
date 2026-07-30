@@ -4,12 +4,12 @@ import {
   createHttpLogger,
   type AccessTokenService,
   type Logger,
+  type Mailer,
 } from "@gym-tracker/shared";
 import { AuthService } from "./domain/auth-service.js";
 import { PasswordResetService } from "./domain/password-reset-service.js";
 import { PasswordChangeService } from "./domain/password-change-service.js";
 import type { PasswordHasher } from "./domain/password.js";
-import type { Mailer } from "./domain/mailer.js";
 import type { UserRepository } from "./repositories/user-repository.js";
 import type { PasswordActionTokenRepository } from "./repositories/password-action-token-repository.js";
 import type { UserMeasurementsRepository } from "./repositories/user-measurements-repository.js";

@@ -9,7 +9,9 @@ export interface MailMessage {
 
 /**
  * Astrazione per l'invio email, iniettabile per rendere i test indipendenti
- * da un vero server SMTP (vedi `fakeMailer` in test/helpers.ts).
+ * da un vero server SMTP (vedi `fakeMailer` nei test dei servizi che la usano).
+ * Condivisa tra account-service (reset/cambio password) e notify-service
+ * (avviso al contatto operativo quando un messaggio finisce in dead-letter).
  */
 export interface Mailer {
   send(message: MailMessage): Promise<void>;

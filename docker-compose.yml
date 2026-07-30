@@ -134,12 +134,18 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       DATABASE_URL: postgres://${POSTGRES_USER:-gymtracker}:${POSTGRES_PASSWORD:-gymtracker}@postgres:5432/${POSTGRES_DB:-gymtracker}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-gymtracker}:${RABBITMQ_PASSWORD:-gymtracker}@rabbitmq:5672
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_FROM: ${SMTP_FROM:-no-reply@gym-tracker.local}
+      OPS_ALERT_EMAIL: ${OPS_ALERT_EMAIL:-ops@gym-tracker.local}
     ports:
       - "${NOTIFY_SERVICE_PORT:-4004}:4004"
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      mailpit:
         condition: service_healthy
 
   # --- API Gateway: unico punto di ingresso per i client (web/Android) ---

@@ -1,4 +1,4 @@
-import type { Mailer } from "./mailer.js";
+import type { Mailer } from "@gym-tracker/shared";
 import type { PasswordHasher } from "./password.js";
 import { generateResetToken, hashToken } from "./security-tokens.js";
 import { InvalidResetTokenError } from "../errors.js";
