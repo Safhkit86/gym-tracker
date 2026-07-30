@@ -169,6 +169,39 @@ http://localhost:15672 (utente/password di default: `gymtracker`/`gymtracker`).
 | `npm run build`  | Build su tutti i workspace      |
 | `npm run format` | Formatta il codice con Prettier |
 
+## Log
+
+Ogni servizio logga in JSON strutturato (`pino`, vedi "Architettura" sopra),
+non pensato per essere letto a occhio così com'è.
+
+Via Docker Compose (come girano normalmente i servizi):
+
+```bash
+docker compose logs -f                    # tutti i servizi, interlacciati, segue in tempo reale
+docker compose logs -f account-service    # solo un servizio
+docker compose logs --tail 100 api-gateway  # ultime 100 righe, senza seguire
+```
+
+Per un formato leggibile invece del JSON grezzo:
+
+```bash
+docker compose logs -f api-gateway | npx pino-pretty
+```
+
+Per seguire una singola richiesta attraverso più servizi (es. capire perché
+una chiamata dal gateway è arrivata "storta" a un servizio a valle): ogni
+richiesta porta un `X-Request-Id` propagato invariato (vedi "Architettura"),
+prendine uno dai log o dalla risposta HTTP e filtra:
+
+```bash
+docker compose logs | grep <request-id>
+```
+
+Se un servizio gira sull'host (`npm run dev`, fuori da Docker) i log JSON
+escono direttamente sul terminale di quel processo, stesso formato.
+L'header `Authorization` è sempre redatto (`[Redacted]`) nei log, anche
+sulle risposte 401, quindi è sicuro incollarli altrove senza esporre token.
+
 ## CI/CD
 
 Ogni Pull Request verso `master` esegue automaticamente (`.github/workflows/ci.yml`):
