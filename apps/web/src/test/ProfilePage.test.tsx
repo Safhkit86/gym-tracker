@@ -30,6 +30,7 @@ const DEFAULT_PROGRESSION_PREFERENCES = {
 const DEFAULT_ACCOUNT_PREFERENCES = {
   prefillScope: "workout",
   timerSoundEnabled: false,
+  historicizeMeasurements: true,
 };
 
 function preferencesHandler(body: unknown = DEFAULT_PROGRESSION_PREFERENCES) {
@@ -39,6 +40,17 @@ function preferencesHandler(body: unknown = DEFAULT_PROGRESSION_PREFERENCES) {
 function accountPreferencesHandler(body: unknown = DEFAULT_ACCOUNT_PREFERENCES) {
   return {
     match: (u: string, m: string) => u.endsWith("/me/account-preferences") && m === "GET",
+    body,
+  };
+}
+
+/** Echo semplice per il PUT /me/account-preferences pubblicato insieme al
+ *  salvataggio delle misure (vedi ProfilePage.handleSaveMeasurements): i test
+ *  sulle misure non verificano questo body, serve solo a far risolvere il
+ *  Promise.all senza una richiesta non gestita dal mock. */
+function accountPreferencesPutHandler(body: unknown = DEFAULT_ACCOUNT_PREFERENCES) {
+  return {
+    match: (u: string, m: string) => u.endsWith("/me/account-preferences") && m === "PUT",
     body,
   };
 }
@@ -172,7 +184,10 @@ describe("ProfilePage", () => {
         legCm: 55,
       }),
       preferencesHandler(),
-      accountPreferencesHandler(),
+      // Storicizzazione disattivata: questo test riguarda il precompilamento
+      // e l'aggiornamento dei valori, non il messaggio specifico per data.
+      accountPreferencesHandler({ ...DEFAULT_ACCOUNT_PREFERENCES, historicizeMeasurements: false }),
+      accountPreferencesPutHandler(),
       {
         match: (u, m) => u.endsWith("/me/measurements") && m === "PUT",
         body: {
@@ -191,7 +206,10 @@ describe("ProfilePage", () => {
     await screen.findByText(/test@example.com/);
     fireEvent.click(screen.getByRole("button", { name: "Misure" }));
 
-    const weightInput = (await screen.findByLabelText(/peso/i)) as HTMLInputElement;
+    // Match esatto (non /peso/i): la spiegazione del toggle "Storicizza le
+    // misure" contiene anch'essa la parola "peso", che altrimenti la
+    // renderebbe ambigua con l'etichetta del campo.
+    const weightInput = (await screen.findByLabelText("Peso (kg)")) as HTMLInputElement;
     expect(weightInput.value).toBe("78.5");
     expect((screen.getByLabelText(/altezza/i) as HTMLInputElement).value).toBe("180");
 
@@ -211,7 +229,11 @@ describe("ProfilePage", () => {
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
       preferencesHandler(),
-      accountPreferencesHandler(),
+      // Storicizzazione disattivata: il messaggio di conferma resta generico
+      // ("Misure salvate."), non specifico per data — questi test non
+      // riguardano il toggle, solo la validazione dei campi.
+      accountPreferencesHandler({ ...DEFAULT_ACCOUNT_PREFERENCES, historicizeMeasurements: false }),
+      accountPreferencesPutHandler(),
       {
         match: (u, m) => u.endsWith("/me/measurements") && m === "PUT",
         body: EMPTY_MEASUREMENTS,
@@ -234,7 +256,11 @@ describe("ProfilePage", () => {
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
       preferencesHandler(),
-      accountPreferencesHandler(),
+      // Storicizzazione disattivata: il messaggio di conferma resta generico
+      // ("Misure salvate."), non specifico per data — questi test non
+      // riguardano il toggle, solo la validazione dei campi.
+      accountPreferencesHandler({ ...DEFAULT_ACCOUNT_PREFERENCES, historicizeMeasurements: false }),
+      accountPreferencesPutHandler(),
       {
         match: (u, m) => u.endsWith("/me/measurements") && m === "PUT",
         body: EMPTY_MEASUREMENTS,
@@ -335,6 +361,7 @@ describe("ProfilePage", () => {
     expect(JSON.parse((accountPutCall?.[1]?.body as string) ?? "{}")).toEqual({
       prefillScope: "exercise",
       timerSoundEnabled: false,
+      historicizeMeasurements: true,
     });
   });
 

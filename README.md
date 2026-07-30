@@ -23,7 +23,7 @@ Web app (apps/web) / Android app (futuro)
 
 - **api-gateway** — unico punto di ingresso per i client: inoltra le richieste
   ai servizi (`/auth`, `/me` → account-service; `/exercises`, `/workouts` →
-  workout-service; `/sessions`, `/stats` → history-service;
+  workout-service; `/sessions`, `/stats`, `/measurements` → history-service;
   `/sessions/:id/status`, `/progression` → progress-service;
   `/notifications` → notify-service). Verifica centralmente il Bearer JWT
   (401 prima ancora di raggiungere un servizio a valle, tranne su
@@ -35,11 +35,20 @@ Web app (apps/web) / Android app (futuro)
   con codice email come secondo fattore (Fase 1), preferenze utente. Le email
   (reset password, conferma cambio password) sono catturate in locale da
   **Mailpit** (nessun vero SMTP in sviluppo): UI su http://localhost:8025.
+  Tiene in locale solo l'altezza; peso/petto/braccia/vita/gamba sono
+  storicizzati in history-service — `PUT /me/measurements` pubblica
+  `measurement-save-requested` con publish confermato (nessuna copia locale,
+  un fallimento di publish fa fallire la richiesta), `GET /me/measurements`
+  legge quei 5 campi da una cache Redis alimentata consumando
+  `measurement-recorded`.
 - **workout-service** — schede, esercizi, set/reps/peso/recupero (Fase 2)
-- **history-service** — storico delle sessioni eseguite e statistiche
-  aggregate (Dashboard). Pubblica `session-logged`/`session-deleted` su
+- **history-service** — storico delle sessioni eseguite, statistiche
+  aggregate (Dashboard) e storico misure datato (`measurement_entries`,
+  Storico > Misure). Pubblica `session-logged`/`session-deleted` su
   RabbitMQ: progress-service li consuma per valutare il motore di regole in
-  modo asincrono, invece di farlo nella stessa richiesta HTTP.
+  modo asincrono, invece di farlo nella stessa richiesta HTTP. Consuma
+  `measurement-save-requested` da account-service (upsert per data) e
+  ripubblica `measurement-recorded` per la cache di lettura veloce.
 - **progress-service** — motore di regole di progressione (Fase 3): decide
   solo _quando_ suggerire un aumento di carico/ripetizioni, non possiede più
   lo storico delle sessioni (spostato in history-service).
@@ -79,7 +88,7 @@ npm run build --workspace=@gym-tracker/shared
 npm run db:migrate --workspace=@gym-tracker/account-service      # crea le tabelle
 npm run db:migrate --workspace=@gym-tracker/workout-service   # crea le tabelle + seed catalogo
 npm run db:migrate --workspace=@gym-tracker/progress-service  # crea anche workout_sessions/session_sets
-npm run db:migrate --workspace=@gym-tracker/history-service   # nessuna tabella propria: le usa da progress-service, va DOPO
+npm run db:migrate --workspace=@gym-tracker/history-service   # va DOPO progress-service (riusa workout_sessions/session_sets); crea anche measurement_entries
 npm run db:migrate --workspace=@gym-tracker/notify-service    # crea le tabelle
 cd services/account-service && npm run dev         # avvia account-service in watch mode
 # in altri terminali:

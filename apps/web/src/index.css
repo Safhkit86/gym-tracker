@@ -1190,6 +1190,130 @@ button.secondary:hover:not(:disabled) {
   align-items: flex-start;
 }
 
+/* --- Storicizzazione misure (Profilo > Misure): toggle + data condizionale --- */
+
+.history-toggle-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-5);
+}
+
+.history-toggle-row__text {
+  flex: 1 1 auto;
+}
+
+.history-toggle-row__text strong {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: var(--space-1);
+}
+
+.history-toggle-row__text span {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.date-field-wrap {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition:
+    max-height 0.2s ease,
+    opacity 0.2s ease;
+  margin-bottom: 0;
+}
+
+.date-field-wrap.is-visible {
+  /* Abbastanza alto da non tagliare il testo di aiuto quando va su piu'
+     righe (schermi stretti): non deve combaciare esattamente col
+     contenuto, solo superarlo. */
+  max-height: 16rem;
+  opacity: 1;
+  margin-bottom: var(--space-4);
+}
+
+.date-field-wrap label {
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: 0;
+}
+
+.date-field-hint {
+  display: block;
+  margin-top: var(--space-2);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+/* --- Storico > Misure: entry con delta rispetto alla misurazione precedente --- */
+
+.measurement-entry {
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.measurement-entry:first-of-type {
+  padding-top: 0;
+}
+
+.measurement-entry:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.measurement-entry .session-card__header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.measurement-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: var(--space-3);
+}
+
+.measurement-item__label {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.2rem;
+}
+
+.measurement-item__value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.measurement-item__value small {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.delta {
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.delta--up {
+  color: var(--color-warning);
+}
+
+.delta--down {
+  color: var(--color-accent);
+}
+
 /* --- Dashboard --- */
 
 .page-subtitle {

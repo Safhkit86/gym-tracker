@@ -178,6 +178,28 @@ describe("routing verso gli upstream", () => {
     expect(ctx.progress.lastRequest).toBeNull();
   });
 
+  it("inoltra GET /measurements a history-service, non ad account-service", async () => {
+    const ctx = await buildTestApp();
+    closeAll = ctx.closeAll;
+    const token = await bearerFor("u1");
+
+    await request(ctx.app).get("/measurements").set("Authorization", `Bearer ${token}`);
+
+    expect(ctx.history.lastRequest?.url).toBe("/measurements");
+    expect(ctx.auth.lastRequest).toBeNull();
+  });
+
+  it("inoltra GET /me/measurements ad account-service, non a history-service", async () => {
+    const ctx = await buildTestApp();
+    closeAll = ctx.closeAll;
+    const token = await bearerFor("u1");
+
+    await request(ctx.app).get("/me/measurements").set("Authorization", `Bearer ${token}`);
+
+    expect(ctx.auth.lastRequest?.url).toBe("/me/measurements");
+    expect(ctx.history.lastRequest).toBeNull();
+  });
+
   it("inoltra GET /notifications a notify-service", async () => {
     const ctx = await buildTestApp();
     closeAll = ctx.closeAll;

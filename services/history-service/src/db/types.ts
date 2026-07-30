@@ -61,7 +61,21 @@ export interface SessionSetsTable {
   created_at: Generated<Date>;
 }
 
+export interface MeasurementEntriesTable {
+  id: Generated<string>;
+  user_id: string;
+  measured_on: ColumnType<Date, Date | string, Date | string>;
+  weight_kg: ColumnType<string | null, number | null, number | null>;
+  chest_cm: ColumnType<string | null, number | null, number | null>;
+  arm_cm: ColumnType<string | null, number | null, number | null>;
+  waist_cm: ColumnType<string | null, number | null, number | null>;
+  leg_cm: ColumnType<string | null, number | null, number | null>;
+  created_at: Generated<Date>;
+  updated_at: ColumnType<Date, Date | undefined, Date>;
+}
+
 export interface Database {
   workout_sessions: WorkoutSessionsTable;
   session_sets: SessionSetsTable;
+  measurement_entries: MeasurementEntriesTable;
 }

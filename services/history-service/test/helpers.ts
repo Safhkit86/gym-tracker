@@ -4,6 +4,7 @@ import type { AppDeps } from "../src/app.js";
 import { InMemorySessionEventPublisher } from "../src/events/publisher.js";
 import { InMemorySessionRepository } from "../src/repositories/session-repository.js";
 import { InMemoryStatsRepository } from "../src/repositories/stats-repository.js";
+import { InMemoryMeasurementEntryRepository } from "../src/repositories/measurement-entry-repository.js";
 
 export const TEST_JWT_SECRET = "test-secret-please-change";
 
@@ -18,6 +19,7 @@ export function buildTestApp(): {
   const deps: AppDeps = {
     sessions,
     stats: new InMemoryStatsRepository(sessions),
+    measurementEntries: new InMemoryMeasurementEntryRepository(),
     publisher,
     tokens: createAccessTokenService(TEST_JWT_SECRET),
     logger: createLogger("history-service", { level: "silent" }),

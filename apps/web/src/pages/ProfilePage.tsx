@@ -26,6 +26,10 @@ function parseMeasurement(value: string): number | null {
   return parsed > 0 ? parsed : null;
 }
 
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export function ProfilePage() {
   const { user, token } = useAuth();
   const [activeSection, setActiveSection] = useState<ProfileSection>("account");
@@ -45,6 +49,7 @@ export function ProfilePage() {
   const [armCm, setArmCm] = useState("");
   const [waistCm, setWaistCm] = useState("");
   const [legCm, setLegCm] = useState("");
+  const [measuredOn, setMeasuredOn] = useState(today());
   const [measurementsLoaded, setMeasurementsLoaded] = useState(false);
   const [measurementsError, setMeasurementsError] = useState<string | null>(null);
   const [measurementsMessage, setMeasurementsMessage] = useState<string | null>(null);
@@ -55,6 +60,7 @@ export function ProfilePage() {
     useState<ProgressionPreferences["groupingScope"]>("workout");
   const [prefillScope, setPrefillScope] = useState<AccountPreferences["prefillScope"]>("workout");
   const [timerSoundEnabled, setTimerSoundEnabled] = useState(false);
+  const [historicizeMeasurements, setHistoricizeMeasurements] = useState(true);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [preferencesError, setPreferencesError] = useState<string | null>(null);
   const [preferencesMessage, setPreferencesMessage] = useState<string | null>(null);
@@ -70,6 +76,7 @@ export function ProfilePage() {
         setGroupingScope(progression.groupingScope);
         setPrefillScope(account.prefillScope);
         setTimerSoundEnabled(account.timerSoundEnabled);
+        setHistoricizeMeasurements(account.historicizeMeasurements);
         setPreferencesLoaded(true);
       })
       .catch((err: unknown) => {
@@ -159,21 +166,33 @@ export function ProfilePage() {
 
     setIsSavingMeasurements(true);
     try {
-      const result = await updateMeasurements(token, {
-        heightCm: parseMeasurement(heightCm),
-        weightKg: parseMeasurement(weightKg),
-        chestCm: parseMeasurement(chestCm),
-        armCm: parseMeasurement(armCm),
-        waistCm: parseMeasurement(waistCm),
-        legCm: parseMeasurement(legCm),
-      });
+      const [result] = await Promise.all([
+        updateMeasurements(token, {
+          heightCm: parseMeasurement(heightCm),
+          weightKg: parseMeasurement(weightKg),
+          chestCm: parseMeasurement(chestCm),
+          armCm: parseMeasurement(armCm),
+          waistCm: parseMeasurement(waistCm),
+          legCm: parseMeasurement(legCm),
+          measuredOn: historicizeMeasurements ? measuredOn : undefined,
+        }),
+        updateAccountPreferences(token, {
+          prefillScope,
+          timerSoundEnabled,
+          historicizeMeasurements,
+        }),
+      ]);
       setHeightCm(result.heightCm !== null ? String(result.heightCm) : "");
       setWeightKg(result.weightKg !== null ? String(result.weightKg) : "");
       setChestCm(result.chestCm !== null ? String(result.chestCm) : "");
       setArmCm(result.armCm !== null ? String(result.armCm) : "");
       setWaistCm(result.waistCm !== null ? String(result.waistCm) : "");
       setLegCm(result.legCm !== null ? String(result.legCm) : "");
-      setMeasurementsMessage("Misure salvate.");
+      setMeasurementsMessage(
+        historicizeMeasurements
+          ? `Misure salvate per il ${measuredOn.split("-").reverse().join("/")}.`
+          : "Misure salvate."
+      );
     } catch (err) {
       setMeasurementsError(
         err instanceof ApiRequestError ? err.message : "Errore imprevisto. Riprova."
@@ -201,12 +220,14 @@ export function ProfilePage() {
         updateAccountPreferences(token, {
           prefillScope,
           timerSoundEnabled,
+          historicizeMeasurements,
         }),
       ]);
       setRequiredConsecutiveSessions(String(progressionResult.requiredConsecutiveSessions));
       setGroupingScope(progressionResult.groupingScope);
       setPrefillScope(accountResult.prefillScope);
       setTimerSoundEnabled(accountResult.timerSoundEnabled);
+      setHistoricizeMeasurements(accountResult.historicizeMeasurements);
       setPreferencesMessage("Preferenze salvate.");
     } catch (err) {
       setPreferencesError(
@@ -349,8 +370,44 @@ export function ProfilePage() {
         <section className="card">
           <h2>Misure atleta</h2>
           {!measurementsLoaded && !measurementsError && <p>Caricamento…</p>}
-          {measurementsLoaded && (
+          {measurementsLoaded && preferencesLoaded && (
             <form onSubmit={handleSaveMeasurements}>
+              <div className="history-toggle-row">
+                <span className="toggle-switch">
+                  <input
+                    id="historicize-measurements"
+                    type="checkbox"
+                    checked={historicizeMeasurements}
+                    onChange={(event) => setHistoricizeMeasurements(event.target.checked)}
+                  />
+                  <span className="toggle-switch__track" aria-hidden="true" />
+                </span>
+                <label htmlFor="historicize-measurements" className="history-toggle-row__text">
+                  <strong>Storicizza le misure</strong>
+                  <span>
+                    Tieni traccia di peso, petto, braccia, vita e gamba nel tempo. Puoi scegliere
+                    per quale data registrarle qui sotto.
+                  </span>
+                </label>
+              </div>
+
+              <div className={`date-field-wrap${historicizeMeasurements ? " is-visible" : ""}`}>
+                <label>
+                  Data di questa misurazione
+                  <input
+                    type="date"
+                    value={measuredOn}
+                    max={today()}
+                    onChange={(event) => setMeasuredOn(event.target.value)}
+                  />
+                  <span className="date-field-hint">
+                    Lascia oggi per registrare la misurazione di oggi, oppure scegli una data
+                    passata per aggiungerla allo storico. Se scegli una data già presente nello
+                    storico, la voce esistente verrà aggiornata.
+                  </span>
+                </label>
+              </div>
+
               <label>
                 Altezza (cm)
                 <input
