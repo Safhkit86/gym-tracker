@@ -4,63 +4,22 @@ import type { ColumnType, Generated } from "kysely";
  * Tipi delle tabelle per Kysely (unica fonte di verita' lato tipi). Le
  * migrazioni SQL in ./migrations devono restare allineate a queste interfacce.
  *
- * Nota: le colonne `numeric` (progression_increment, actual_weight,
- * previous_value, suggested_value) tornano da node-pg come stringa, quindi in
- * select sono `string | null`; in insert/update accettiamo `number | null`
- * (stesso trattamento di target_weight in workout-service).
+ * `workout_sessions`/`session_sets` non vivono piu' qui: sono state spostate
+ * (logicamente, non fisicamente: vedi history-service/src/db/migrate.ts) in
+ * history-service. `progression_events.triggering_session_id` e' quindi
+ * logico, non FK (era l'unica FK reale del sistema finche' le due tabelle
+ * vivevano nello stesso servizio: vedi migrazione 013).
+ *
+ * Nota: le colonne `numeric` (previous_value, suggested_value) tornano da
+ * node-pg come stringa, quindi in select sono `string | null`; in
+ * insert/update accettiamo `number | null`.
  */
-export interface WorkoutSessionsTable {
-  id: Generated<string>;
-  user_id: string;
-  /** Non FK: workout-service e' un altro servizio (stesso DB fisico). */
-  workout_id: string;
-  /** Denormalizzato dal client al momento del log (evita una chiamata HTTP). */
-  workout_name: string;
-  /** Snapshot di Workout.notes al momento del log (non le note della sessione). */
-  workout_notes: string | null;
-  performed_at: ColumnType<Date, Date | string, Date | string>;
-  notes: string | null;
-  created_at: Generated<Date>;
-}
-
-export interface SessionSetsTable {
-  id: Generated<string>;
-  session_id: string;
-  /** Non FK: catalogo esercizi vive in workout-service. */
-  exercise_id: string;
-  exercise_name: string;
-  workout_exercise_id: string | null;
-  set_number: number;
-  /** Snapshot della prescrizione al momento del log; null per log liberi. */
-  target_min_reps: number | null;
-  /** Snapshot della prescrizione al momento del log; null se non era un range. */
-  target_max_reps: number | null;
-  /** Snapshot di WorkoutExercise.progressionIncrement al momento del log. */
-  progression_increment: ColumnType<string | null, number | null, number | null>;
-  /** Snapshot di WorkoutExercise.restSeconds (recupero prima dell'esercizio
-   *  successivo) al momento del log. */
-  rest_seconds: number | null;
-  /** Snapshot di WorkoutSet.restMinSeconds (recupero tra i set) al momento del log. */
-  target_rest_min_seconds: number | null;
-  /** Snapshot di WorkoutSet.restMaxSeconds al momento del log. */
-  target_rest_max_seconds: number | null;
-  /** Recupero tra i set effettivamente preso, inserito dall'utente nel form di log. */
-  actual_rest_seconds: number | null;
-  /** Indice dell'esercizio nell'array `exercises` della request: determina
-   *  l'ordine di visualizzazione, non derivabile in modo affidabile da
-   *  created_at quando piu' esercizi vengono inseriti nella stessa transazione. */
-  position: number;
-  actual_reps: number;
-  actual_weight: ColumnType<string | null, number | null, number | null>;
-  actual_rpe: number | null;
-  created_at: Generated<Date>;
-}
-
 export interface ProgressionEventsTable {
   id: Generated<string>;
   user_id: string;
   exercise_id: string;
   exercise_name: string;
+  /** Logico, non FK: vedi commento sopra. */
   triggering_session_id: string;
   /** "increase_weight" | "increase_reps" */
   suggestion_type: string;
@@ -90,10 +49,50 @@ export interface ProgressionDefaultsTable {
   created_at: Generated<Date>;
 }
 
+/**
+ * Read-model alimentato consumando `session-logged` (history-service): evita
+ * a progress-service di leggere le tabelle di un altro servizio per valutare
+ * il motore di regole e per "esercizio in stallo". `recent_outcomes` e' una
+ * finestra scorrevole (JSON stringificato, non jsonb: qui non serve mai
+ * interrogare dentro il campo lato SQL, solo leggerlo/scriverlo per intero)
+ * delle ultime sessioni per quell'esercizio, gia' nella forma richiesta dal
+ * motore di regole (vedi progression-rule-engine.ts). `first_logged_at` non
+ * viene mai spostato in avanti (solo `LEAST` su un evento piu' vecchio in
+ * arrivo in seguito), cosi' da restare fedele al comportamento storico basato
+ * su MIN(performed_at).
+ */
+export interface ExerciseHistoryCacheTable {
+  user_id: string;
+  exercise_id: string;
+  /** Snapshot dell'ultimo nome esercizio visto (session-logged): puo'
+   *  invecchiare se l'utente rinomina un esercizio custom, stesso
+   *  trattamento gia' accettato per session_sets.exercise_name. */
+  exercise_name: string;
+  first_logged_at: ColumnType<Date, Date | string, Date | string>;
+  recent_outcomes: string;
+  updated_at: ColumnType<Date, Date | undefined, Date>;
+}
+
+/**
+ * Marcatore scritto dal consumer di `session-logged` a valutazione completata:
+ * supporta il polling di GET /sessions/:id/status (breve finestra dopo POST
+ * /sessions in history-service, per continuare a mostrare subito l'eventuale
+ * suggerimento com'era quando le due responsabilita' erano nello stesso
+ * servizio).
+ */
+export interface ProcessedSessionsTable {
+  session_id: string;
+  /** Necessario per verificare l'ownership in GET /sessions/:id/status:
+   *  questo servizio non ha piu' la tabella delle sessioni per una join. */
+  user_id: string;
+  processed_at: Generated<Date>;
+  had_suggestions: boolean;
+}
+
 export interface Database {
-  workout_sessions: WorkoutSessionsTable;
-  session_sets: SessionSetsTable;
   progression_events: ProgressionEventsTable;
   progression_preferences: ProgressionPreferencesTable;
   progression_defaults: ProgressionDefaultsTable;
+  exercise_history_cache: ExerciseHistoryCacheTable;
+  processed_sessions: ProcessedSessionsTable;
 }

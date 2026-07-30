@@ -9,6 +9,7 @@ export * from "./api-error.js";
 export * from "./auth.js";
 export * from "./profile.js";
 export * from "./workout.js";
+export * from "./history.js";
 export * from "./progress.js";
 export * from "./notify.js";
 export * from "./logger.js";

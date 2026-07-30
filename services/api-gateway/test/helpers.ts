@@ -65,23 +65,26 @@ export async function startFakeUpstream(
   return state;
 }
 
-/** Costruisce l'app del gateway puntata su quattro fake upstream. */
+/** Costruisce l'app del gateway puntata su cinque fake upstream. */
 export async function buildTestApp(rateLimits?: RateLimitConfig): Promise<{
   app: ReturnType<typeof createApp>;
   auth: FakeUpstream;
   workout: FakeUpstream;
   progress: FakeUpstream;
+  history: FakeUpstream;
   notify: FakeUpstream;
   closeAll(): Promise<void>;
 }> {
   const auth = await startFakeUpstream();
   const workout = await startFakeUpstream();
   const progress = await startFakeUpstream();
+  const history = await startFakeUpstream();
   const notify = await startFakeUpstream();
   const app = createApp({
     accountServiceUrl: auth.url,
     workoutServiceUrl: workout.url,
     progressServiceUrl: progress.url,
+    historyServiceUrl: history.url,
     notifyServiceUrl: notify.url,
     tokens: createAccessTokenService(TEST_JWT_SECRET),
     rateLimits,
@@ -92,11 +95,13 @@ export async function buildTestApp(rateLimits?: RateLimitConfig): Promise<{
     auth,
     workout,
     progress,
+    history,
     notify,
     closeAll: async () => {
       await auth.close();
       await workout.close();
       await progress.close();
+      await history.close();
       await notify.close();
     },
   };

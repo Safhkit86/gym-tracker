@@ -102,8 +102,8 @@ export function createSessionRoutes(sessions: SessionService, tokens: AccessToke
   });
 
   // Registrata prima di "/sessions/:id" per non essere intercettata da
-  // quella rotta parametrica (stesso accorgimento di PUT /workouts/reorder
-  // in workout-routes.ts).
+  // quella rotta parametrica (stesso accorgimento gia' usato altrove per
+  // rotte letterali vs. parametriche).
   router.get("/sessions/exercise-history", async (req, res, next) => {
     try {
       const exerciseId =

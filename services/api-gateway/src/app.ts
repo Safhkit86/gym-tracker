@@ -22,6 +22,7 @@ export interface AppDeps {
   accountServiceUrl: string;
   workoutServiceUrl: string;
   progressServiceUrl: string;
+  historyServiceUrl: string;
   notifyServiceUrl: string;
   tokens: AccessTokenService;
   rateLimits?: RateLimitConfig;
@@ -122,10 +123,15 @@ export function createApp(deps: AppDeps): Express {
   app.use("/me", proxyTo(deps.accountServiceUrl));
   app.use("/exercises", proxyTo(deps.workoutServiceUrl));
   app.use("/workouts", proxyTo(deps.workoutServiceUrl));
-  app.use("/sessions", proxyTo(deps.progressServiceUrl));
+  // Storico sessioni: history-service. GET /sessions/:id/status (polling
+  // dopo il log) e' pero' del motore di regole, quindi va a progress-service
+  // — montata prima, altrimenti il blanket /sessions qui sotto la
+  // intercetterebbe per prima instradandola a history-service.
+  app.use("/sessions/:id/status", proxyTo(deps.progressServiceUrl));
+  app.use("/sessions", proxyTo(deps.historyServiceUrl));
   app.use("/progression", proxyTo(deps.progressServiceUrl));
   app.use("/notifications", proxyTo(deps.notifyServiceUrl));
-  app.use("/stats", proxyTo(deps.progressServiceUrl));
+  app.use("/stats", proxyTo(deps.historyServiceUrl));
 
   app.use((req, res) => {
     req.log.warn("rotta non trovata");

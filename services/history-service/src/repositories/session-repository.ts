@@ -63,7 +63,7 @@ export interface SessionRepository {
   /**
    * Ultime `limit` sessioni (piu' recente prima) per lo stesso esercizio —
    * include la sessione appena creata. Lo `scope` decide il raggruppamento
-   * (preferenza per-utente, vedi progression-preferences-repository.ts):
+   * (preferenza per-utente, vedi progress-service/progression-preferences-repository.ts):
    * `"workout"` (default, comportamento storico) considera solo le sessioni
    * della stessa scheda; `"exercise"` considera l'esercizio ovunque compaia,
    * indipendentemente dalla scheda.

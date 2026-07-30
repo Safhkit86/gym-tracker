@@ -124,6 +124,24 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  history-service:
+    build:
+      context: .
+      dockerfile: services/history-service/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: ${HISTORY_SERVICE_PORT:-4005}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      DATABASE_URL: postgres://${POSTGRES_USER:-gymtracker}:${POSTGRES_PASSWORD:-gymtracker}@postgres:5432/${POSTGRES_DB:-gymtracker}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-gymtracker}:${RABBITMQ_PASSWORD:-gymtracker}@rabbitmq:5672
+    ports:
+      - "${HISTORY_SERVICE_PORT:-4005}:4005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
   notify-service:
     build:
       context: .
@@ -160,6 +178,7 @@ services:
       ACCOUNT_SERVICE_URL: http://account-service:4001
       WORKOUT_SERVICE_URL: http://workout-service:4002
       PROGRESS_SERVICE_URL: http://progress-service:4003
+      HISTORY_SERVICE_URL: http://history-service:4005
       NOTIFY_SERVICE_URL: http://notify-service:4004
     ports:
       - "${API_GATEWAY_PORT:-4000}:4000"
@@ -167,6 +186,7 @@ services:
       - account-service
       - workout-service
       - progress-service
+      - history-service
       - notify-service
 
 volumes:

@@ -17,6 +17,14 @@ export interface NewProgressionEvent {
 export interface ProgressionEventRepository {
   create(event: NewProgressionEvent): Promise<ProgressionEvent>;
   listByOwner(userId: string, exerciseId?: string): Promise<ProgressionEvent[]>;
+  /** Per GET /sessions/:id/status (polling dopo il log): i suggerimenti
+   *  generati da una sessione specifica. */
+  listByTriggeringSession(sessionId: string): Promise<ProgressionEvent[]>;
+  /** Cascade applicativo: sostituisce l'FK reale `ON DELETE CASCADE` di
+   *  quando `progression_events` e `workout_sessions` vivevano nello stesso
+   *  servizio (vedi migrazione 013), invocato dal consumer su
+   *  `session-deleted`. */
+  deleteByTriggeringSession(sessionId: string): Promise<void>;
 }
 
 export class KyselyProgressionEventRepository implements ProgressionEventRepository {
@@ -48,6 +56,23 @@ export class KyselyProgressionEventRepository implements ProgressionEventReposit
     }
     const rows = await query.orderBy("created_at", "desc").execute();
     return rows.map(toDto);
+  }
+
+  async listByTriggeringSession(sessionId: string): Promise<ProgressionEvent[]> {
+    const rows = await this.db
+      .selectFrom("progression_events")
+      .selectAll()
+      .where("triggering_session_id", "=", sessionId)
+      .orderBy("created_at", "desc")
+      .execute();
+    return rows.map(toDto);
+  }
+
+  async deleteByTriggeringSession(sessionId: string): Promise<void> {
+    await this.db
+      .deleteFrom("progression_events")
+      .where("triggering_session_id", "=", sessionId)
+      .execute();
   }
 }
 
@@ -104,5 +129,18 @@ export class InMemoryProgressionEventRepository implements ProgressionEventRepos
   async listByOwner(userId: string, exerciseId?: string): Promise<ProgressionEvent[]> {
     const list = this.byOwner.get(userId) ?? [];
     return exerciseId ? list.filter((e) => e.exerciseId === exerciseId) : list;
+  }
+
+  async listByTriggeringSession(sessionId: string): Promise<ProgressionEvent[]> {
+    return [...this.byOwner.values()].flat().filter((e) => e.triggeringSessionId === sessionId);
+  }
+
+  async deleteByTriggeringSession(sessionId: string): Promise<void> {
+    for (const [userId, events] of this.byOwner.entries()) {
+      this.byOwner.set(
+        userId,
+        events.filter((e) => e.triggeringSessionId !== sessionId)
+      );
+    }
   }
 }

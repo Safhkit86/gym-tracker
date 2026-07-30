@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { evaluateProgression } from "../src/domain/progression-rule-engine.js";
-import type { ExerciseSessionSnapshot } from "../src/repositories/session-repository.js";
+import type { ExerciseSessionSnapshot } from "../src/repositories/exercise-history-cache-repository.js";
 
 function session(
   sessionId: string,

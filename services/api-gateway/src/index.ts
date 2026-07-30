@@ -9,6 +9,7 @@ const app = createApp({
   accountServiceUrl: config.ACCOUNT_SERVICE_URL,
   workoutServiceUrl: config.WORKOUT_SERVICE_URL,
   progressServiceUrl: config.PROGRESS_SERVICE_URL,
+  historyServiceUrl: config.HISTORY_SERVICE_URL,
   notifyServiceUrl: config.NOTIFY_SERVICE_URL,
   tokens: createAccessTokenService(config.JWT_SECRET),
   logger,
