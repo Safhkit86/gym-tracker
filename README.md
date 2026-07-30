@@ -204,10 +204,10 @@ entrambi.
 - ✅ **Fase 4** — notify-service
   - ✅ Backend
   - ✅ UI (badge notifiche non lette, elenco, segna come letta/tutte lette)
-- **Fase 5** — hardening API Gateway (autenticazione centralizzata, rate
+- ✅ **Fase 5** — hardening API Gateway (autenticazione centralizzata, rate
   limiting) + rifinitura webapp
   - ✅ Hardening API Gateway
-  - ⬜ Rifinitura webapp
+  - ✅ Rifinitura webapp
 - ✅ **Fase 6** — osservabilità leggera (log strutturati + correlation ID)
 - ⬜ **Fase 7** — Kubernetes (opzionale)
 - ⬜ **Fase 8** — app Android
@@ -215,9 +215,10 @@ entrambi.
 L'API Gateway in versione minima (solo reverse-proxy, vedi `services/api-gateway`)
 è stato anticipato rispetto alla Fase 5 originale: serviva da subito per non
 far parlare la webapp direttamente con i singoli servizi (vedi "Cosa NON fare"
-in `CLAUDE.md`). L'hardening (autenticazione centralizzata, rate limiting) è
-arrivato in Fase 5; la "rifinitura webapp" resta da fare, senza uno scope
-preciso ancora definito.
+in `CLAUDE.md`). L'hardening (autenticazione centralizzata, rate limiting) e
+la rifinitura webapp (restyling "Night Track" completo su tutte le pagine,
+standard responsive unico per le tabelle a larghezza fissa, storico misure)
+sono entrambi arrivati in Fase 5.
 
 Vedi `CLAUDE.md` per le convenzioni di codice usate da Claude Code in questo
 repo.
