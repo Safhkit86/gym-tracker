@@ -158,7 +158,10 @@ Ogni Pull Request verso `master` esegue automaticamente (`.github/workflows/ci.y
 1. Lint su tutti i workspace
 2. Test su tutti i workspace
 3. Build TypeScript su tutti i workspace
-4. Build dell'immagine Docker di ogni servizio implementato (`account-service`, `workout-service`, `progress-service`, `notify-service`, `api-gateway`)
+4. Format check (`npm run format:check`, Prettier) — verificare in locale con
+   `npm run format:check` prima di aprire una PR, `npm run format` per
+   correggere
+5. Build dell'immagine Docker di ogni servizio implementato (`account-service`, `workout-service`, `progress-service`, `notify-service`, `api-gateway`)
 
 La validazione obbligatoria delle PR è **attiva**: su `master` è impostata una
 branch protection rule con il check `CI passed` (il job `ci-status` del workflow)
