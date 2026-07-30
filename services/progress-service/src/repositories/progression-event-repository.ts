@@ -4,7 +4,7 @@ import type { ProgressionEvent, ProgressionSuggestionType } from "@gym-tracker/s
 import type { Database } from "../db/types.js";
 
 export interface NewProgressionEvent {
-  ownerId: string;
+  userId: string;
   exerciseId: string;
   exerciseName: string;
   triggeringSessionId: string;
@@ -16,7 +16,7 @@ export interface NewProgressionEvent {
 
 export interface ProgressionEventRepository {
   create(event: NewProgressionEvent): Promise<ProgressionEvent>;
-  listByOwner(ownerId: string, exerciseId?: string): Promise<ProgressionEvent[]>;
+  listByOwner(userId: string, exerciseId?: string): Promise<ProgressionEvent[]>;
 }
 
 export class KyselyProgressionEventRepository implements ProgressionEventRepository {
@@ -26,7 +26,7 @@ export class KyselyProgressionEventRepository implements ProgressionEventReposit
     const row = await this.db
       .insertInto("progression_events")
       .values({
-        owner_id: event.ownerId,
+        user_id: event.userId,
         exercise_id: event.exerciseId,
         exercise_name: event.exerciseName,
         triggering_session_id: event.triggeringSessionId,
@@ -41,11 +41,11 @@ export class KyselyProgressionEventRepository implements ProgressionEventReposit
     return toDto(row);
   }
 
-  async listByOwner(ownerId: string, exerciseId?: string): Promise<ProgressionEvent[]> {
+  async listByOwner(userId: string, exerciseId?: string): Promise<ProgressionEvent[]> {
     let query = this.db
       .selectFrom("progression_events")
       .selectAll()
-      .where("owner_id", "=", ownerId);
+      .where("user_id", "=", userId);
     if (exerciseId) {
       query = query.where("exercise_id", "=", exerciseId);
     }
@@ -98,14 +98,14 @@ export class InMemoryProgressionEventRepository implements ProgressionEventRepos
       source: "rule",
       createdAt: new Date().toISOString(),
     };
-    const list = this.byOwner.get(event.ownerId) ?? [];
+    const list = this.byOwner.get(event.userId) ?? [];
     list.unshift(created);
-    this.byOwner.set(event.ownerId, list);
+    this.byOwner.set(event.userId, list);
     return created;
   }
 
-  async listByOwner(ownerId: string, exerciseId?: string): Promise<ProgressionEvent[]> {
-    const list = this.byOwner.get(ownerId) ?? [];
+  async listByOwner(userId: string, exerciseId?: string): Promise<ProgressionEvent[]> {
+    const list = this.byOwner.get(userId) ?? [];
     return exerciseId ? list.filter((e) => e.exerciseId === exerciseId) : list;
   }
 }

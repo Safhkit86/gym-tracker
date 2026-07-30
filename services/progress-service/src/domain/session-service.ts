@@ -30,9 +30,9 @@ export class SessionService {
     private readonly logger: Logger
   ) {}
 
-  async logSession(ownerId: string, input: SessionInput): Promise<CreateSessionResponse> {
-    const session = await this.sessions.create(ownerId, normalize(input));
-    const preferences = await this.progressionPreferences.find(ownerId);
+  async logSession(userId: string, input: SessionInput): Promise<CreateSessionResponse> {
+    const session = await this.sessions.create(userId, normalize(input));
+    const preferences = await this.progressionPreferences.find(userId);
 
     const suggestions: ProgressionEvent[] = [];
     const seenExerciseIds = new Set<string>();
@@ -47,10 +47,10 @@ export class SessionService {
       // LogSessionPage.tsx): da qui in poi il normale prefill (ultima
       // sessione registrata) riflette gia' il nuovo valore, quindi si
       // consuma subito, a prescindere dall'esito della valutazione sotto.
-      await this.progressionDefaults.consume(ownerId, exercise.exerciseId);
+      await this.progressionDefaults.consume(userId, exercise.exerciseId);
 
       const history = await this.sessions.findRecentSetsForExercise(
-        ownerId,
+        userId,
         session.workoutId,
         exercise.exerciseId,
         preferences.requiredConsecutiveSessions,
@@ -66,7 +66,7 @@ export class SessionService {
       }
 
       const event = await this.progressionEvents.create({
-        ownerId,
+        userId,
         exerciseId: exercise.exerciseId,
         exerciseName: exercise.exerciseName,
         triggeringSessionId: session.id,
@@ -75,7 +75,7 @@ export class SessionService {
       suggestions.push(event);
 
       try {
-        await this.publisher.publish({ ...event, ownerId });
+        await this.publisher.publish({ ...event, userId });
       } catch (err) {
         // Best-effort: la sessione e' gia' salvata con successo, un
         // fallimento di publish non deve far fallire la richiesta.
@@ -86,8 +86,8 @@ export class SessionService {
     return { ...session, suggestions };
   }
 
-  async list(ownerId: string, limit?: number): Promise<SessionDetail[]> {
-    return this.sessions.listByOwner(ownerId, limit);
+  async list(userId: string, limit?: number): Promise<SessionDetail[]> {
+    return this.sessions.listByOwner(userId, limit);
   }
 
   /** Storico per il grafico "Progressioni per esercizio" della Dashboard:
@@ -95,11 +95,11 @@ export class SessionService {
    *  altrimenti ripetizioni massime. Ordinato dal piu' vecchio al piu'
    *  recente (pronto per l'asse X del grafico). */
   async getExerciseHistory(
-    ownerId: string,
+    userId: string,
     exerciseId: string,
     limit = 10
   ): Promise<ExerciseHistoryPoint[]> {
-    const snapshots = await this.sessions.findExerciseHistory(ownerId, exerciseId, limit);
+    const snapshots = await this.sessions.findExerciseHistory(userId, exerciseId, limit);
     const isWeighted = snapshots.some((snapshot) =>
       snapshot.sets.some((set) => set.actualWeight !== null)
     );
@@ -117,16 +117,16 @@ export class SessionService {
       }));
   }
 
-  async get(ownerId: string, id: string): Promise<SessionDetail> {
-    const detail = await this.sessions.findDetail(ownerId, id);
+  async get(userId: string, id: string): Promise<SessionDetail> {
+    const detail = await this.sessions.findDetail(userId, id);
     if (!detail) {
       throw new NotFoundError("Sessione non trovata.");
     }
     return detail;
   }
 
-  async delete(ownerId: string, id: string): Promise<void> {
-    const deleted = await this.sessions.delete(ownerId, id);
+  async delete(userId: string, id: string): Promise<void> {
+    const deleted = await this.sessions.delete(userId, id);
     if (!deleted) {
       throw new NotFoundError("Sessione non trovata.");
     }

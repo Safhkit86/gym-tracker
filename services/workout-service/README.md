@@ -7,8 +7,8 @@ Modella la **prescrizione** (cosa fare); l'esecuzione reale sarà di `progress-s
 
 `Workout` → `WorkoutExercise` → `WorkoutSet` (3 livelli, così una scheda può
 avere set diversi per reps/peso sullo stesso esercizio). Catalogo `Exercise`
-con `ownerId` nullo per gli esercizi globali (seed) o valorizzato per quelli
-creati dall'utente. `ownerId` sulle schede/esercizi è il `sub` del JWT: non è
+con `userId` nullo per gli esercizi globali (seed) o valorizzato per quelli
+creati dall'utente. `userId` sulle schede/esercizi è il `sub` del JWT: non è
 una foreign key verso `account-service` (confine tra servizi).
 
 Ogni `WorkoutExercise` può avere un `progressionIncrement` (kg se pesato,

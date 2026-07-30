@@ -9,7 +9,7 @@ import type { ColumnType, Generated } from "kysely";
  */
 export interface ExercisesTable {
   id: Generated<string>;
-  owner_id: string | null;
+  user_id: string | null;
   name: string;
   muscle_group: string | null;
   /** Come eseguire l'esercizio; null per gli esercizi creati dagli utenti. */
@@ -22,7 +22,7 @@ export interface ExercisesTable {
 
 export interface WorkoutsTable {
   id: Generated<string>;
-  owner_id: string;
+  user_id: string;
   name: string;
   notes: string | null;
   position: number;

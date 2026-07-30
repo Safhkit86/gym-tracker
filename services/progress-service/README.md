@@ -37,7 +37,7 @@ corpo libero) — pubblicato su RabbitMQ (coda `progression-events`, che
 
 `WorkoutSession` → `SessionSet` (esecuzione reale, con snapshot di nome
 esercizio/obiettivo/incremento configurato al momento del log) e
-`ProgressionEvent` (suggerimenti generati). `ownerId`/`workoutId`/`exerciseId`
+`ProgressionEvent` (suggerimenti generati). `userId`/`workoutId`/`exerciseId`
 non sono foreign key verso altri servizi (confine tra servizi, stesso
 pattern di `workout-service`).
 

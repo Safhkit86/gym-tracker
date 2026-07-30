@@ -15,48 +15,48 @@ export class WorkoutService {
     private readonly exercises: ExerciseRepository
   ) {}
 
-  async create(ownerId: string, input: WorkoutInput): Promise<WorkoutDetail> {
-    const normalized = await this.normalize(ownerId, input);
-    return this.workouts.create(ownerId, normalized);
+  async create(userId: string, input: WorkoutInput): Promise<WorkoutDetail> {
+    const normalized = await this.normalize(userId, input);
+    return this.workouts.create(userId, normalized);
   }
 
-  async replace(ownerId: string, id: string, input: WorkoutInput): Promise<WorkoutDetail> {
-    const normalized = await this.normalize(ownerId, input);
-    const result = await this.workouts.replace(ownerId, id, normalized);
+  async replace(userId: string, id: string, input: WorkoutInput): Promise<WorkoutDetail> {
+    const normalized = await this.normalize(userId, input);
+    const result = await this.workouts.replace(userId, id, normalized);
     if (!result) {
       throw new NotFoundError("Scheda non trovata.");
     }
     return result;
   }
 
-  async list(ownerId: string): Promise<WorkoutSummary[]> {
-    return this.workouts.listByOwner(ownerId);
+  async list(userId: string): Promise<WorkoutSummary[]> {
+    return this.workouts.listByOwner(userId);
   }
 
-  async get(ownerId: string, id: string): Promise<WorkoutDetail> {
-    const detail = await this.workouts.findDetail(ownerId, id);
+  async get(userId: string, id: string): Promise<WorkoutDetail> {
+    const detail = await this.workouts.findDetail(userId, id);
     if (!detail) {
       throw new NotFoundError("Scheda non trovata.");
     }
     return detail;
   }
 
-  async delete(ownerId: string, id: string): Promise<void> {
-    const deleted = await this.workouts.delete(ownerId, id);
+  async delete(userId: string, id: string): Promise<void> {
+    const deleted = await this.workouts.delete(userId, id);
     if (!deleted) {
       throw new NotFoundError("Scheda non trovata.");
     }
   }
 
-  async reorder(ownerId: string, workoutIds: string[]): Promise<void> {
-    await this.workouts.reorder(ownerId, workoutIds);
+  async reorder(userId: string, workoutIds: string[]): Promise<void> {
+    await this.workouts.reorder(userId, workoutIds);
   }
 
   /** Verifica gli esercizi referenziati e risolve i loro nomi dal catalogo. */
-  private async normalize(ownerId: string, input: WorkoutInput): Promise<NormalizedWorkout> {
+  private async normalize(userId: string, input: WorkoutInput): Promise<NormalizedWorkout> {
     const exercises = input.exercises ?? [];
     const ids = [...new Set(exercises.map((e) => e.exerciseId))];
-    const accessible = await this.exercises.findAccessibleByIds(ownerId, ids);
+    const accessible = await this.exercises.findAccessibleByIds(userId, ids);
     const nameById = new Map(accessible.map((e) => [e.id, e.name]));
 
     const missing = ids.filter((id) => !nameById.has(id));

@@ -5,7 +5,7 @@ import { ConflictError } from "../errors.js";
 
 export interface ExerciseRecord {
   id: string;
-  ownerId: string | null;
+  userId: string | null;
   name: string;
   muscleGroup: string | null;
   description: string | null;
@@ -13,22 +13,22 @@ export interface ExerciseRecord {
 }
 
 export interface NewExercise {
-  ownerId: string;
+  userId: string;
   name: string;
   muscleGroup: string | null;
 }
 
 export interface ExerciseRepository {
   /** Esercizi globali + quelli dell'utente, ordinati per nome. */
-  listAvailable(ownerId: string): Promise<ExerciseRecord[]>;
+  listAvailable(userId: string): Promise<ExerciseRecord[]>;
   /** Sottoinsieme di `ids` accessibile all'utente (globali o propri). */
-  findAccessibleByIds(ownerId: string, ids: string[]): Promise<ExerciseRecord[]>;
+  findAccessibleByIds(userId: string, ids: string[]): Promise<ExerciseRecord[]>;
   create(exercise: NewExercise): Promise<ExerciseRecord>;
 }
 
 interface ExerciseRow {
   id: string;
-  owner_id: string | null;
+  user_id: string | null;
   name: string;
   muscle_group: string | null;
   description: string | null;
@@ -38,7 +38,7 @@ interface ExerciseRow {
 function toRecord(row: ExerciseRow): ExerciseRecord {
   return {
     id: row.id,
-    ownerId: row.owner_id,
+    userId: row.user_id,
     name: row.name,
     muscleGroup: row.muscle_group,
     description: row.description,
@@ -54,25 +54,25 @@ function isUniqueViolation(err: unknown): boolean {
 export class KyselyExerciseRepository implements ExerciseRepository {
   constructor(private readonly db: Kysely<Database>) {}
 
-  async listAvailable(ownerId: string): Promise<ExerciseRecord[]> {
+  async listAvailable(userId: string): Promise<ExerciseRecord[]> {
     const rows = await this.db
       .selectFrom("exercises")
-      .select(["id", "owner_id", "name", "muscle_group", "description", "source_url"])
-      .where((eb) => eb.or([eb("owner_id", "is", null), eb("owner_id", "=", ownerId)]))
+      .select(["id", "user_id", "name", "muscle_group", "description", "source_url"])
+      .where((eb) => eb.or([eb("user_id", "is", null), eb("user_id", "=", userId)]))
       .orderBy("name")
       .execute();
     return rows.map(toRecord);
   }
 
-  async findAccessibleByIds(ownerId: string, ids: string[]): Promise<ExerciseRecord[]> {
+  async findAccessibleByIds(userId: string, ids: string[]): Promise<ExerciseRecord[]> {
     if (ids.length === 0) {
       return [];
     }
     const rows = await this.db
       .selectFrom("exercises")
-      .select(["id", "owner_id", "name", "muscle_group", "description", "source_url"])
+      .select(["id", "user_id", "name", "muscle_group", "description", "source_url"])
       .where("id", "in", ids)
-      .where((eb) => eb.or([eb("owner_id", "is", null), eb("owner_id", "=", ownerId)]))
+      .where((eb) => eb.or([eb("user_id", "is", null), eb("user_id", "=", userId)]))
       .execute();
     return rows.map(toRecord);
   }
@@ -82,11 +82,11 @@ export class KyselyExerciseRepository implements ExerciseRepository {
       const row = await this.db
         .insertInto("exercises")
         .values({
-          owner_id: exercise.ownerId,
+          user_id: exercise.userId,
           name: exercise.name,
           muscle_group: exercise.muscleGroup,
         })
-        .returning(["id", "owner_id", "name", "muscle_group", "description", "source_url"])
+        .returning(["id", "user_id", "name", "muscle_group", "description", "source_url"])
         .executeTakeFirstOrThrow();
       return toRecord(row);
     } catch (err) {
@@ -109,7 +109,7 @@ export class InMemoryExerciseRepository implements ExerciseRepository {
     for (const g of seedGlobals) {
       const record: ExerciseRecord = {
         id: randomUUID(),
-        ownerId: null,
+        userId: null,
         name: g.name,
         muscleGroup: g.muscleGroup,
         description: null,
@@ -119,29 +119,29 @@ export class InMemoryExerciseRepository implements ExerciseRepository {
     }
   }
 
-  async listAvailable(ownerId: string): Promise<ExerciseRecord[]> {
+  async listAvailable(userId: string): Promise<ExerciseRecord[]> {
     return [...this.byId.values()]
-      .filter((e) => e.ownerId === null || e.ownerId === ownerId)
+      .filter((e) => e.userId === null || e.userId === userId)
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  async findAccessibleByIds(ownerId: string, ids: string[]): Promise<ExerciseRecord[]> {
+  async findAccessibleByIds(userId: string, ids: string[]): Promise<ExerciseRecord[]> {
     const wanted = new Set(ids);
     return [...this.byId.values()].filter(
-      (e) => wanted.has(e.id) && (e.ownerId === null || e.ownerId === ownerId)
+      (e) => wanted.has(e.id) && (e.userId === null || e.userId === userId)
     );
   }
 
   async create(exercise: NewExercise): Promise<ExerciseRecord> {
     const duplicate = [...this.byId.values()].some(
-      (e) => e.ownerId === exercise.ownerId && e.name === exercise.name
+      (e) => e.userId === exercise.userId && e.name === exercise.name
     );
     if (duplicate) {
       throw new ConflictError("EXERCISE_ALREADY_EXISTS", "Hai gia' un esercizio con questo nome.");
     }
     const record: ExerciseRecord = {
       id: randomUUID(),
-      ownerId: exercise.ownerId,
+      userId: exercise.userId,
       name: exercise.name,
       muscleGroup: exercise.muscleGroup,
       description: null,

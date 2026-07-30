@@ -17,9 +17,9 @@ const DEFAULT_PREFERENCES: ProgressionPreferencesRecord = {
 
 export interface ProgressionPreferencesRepository {
   /** I default se l'utente non ha ancora salvato nulla (nessun backfill richiesto). */
-  find(ownerId: string): Promise<ProgressionPreferencesRecord>;
+  find(userId: string): Promise<ProgressionPreferencesRecord>;
   upsert(
-    ownerId: string,
+    userId: string,
     values: ProgressionPreferencesRecord
   ): Promise<ProgressionPreferencesRecord>;
 }
@@ -28,11 +28,11 @@ export interface ProgressionPreferencesRepository {
 export class KyselyProgressionPreferencesRepository implements ProgressionPreferencesRepository {
   constructor(private readonly db: Kysely<Database>) {}
 
-  async find(ownerId: string): Promise<ProgressionPreferencesRecord> {
+  async find(userId: string): Promise<ProgressionPreferencesRecord> {
     const row = await this.db
       .selectFrom("progression_preferences")
       .selectAll()
-      .where("owner_id", "=", ownerId)
+      .where("user_id", "=", userId)
       .executeTakeFirst();
     if (!row) {
       return DEFAULT_PREFERENCES;
@@ -46,20 +46,20 @@ export class KyselyProgressionPreferencesRepository implements ProgressionPrefer
   }
 
   async upsert(
-    ownerId: string,
+    userId: string,
     values: ProgressionPreferencesRecord
   ): Promise<ProgressionPreferencesRecord> {
     const row = await this.db
       .insertInto("progression_preferences")
       .values({
-        owner_id: ownerId,
+        user_id: userId,
         required_consecutive_sessions: values.requiredConsecutiveSessions,
         grouping_scope: values.groupingScope,
         prefill_scope: values.prefillScope,
         timer_sound_enabled: values.timerSoundEnabled,
       })
       .onConflict((oc) =>
-        oc.column("owner_id").doUpdateSet({
+        oc.column("user_id").doUpdateSet({
           required_consecutive_sessions: values.requiredConsecutiveSessions,
           grouping_scope: values.groupingScope,
           prefill_scope: values.prefillScope,
@@ -82,15 +82,15 @@ export class KyselyProgressionPreferencesRepository implements ProgressionPrefer
 export class InMemoryProgressionPreferencesRepository implements ProgressionPreferencesRepository {
   private readonly byOwnerId = new Map<string, ProgressionPreferencesRecord>();
 
-  async find(ownerId: string): Promise<ProgressionPreferencesRecord> {
-    return this.byOwnerId.get(ownerId) ?? DEFAULT_PREFERENCES;
+  async find(userId: string): Promise<ProgressionPreferencesRecord> {
+    return this.byOwnerId.get(userId) ?? DEFAULT_PREFERENCES;
   }
 
   async upsert(
-    ownerId: string,
+    userId: string,
     values: ProgressionPreferencesRecord
   ): Promise<ProgressionPreferencesRecord> {
-    this.byOwnerId.set(ownerId, values);
+    this.byOwnerId.set(userId, values);
     return values;
   }
 }

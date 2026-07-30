@@ -9,7 +9,7 @@ const FAKE_USER = { id: "u1", email: "test@example.com", createdAt: new Date().t
 const EXERCISES = [
   {
     id: "e1",
-    ownerId: null,
+    userId: null,
     name: "Dip",
     muscleGroup: "Petto",
     description: null,
@@ -17,7 +17,7 @@ const EXERCISES = [
   },
   {
     id: "e2",
-    ownerId: null,
+    userId: null,
     name: "Curl a martello",
     muscleGroup: "Braccia",
     description: null,
@@ -372,7 +372,7 @@ describe("DashboardPage", () => {
     const exercisesFixture = [
       {
         id: "e1",
-        ownerId: null,
+        userId: null,
         name: "Dip",
         muscleGroup: "Petto",
         description: null,
@@ -380,7 +380,7 @@ describe("DashboardPage", () => {
       },
       {
         id: "e2",
-        ownerId: null,
+        userId: null,
         name: "Curl a martello",
         muscleGroup: "Braccia",
         description: null,
@@ -443,7 +443,7 @@ describe("DashboardPage", () => {
     const exercisesFixture = [
       {
         id: "e1",
-        ownerId: null,
+        userId: null,
         name: "Squat",
         muscleGroup: "Gambe",
         description: null,
@@ -451,7 +451,7 @@ describe("DashboardPage", () => {
       },
       {
         id: "e2",
-        ownerId: null,
+        userId: null,
         name: "Calf raise",
         muscleGroup: "Polpacci",
         description: null,
@@ -513,7 +513,7 @@ describe("DashboardPage", () => {
     const exercisesFixture = [
       {
         id: "e1",
-        ownerId: null,
+        userId: null,
         name: "Dip",
         muscleGroup: "Petto",
         description: null,
@@ -521,7 +521,7 @@ describe("DashboardPage", () => {
       },
       {
         id: "e2",
-        ownerId: null,
+        userId: null,
         name: "Croci ai cavi",
         muscleGroup: "Petto",
         description: null,

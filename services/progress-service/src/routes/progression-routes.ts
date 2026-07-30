@@ -15,7 +15,7 @@ export function createProgressionRoutes(
   const router = Router();
   router.use(authenticate(tokens));
 
-  function ownerId(req: { userClaims?: { sub: string } }): string {
+  function userId(req: { userClaims?: { sub: string } }): string {
     const id = req.userClaims?.sub;
     if (!id) {
       throw new UnauthorizedError();
@@ -28,7 +28,7 @@ export function createProgressionRoutes(
   // accorgimento gia' usato altrove per rotte letterali vs. parametriche).
   router.get("/progression/stalled", async (req, res, next) => {
     try {
-      const result = await stats.getStalledExercise(ownerId(req));
+      const result = await stats.getStalledExercise(userId(req));
       res.status(200).json(result);
     } catch (err) {
       next(err);
@@ -39,7 +39,7 @@ export function createProgressionRoutes(
     try {
       const exerciseId =
         typeof req.query.exerciseId === "string" ? req.query.exerciseId : undefined;
-      const events = await progressionEvents.listByOwner(ownerId(req), exerciseId);
+      const events = await progressionEvents.listByOwner(userId(req), exerciseId);
       res.status(200).json(events);
     } catch (err) {
       next(err);

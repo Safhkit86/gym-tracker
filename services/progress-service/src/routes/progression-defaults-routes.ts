@@ -26,7 +26,7 @@ export function createProgressionDefaultsRoutes(
   const router = Router();
   router.use(authenticate(tokens));
 
-  function ownerId(req: { userClaims?: { sub: string } }): string {
+  function userId(req: { userClaims?: { sub: string } }): string {
     const id = req.userClaims?.sub;
     if (!id) {
       throw new UnauthorizedError();
@@ -36,7 +36,7 @@ export function createProgressionDefaultsRoutes(
 
   router.get("/me/progression-defaults", async (req, res, next) => {
     try {
-      const records = await defaults.listByOwner(ownerId(req));
+      const records = await defaults.listByOwner(userId(req));
       res.status(200).json(records);
     } catch (err) {
       next(err);
@@ -46,7 +46,7 @@ export function createProgressionDefaultsRoutes(
   router.post("/me/progression-defaults", async (req, res, next) => {
     try {
       const body = acceptSchema.parse(req.body);
-      await defaults.upsertMany(ownerId(req), body.overrides);
+      await defaults.upsertMany(userId(req), body.overrides);
       res.status(204).send();
     } catch (err) {
       next(err);

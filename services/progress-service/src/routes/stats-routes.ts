@@ -10,7 +10,7 @@ export function createStatsRoutes(stats: StatsRepository, tokens: AccessTokenSer
   const router = Router();
   router.use(authenticate(tokens));
 
-  function ownerId(req: { userClaims?: { sub: string } }): string {
+  function userId(req: { userClaims?: { sub: string } }): string {
     const id = req.userClaims?.sub;
     if (!id) {
       throw new UnauthorizedError();
@@ -20,7 +20,7 @@ export function createStatsRoutes(stats: StatsRepository, tokens: AccessTokenSer
 
   router.get("/stats", async (req, res, next) => {
     try {
-      const result = await stats.getStats(ownerId(req));
+      const result = await stats.getStats(userId(req));
       res.status(200).json(result);
     } catch (err) {
       next(err);

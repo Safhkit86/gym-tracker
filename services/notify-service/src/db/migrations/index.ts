@@ -1,5 +1,6 @@
 import type { Migration } from "kysely";
 import * as createNotificationsTable from "./001-create-notifications-table.js";
+import * as renameOwnerIdToUserId from "./002-rename-owner-id-to-user-id.js";
 
 /**
  * Registro statico delle migrazioni (chiavi ordinate). Preferito a
@@ -8,4 +9,5 @@ import * as createNotificationsTable from "./001-create-notifications-table.js";
  */
 export const migrations: Record<string, Migration> = {
   "001-create-notifications-table": createNotificationsTable,
+  "002-rename-owner-id-to-user-id": renameOwnerIdToUserId,
 };

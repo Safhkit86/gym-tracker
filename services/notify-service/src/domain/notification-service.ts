@@ -10,25 +10,25 @@ import type { NotificationRepository } from "../repositories/notification-reposi
 export class NotificationService {
   constructor(private readonly notifications: NotificationRepository) {}
 
-  async list(ownerId: string, unreadOnly = false): Promise<Notification[]> {
-    return this.notifications.listByOwner(ownerId, { unreadOnly });
+  async list(userId: string, unreadOnly = false): Promise<Notification[]> {
+    return this.notifications.listByOwner(userId, { unreadOnly });
   }
 
-  async markRead(ownerId: string, id: string): Promise<void> {
-    const updated = await this.notifications.markRead(ownerId, id);
+  async markRead(userId: string, id: string): Promise<void> {
+    const updated = await this.notifications.markRead(userId, id);
     if (!updated) {
       throw new NotFoundError("Notifica non trovata.");
     }
   }
 
-  async markAllRead(ownerId: string): Promise<number> {
-    return this.notifications.markAllRead(ownerId);
+  async markAllRead(userId: string): Promise<number> {
+    return this.notifications.markAllRead(userId);
   }
 
   /** Chiamato dal consumer RabbitMQ per ogni messaggio valido. */
   async handleProgressionEvent(message: ProgressionEventMessage): Promise<void> {
     await this.notifications.create({
-      ownerId: message.ownerId,
+      userId: message.userId,
       exerciseId: message.exerciseId,
       exerciseName: message.exerciseName,
       suggestionType: message.suggestionType,

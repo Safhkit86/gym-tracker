@@ -7,7 +7,7 @@ import { EditWorkoutPage } from "../pages/EditWorkoutPage";
 const FAKE_USER = { id: "u1", email: "test@example.com", createdAt: new Date().toISOString() };
 const FAKE_EXERCISE = {
   id: "e1",
-  ownerId: null,
+  userId: null,
   name: "Panca piana",
   muscleGroup: "Petto",
   description: "Sdraiati sulla panca e spingi il bilanciere verso l'alto.",
@@ -15,7 +15,7 @@ const FAKE_EXERCISE = {
 };
 const FAKE_EXERCISE_2 = {
   id: "e2",
-  ownerId: null,
+  userId: null,
   name: "Squat",
   muscleGroup: "Gambe",
   description: null,

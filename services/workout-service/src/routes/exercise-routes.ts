@@ -20,11 +20,11 @@ export function createExerciseRoutes(
 
   router.get("/exercises", async (req, res, next) => {
     try {
-      const ownerId = req.userClaims?.sub;
-      if (!ownerId) {
+      const userId = req.userClaims?.sub;
+      if (!userId) {
         throw new UnauthorizedError();
       }
-      const list = await exercises.listAvailable(ownerId);
+      const list = await exercises.listAvailable(userId);
       res.status(200).json(list);
     } catch (err) {
       next(err);
@@ -33,12 +33,12 @@ export function createExerciseRoutes(
 
   router.post("/exercises", async (req, res, next) => {
     try {
-      const ownerId = req.userClaims?.sub;
-      if (!ownerId) {
+      const userId = req.userClaims?.sub;
+      if (!userId) {
         throw new UnauthorizedError();
       }
       const body = createExerciseSchema.parse(req.body);
-      const created = await exercises.create(ownerId, body);
+      const created = await exercises.create(userId, body);
       res.status(201).json(created);
     } catch (err) {
       next(err);

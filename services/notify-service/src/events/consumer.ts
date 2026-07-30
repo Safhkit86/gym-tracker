@@ -18,7 +18,7 @@ const progressionEventMessageSchema = z.object({
   reason: z.string().min(1),
   source: z.enum(["rule", "ai"]),
   createdAt: z.string(),
-  ownerId: z.string().uuid(),
+  userId: z.string().uuid(),
 });
 
 /**

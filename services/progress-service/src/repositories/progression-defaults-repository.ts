@@ -9,21 +9,21 @@ export interface ProgressionDefaultRecord {
 }
 
 export interface ProgressionDefaultsRepository {
-  listByOwner(ownerId: string): Promise<ProgressionDefaultRecord[]>;
-  upsertMany(ownerId: string, overrides: ProgressionDefaultRecord[]): Promise<void>;
+  listByOwner(userId: string): Promise<ProgressionDefaultRecord[]>;
+  upsertMany(userId: string, overrides: ProgressionDefaultRecord[]): Promise<void>;
   /** No-op se non esiste una riga pendente per quell'esercizio. */
-  consume(ownerId: string, exerciseId: string): Promise<void>;
+  consume(userId: string, exerciseId: string): Promise<void>;
 }
 
 /** Implementazione su Postgres via Kysely. */
 export class KyselyProgressionDefaultsRepository implements ProgressionDefaultsRepository {
   constructor(private readonly db: Kysely<Database>) {}
 
-  async listByOwner(ownerId: string): Promise<ProgressionDefaultRecord[]> {
+  async listByOwner(userId: string): Promise<ProgressionDefaultRecord[]> {
     const rows = await this.db
       .selectFrom("progression_defaults")
       .selectAll()
-      .where("owner_id", "=", ownerId)
+      .where("user_id", "=", userId)
       .execute();
     return rows.map((row) => ({
       exerciseId: row.exercise_id,
@@ -32,18 +32,18 @@ export class KyselyProgressionDefaultsRepository implements ProgressionDefaultsR
     }));
   }
 
-  async upsertMany(ownerId: string, overrides: ProgressionDefaultRecord[]): Promise<void> {
+  async upsertMany(userId: string, overrides: ProgressionDefaultRecord[]): Promise<void> {
     for (const override of overrides) {
       await this.db
         .insertInto("progression_defaults")
         .values({
-          owner_id: ownerId,
+          user_id: userId,
           exercise_id: override.exerciseId,
           suggestion_type: override.suggestionType,
           value: override.value,
         })
         .onConflict((oc) =>
-          oc.columns(["owner_id", "exercise_id"]).doUpdateSet({
+          oc.columns(["user_id", "exercise_id"]).doUpdateSet({
             suggestion_type: override.suggestionType,
             value: override.value,
             created_at: new Date(),
@@ -53,10 +53,10 @@ export class KyselyProgressionDefaultsRepository implements ProgressionDefaultsR
     }
   }
 
-  async consume(ownerId: string, exerciseId: string): Promise<void> {
+  async consume(userId: string, exerciseId: string): Promise<void> {
     await this.db
       .deleteFrom("progression_defaults")
-      .where("owner_id", "=", ownerId)
+      .where("user_id", "=", userId)
       .where("exercise_id", "=", exerciseId)
       .execute();
   }
@@ -66,23 +66,23 @@ export class KyselyProgressionDefaultsRepository implements ProgressionDefaultsR
 export class InMemoryProgressionDefaultsRepository implements ProgressionDefaultsRepository {
   private readonly byOwnerAndExercise = new Map<string, ProgressionDefaultRecord>();
 
-  private key(ownerId: string, exerciseId: string): string {
-    return `${ownerId}:${exerciseId}`;
+  private key(userId: string, exerciseId: string): string {
+    return `${userId}:${exerciseId}`;
   }
 
-  async listByOwner(ownerId: string): Promise<ProgressionDefaultRecord[]> {
+  async listByOwner(userId: string): Promise<ProgressionDefaultRecord[]> {
     return [...this.byOwnerAndExercise.entries()]
-      .filter(([key]) => key.startsWith(`${ownerId}:`))
+      .filter(([key]) => key.startsWith(`${userId}:`))
       .map(([, record]) => record);
   }
 
-  async upsertMany(ownerId: string, overrides: ProgressionDefaultRecord[]): Promise<void> {
+  async upsertMany(userId: string, overrides: ProgressionDefaultRecord[]): Promise<void> {
     for (const override of overrides) {
-      this.byOwnerAndExercise.set(this.key(ownerId, override.exerciseId), override);
+      this.byOwnerAndExercise.set(this.key(userId, override.exerciseId), override);
     }
   }
 
-  async consume(ownerId: string, exerciseId: string): Promise<void> {
-    this.byOwnerAndExercise.delete(this.key(ownerId, exerciseId));
+  async consume(userId: string, exerciseId: string): Promise<void> {
+    this.byOwnerAndExercise.delete(this.key(userId, exerciseId));
   }
 }

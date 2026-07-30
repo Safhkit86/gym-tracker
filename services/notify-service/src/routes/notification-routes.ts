@@ -12,7 +12,7 @@ export function createNotificationRoutes(
   const router = Router();
   router.use(authenticate(tokens));
 
-  function ownerId(req: { userClaims?: { sub: string } }): string {
+  function userId(req: { userClaims?: { sub: string } }): string {
     const id = req.userClaims?.sub;
     if (!id) {
       throw new UnauthorizedError();
@@ -23,7 +23,7 @@ export function createNotificationRoutes(
   router.get("/notifications", async (req, res, next) => {
     try {
       const unreadOnly = req.query.unread === "true";
-      const list = await notifications.list(ownerId(req), unreadOnly);
+      const list = await notifications.list(userId(req), unreadOnly);
       res.status(200).json(list);
     } catch (err) {
       next(err);
@@ -32,7 +32,7 @@ export function createNotificationRoutes(
 
   router.patch("/notifications/:id/read", async (req, res, next) => {
     try {
-      await notifications.markRead(ownerId(req), req.params.id);
+      await notifications.markRead(userId(req), req.params.id);
       res.status(204).send();
     } catch (err) {
       next(err);
@@ -41,7 +41,7 @@ export function createNotificationRoutes(
 
   router.post("/notifications/read-all", async (req, res, next) => {
     try {
-      const count = await notifications.markAllRead(ownerId(req));
+      const count = await notifications.markAllRead(userId(req));
       res.status(200).json({ count });
     } catch (err) {
       next(err);
