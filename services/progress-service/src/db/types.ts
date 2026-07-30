@@ -11,7 +11,7 @@ import type { ColumnType, Generated } from "kysely";
  */
 export interface WorkoutSessionsTable {
   id: Generated<string>;
-  owner_id: string;
+  user_id: string;
   /** Non FK: workout-service e' un altro servizio (stesso DB fisico). */
   workout_id: string;
   /** Denormalizzato dal client al momento del log (evita una chiamata HTTP). */
@@ -58,7 +58,7 @@ export interface SessionSetsTable {
 
 export interface ProgressionEventsTable {
   id: Generated<string>;
-  owner_id: string;
+  user_id: string;
   exercise_id: string;
   exercise_name: string;
   triggering_session_id: string;
@@ -75,7 +75,7 @@ export interface ProgressionEventsTable {
 export type GroupingScope = "workout" | "exercise";
 
 export interface ProgressionPreferencesTable {
-  owner_id: string;
+  user_id: string;
   required_consecutive_sessions: Generated<number>;
   grouping_scope: Generated<GroupingScope>;
   /** Precompilazione delle rep effettive in Registra sessione: concetto
@@ -89,7 +89,7 @@ export interface ProgressionPreferencesTable {
 
 /** "increase_weight" | "increase_reps", come ProgressionEventsTable.suggestion_type. */
 export interface ProgressionDefaultsTable {
-  owner_id: string;
+  user_id: string;
   exercise_id: string;
   suggestion_type: string;
   value: ColumnType<string, number, number>;

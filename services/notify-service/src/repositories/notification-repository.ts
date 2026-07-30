@@ -4,7 +4,7 @@ import type { Notification, ProgressionSuggestionType } from "@gym-tracker/share
 import type { Database } from "../db/types.js";
 
 export interface NewNotification {
-  ownerId: string;
+  userId: string;
   exerciseId: string;
   exerciseName: string;
   suggestionType: ProgressionSuggestionType;
@@ -23,11 +23,11 @@ export interface ListOptions {
 export interface NotificationRepository {
   /** null se gia' esistente (stesso owner+progressionEventId): nessun duplicato creato. */
   create(input: NewNotification): Promise<Notification | null>;
-  listByOwner(ownerId: string, opts?: ListOptions): Promise<Notification[]>;
+  listByOwner(userId: string, opts?: ListOptions): Promise<Notification[]>;
   /** true se la notifica esiste ed e' dell'owner (letta o meno). */
-  markRead(ownerId: string, id: string): Promise<boolean>;
+  markRead(userId: string, id: string): Promise<boolean>;
   /** Numero di notifiche segnate come lette. */
-  markAllRead(ownerId: string): Promise<number>;
+  markAllRead(userId: string): Promise<number>;
 }
 
 export class KyselyNotificationRepository implements NotificationRepository {
@@ -37,7 +37,7 @@ export class KyselyNotificationRepository implements NotificationRepository {
     const row = await this.db
       .insertInto("notifications")
       .values({
-        owner_id: input.ownerId,
+        user_id: input.userId,
         exercise_id: input.exerciseId,
         exercise_name: input.exerciseName,
         suggestion_type: input.suggestionType,
@@ -47,14 +47,14 @@ export class KyselyNotificationRepository implements NotificationRepository {
         triggering_session_id: input.triggeringSessionId,
         progression_event_id: input.progressionEventId,
       })
-      .onConflict((oc) => oc.columns(["owner_id", "progression_event_id"]).doNothing())
+      .onConflict((oc) => oc.columns(["user_id", "progression_event_id"]).doNothing())
       .returningAll()
       .executeTakeFirst();
     return row ? toDto(row) : null;
   }
 
-  async listByOwner(ownerId: string, opts: ListOptions = {}): Promise<Notification[]> {
-    let query = this.db.selectFrom("notifications").selectAll().where("owner_id", "=", ownerId);
+  async listByOwner(userId: string, opts: ListOptions = {}): Promise<Notification[]> {
+    let query = this.db.selectFrom("notifications").selectAll().where("user_id", "=", userId);
     if (opts.unreadOnly) {
       query = query.where("read_at", "is", null);
     }
@@ -62,21 +62,21 @@ export class KyselyNotificationRepository implements NotificationRepository {
     return rows.map(toDto);
   }
 
-  async markRead(ownerId: string, id: string): Promise<boolean> {
+  async markRead(userId: string, id: string): Promise<boolean> {
     const result = await this.db
       .updateTable("notifications")
       .set({ read_at: sql`coalesce(read_at, now())` })
       .where("id", "=", id)
-      .where("owner_id", "=", ownerId)
+      .where("user_id", "=", userId)
       .executeTakeFirst();
     return (result.numUpdatedRows ?? 0n) > 0n;
   }
 
-  async markAllRead(ownerId: string): Promise<number> {
+  async markAllRead(userId: string): Promise<number> {
     const result = await this.db
       .updateTable("notifications")
       .set({ read_at: sql`now()` })
-      .where("owner_id", "=", ownerId)
+      .where("user_id", "=", userId)
       .where("read_at", "is", null)
       .executeTakeFirst();
     return Number(result.numUpdatedRows ?? 0n);
@@ -113,7 +113,7 @@ function toDto(row: {
 
 interface StoredNotification {
   id: string;
-  ownerId: string;
+  userId: string;
   progressionEventId: string;
   exerciseId: string;
   exerciseName: string;
@@ -131,14 +131,14 @@ export class InMemoryNotificationRepository implements NotificationRepository {
 
   async create(input: NewNotification): Promise<Notification | null> {
     const exists = [...this.byId.values()].some(
-      (n) => n.ownerId === input.ownerId && n.progressionEventId === input.progressionEventId
+      (n) => n.userId === input.userId && n.progressionEventId === input.progressionEventId
     );
     if (exists) {
       return null;
     }
     const stored: StoredNotification = {
       id: randomUUID(),
-      ownerId: input.ownerId,
+      userId: input.userId,
       progressionEventId: input.progressionEventId,
       exerciseId: input.exerciseId,
       exerciseName: input.exerciseName,
@@ -154,27 +154,27 @@ export class InMemoryNotificationRepository implements NotificationRepository {
     return toStoredDto(stored);
   }
 
-  async listByOwner(ownerId: string, opts: ListOptions = {}): Promise<Notification[]> {
+  async listByOwner(userId: string, opts: ListOptions = {}): Promise<Notification[]> {
     return [...this.byId.values()]
-      .filter((n) => n.ownerId === ownerId)
+      .filter((n) => n.userId === userId)
       .filter((n) => !opts.unreadOnly || n.readAt === null)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .map(toStoredDto);
   }
 
-  async markRead(ownerId: string, id: string): Promise<boolean> {
+  async markRead(userId: string, id: string): Promise<boolean> {
     const stored = this.byId.get(id);
-    if (!stored || stored.ownerId !== ownerId) {
+    if (!stored || stored.userId !== userId) {
       return false;
     }
     stored.readAt ??= new Date();
     return true;
   }
 
-  async markAllRead(ownerId: string): Promise<number> {
+  async markAllRead(userId: string): Promise<number> {
     let count = 0;
     for (const stored of this.byId.values()) {
-      if (stored.ownerId === ownerId && stored.readAt === null) {
+      if (stored.userId === userId && stored.readAt === null) {
         stored.readAt = new Date();
         count++;
       }

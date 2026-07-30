@@ -15,6 +15,7 @@ import * as addRestMinMaxSeconds from "./013-add-rest-min-max-seconds.js";
 import * as addVariantiPetto from "./014-add-varianti-petto.js";
 import * as addEserciziSuggeriti from "./015-add-esercizi-suggeriti.js";
 import * as addIsMaxEffort from "./016-add-is-max-effort.js";
+import * as renameOwnerIdToUserId from "./017-rename-owner-id-to-user-id.js";
 
 /**
  * Registro statico delle migrazioni (chiavi ordinate). Preferito a
@@ -38,4 +39,5 @@ export const migrations: Record<string, Migration> = {
   "014-add-varianti-petto": addVariantiPetto,
   "015-add-esercizi-suggeriti": addEserciziSuggeriti,
   "016-add-is-max-effort": addIsMaxEffort,
+  "017-rename-owner-id-to-user-id": renameOwnerIdToUserId,
 };

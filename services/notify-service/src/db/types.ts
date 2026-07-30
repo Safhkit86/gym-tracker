@@ -11,7 +11,7 @@ import type { ColumnType, Generated } from "kysely";
  */
 export interface NotificationsTable {
   id: Generated<string>;
-  owner_id: string;
+  user_id: string;
   /** Non FK: il catalogo esercizi vive in workout-service. */
   exercise_id: string;
   exercise_name: string;

@@ -70,7 +70,7 @@ export function createSessionRoutes(sessions: SessionService, tokens: AccessToke
   const router = Router();
   router.use(authenticate(tokens));
 
-  function ownerId(req: { userClaims?: { sub: string } }): string {
+  function userId(req: { userClaims?: { sub: string } }): string {
     const id = req.userClaims?.sub;
     if (!id) {
       throw new UnauthorizedError();
@@ -81,7 +81,7 @@ export function createSessionRoutes(sessions: SessionService, tokens: AccessToke
   router.post("/sessions", async (req, res, next) => {
     try {
       const body = sessionSchema.parse(req.body);
-      const created = await sessions.logSession(ownerId(req), body);
+      const created = await sessions.logSession(userId(req), body);
       res.status(201).json(created);
     } catch (err) {
       next(err);
@@ -94,7 +94,7 @@ export function createSessionRoutes(sessions: SessionService, tokens: AccessToke
         typeof req.query.limit === "string" && req.query.limit.trim() !== ""
           ? Number(req.query.limit)
           : undefined;
-      const list = await sessions.list(ownerId(req), limit);
+      const list = await sessions.list(userId(req), limit);
       res.status(200).json(list);
     } catch (err) {
       next(err);
@@ -111,7 +111,7 @@ export function createSessionRoutes(sessions: SessionService, tokens: AccessToke
       if (!exerciseId) {
         throw new BadRequestError("VALIDATION_ERROR", "exerciseId richiesto.");
       }
-      const history = await sessions.getExerciseHistory(ownerId(req), exerciseId);
+      const history = await sessions.getExerciseHistory(userId(req), exerciseId);
       res.status(200).json(history);
     } catch (err) {
       next(err);
@@ -120,7 +120,7 @@ export function createSessionRoutes(sessions: SessionService, tokens: AccessToke
 
   router.get("/sessions/:id", async (req, res, next) => {
     try {
-      const detail = await sessions.get(ownerId(req), req.params.id);
+      const detail = await sessions.get(userId(req), req.params.id);
       res.status(200).json(detail);
     } catch (err) {
       next(err);
@@ -129,7 +129,7 @@ export function createSessionRoutes(sessions: SessionService, tokens: AccessToke
 
   router.delete("/sessions/:id", async (req, res, next) => {
     try {
-      await sessions.delete(ownerId(req), req.params.id);
+      await sessions.delete(userId(req), req.params.id);
       res.status(204).send();
     } catch (err) {
       next(err);

@@ -42,31 +42,31 @@ export interface NormalizedWorkout {
 }
 
 export interface WorkoutRepository {
-  create(ownerId: string, input: NormalizedWorkout): Promise<WorkoutDetail>;
-  listByOwner(ownerId: string): Promise<WorkoutSummary[]>;
-  findDetail(ownerId: string, id: string): Promise<WorkoutDetail | null>;
+  create(userId: string, input: NormalizedWorkout): Promise<WorkoutDetail>;
+  listByOwner(userId: string): Promise<WorkoutSummary[]>;
+  findDetail(userId: string, id: string): Promise<WorkoutDetail | null>;
   /** null se la scheda non esiste o non e' dell'utente. */
-  replace(ownerId: string, id: string, input: NormalizedWorkout): Promise<WorkoutDetail | null>;
-  delete(ownerId: string, id: string): Promise<boolean>;
+  replace(userId: string, id: string, input: NormalizedWorkout): Promise<WorkoutDetail | null>;
+  delete(userId: string, id: string): Promise<boolean>;
   /** Riassegna position = index+1 secondo orderedIds. Lancia NotFoundError se
-   *  orderedIds non corrisponde esattamente all'insieme delle schede di ownerId. */
-  reorder(ownerId: string, orderedIds: string[]): Promise<void>;
+   *  orderedIds non corrisponde esattamente all'insieme delle schede di userId. */
+  reorder(userId: string, orderedIds: string[]): Promise<void>;
 }
 
 export class KyselyWorkoutRepository implements WorkoutRepository {
   constructor(private readonly db: Kysely<Database>) {}
 
-  async create(ownerId: string, input: NormalizedWorkout): Promise<WorkoutDetail> {
+  async create(userId: string, input: NormalizedWorkout): Promise<WorkoutDetail> {
     const id = await this.db.transaction().execute(async (trx) => {
       const nextPosition = await trx
         .selectFrom("workouts")
         .select((eb) => eb.fn.coalesce(eb.fn.max("position"), eb.lit(0)).as("max_position"))
-        .where("owner_id", "=", ownerId)
+        .where("user_id", "=", userId)
         .executeTakeFirstOrThrow();
       const workout = await trx
         .insertInto("workouts")
         .values({
-          owner_id: ownerId,
+          user_id: userId,
           name: input.name,
           notes: input.notes,
           position: Number(nextPosition.max_position) + 1,
@@ -77,11 +77,11 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
       return workout.id;
     });
     // Appena creata: findDetail non puo' essere null.
-    return (await this.findDetail(ownerId, id)) as WorkoutDetail;
+    return (await this.findDetail(userId, id)) as WorkoutDetail;
   }
 
   async replace(
-    ownerId: string,
+    userId: string,
     id: string,
     input: NormalizedWorkout
   ): Promise<WorkoutDetail | null> {
@@ -90,7 +90,7 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
         .selectFrom("workouts")
         .select("id")
         .where("id", "=", id)
-        .where("owner_id", "=", ownerId)
+        .where("user_id", "=", userId)
         .executeTakeFirst();
       if (!existing) {
         return false;
@@ -105,16 +105,16 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
       await insertChildren(trx, id, input.exercises);
       return true;
     });
-    return replaced ? this.findDetail(ownerId, id) : null;
+    return replaced ? this.findDetail(userId, id) : null;
   }
 
-  async listByOwner(ownerId: string): Promise<WorkoutSummary[]> {
+  async listByOwner(userId: string): Promise<WorkoutSummary[]> {
     const rows = await this.db
       .selectFrom("workouts as w")
       .leftJoin("workout_exercises as we", "we.workout_id", "w.id")
       .select(["w.id", "w.name", "w.notes", "w.created_at", "w.updated_at"])
       .select((eb) => eb.fn.count("we.id").as("exercise_count"))
-      .where("w.owner_id", "=", ownerId)
+      .where("w.user_id", "=", userId)
       .groupBy("w.id")
       .orderBy("w.position", "asc")
       .execute();
@@ -129,12 +129,12 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
     }));
   }
 
-  async findDetail(ownerId: string, id: string): Promise<WorkoutDetail | null> {
+  async findDetail(userId: string, id: string): Promise<WorkoutDetail | null> {
     const workout = await this.db
       .selectFrom("workouts")
       .selectAll()
       .where("id", "=", id)
-      .where("owner_id", "=", ownerId)
+      .where("user_id", "=", userId)
       .executeTakeFirst();
     if (!workout) {
       return null;
@@ -203,21 +203,21 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
     };
   }
 
-  async delete(ownerId: string, id: string): Promise<boolean> {
+  async delete(userId: string, id: string): Promise<boolean> {
     const result = await this.db
       .deleteFrom("workouts")
       .where("id", "=", id)
-      .where("owner_id", "=", ownerId)
+      .where("user_id", "=", userId)
       .execute();
     return (result[0]?.numDeletedRows ?? 0n) > 0n;
   }
 
-  async reorder(ownerId: string, orderedIds: string[]): Promise<void> {
+  async reorder(userId: string, orderedIds: string[]): Promise<void> {
     await this.db.transaction().execute(async (trx) => {
       const owned = await trx
         .selectFrom("workouts")
         .select("id")
-        .where("owner_id", "=", ownerId)
+        .where("user_id", "=", userId)
         .execute();
       assertSameIdSet(
         owned.map((r) => r.id),
@@ -229,7 +229,7 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
           .updateTable("workouts")
           .set({ position: index + 1 })
           .where("id", "=", id)
-          .where("owner_id", "=", ownerId)
+          .where("user_id", "=", userId)
           .execute();
       }
     });
@@ -290,7 +290,7 @@ async function insertChildren(
 
 interface StoredWorkout {
   id: string;
-  ownerId: string;
+  userId: string;
   name: string;
   notes: string | null;
   position: number;
@@ -302,14 +302,14 @@ interface StoredWorkout {
 export class InMemoryWorkoutRepository implements WorkoutRepository {
   private readonly byId = new Map<string, StoredWorkout>();
 
-  async create(ownerId: string, input: NormalizedWorkout): Promise<WorkoutDetail> {
+  async create(userId: string, input: NormalizedWorkout): Promise<WorkoutDetail> {
     const now = new Date();
     const maxPosition = [...this.byId.values()]
-      .filter((w) => w.ownerId === ownerId)
+      .filter((w) => w.userId === userId)
       .reduce((max, w) => Math.max(max, w.position), 0);
     const stored: StoredWorkout = {
       id: randomUUID(),
-      ownerId,
+      userId,
       name: input.name,
       notes: input.notes,
       position: maxPosition + 1,
@@ -322,12 +322,12 @@ export class InMemoryWorkoutRepository implements WorkoutRepository {
   }
 
   async replace(
-    ownerId: string,
+    userId: string,
     id: string,
     input: NormalizedWorkout
   ): Promise<WorkoutDetail | null> {
     const existing = this.byId.get(id);
-    if (!existing || existing.ownerId !== ownerId) {
+    if (!existing || existing.userId !== userId) {
       return null;
     }
     const updated: StoredWorkout = {
@@ -341,9 +341,9 @@ export class InMemoryWorkoutRepository implements WorkoutRepository {
     return toDetail(updated);
   }
 
-  async listByOwner(ownerId: string): Promise<WorkoutSummary[]> {
+  async listByOwner(userId: string): Promise<WorkoutSummary[]> {
     return [...this.byId.values()]
-      .filter((w) => w.ownerId === ownerId)
+      .filter((w) => w.userId === userId)
       .sort((a, b) => a.position - b.position)
       .map((w) => ({
         id: w.id,
@@ -355,25 +355,25 @@ export class InMemoryWorkoutRepository implements WorkoutRepository {
       }));
   }
 
-  async findDetail(ownerId: string, id: string): Promise<WorkoutDetail | null> {
+  async findDetail(userId: string, id: string): Promise<WorkoutDetail | null> {
     const stored = this.byId.get(id);
-    if (!stored || stored.ownerId !== ownerId) {
+    if (!stored || stored.userId !== userId) {
       return null;
     }
     return toDetail(stored);
   }
 
-  async delete(ownerId: string, id: string): Promise<boolean> {
+  async delete(userId: string, id: string): Promise<boolean> {
     const stored = this.byId.get(id);
-    if (!stored || stored.ownerId !== ownerId) {
+    if (!stored || stored.userId !== userId) {
       return false;
     }
     this.byId.delete(id);
     return true;
   }
 
-  async reorder(ownerId: string, orderedIds: string[]): Promise<void> {
-    const ownedIds = [...this.byId.values()].filter((w) => w.ownerId === ownerId).map((w) => w.id);
+  async reorder(userId: string, orderedIds: string[]): Promise<void> {
+    const ownedIds = [...this.byId.values()].filter((w) => w.userId === userId).map((w) => w.id);
     assertSameIdSet(ownedIds, orderedIds);
 
     orderedIds.forEach((id, index) => {

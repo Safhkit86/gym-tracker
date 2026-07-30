@@ -4,10 +4,10 @@
  * Modellano la SCHEDA (cosa fare); l'esecuzione reale sara' di progress-service.
  */
 
-/** Esercizio del catalogo. `ownerId` null = esercizio globale (seed). */
+/** Esercizio del catalogo. `userId` null = esercizio globale (seed). */
 export interface Exercise {
   id: string;
-  ownerId: string | null;
+  userId: string | null;
   name: string;
   muscleGroup: string | null;
   /** Come eseguire l'esercizio; null se non disponibile (es. esercizi personali). */

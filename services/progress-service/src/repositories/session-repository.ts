@@ -52,14 +52,14 @@ export interface ExerciseSessionSnapshot {
 }
 
 export interface SessionRepository {
-  create(ownerId: string, input: NormalizedSession): Promise<SessionDetail>;
+  create(userId: string, input: NormalizedSession): Promise<SessionDetail>;
   /** Storico completo (esercizi + set), non solo un riepilogo: la pagina
    *  storico li mostra gia' espansi, senza un secondo giro per i dettagli.
    *  `limit` opzionale (es. la Dashboard vuole solo l'ultima sessione, non
    *  tutto lo storico) non cambia il comportamento di chi non lo passa. */
-  listByOwner(ownerId: string, limit?: number): Promise<SessionDetail[]>;
-  findDetail(ownerId: string, id: string): Promise<SessionDetail | null>;
-  delete(ownerId: string, id: string): Promise<boolean>;
+  listByOwner(userId: string, limit?: number): Promise<SessionDetail[]>;
+  findDetail(userId: string, id: string): Promise<SessionDetail | null>;
+  delete(userId: string, id: string): Promise<boolean>;
   /**
    * Ultime `limit` sessioni (piu' recente prima) per lo stesso esercizio —
    * include la sessione appena creata. Lo `scope` decide il raggruppamento
@@ -69,7 +69,7 @@ export interface SessionRepository {
    * indipendentemente dalla scheda.
    */
   findRecentSetsForExercise(
-    ownerId: string,
+    userId: string,
     workoutId: string,
     exerciseId: string,
     limit: number,
@@ -82,7 +82,7 @@ export interface SessionRepository {
    * motore di regole e rispetta la preferenza di scope dell'utente).
    */
   findExerciseHistory(
-    ownerId: string,
+    userId: string,
     exerciseId: string,
     limit: number
   ): Promise<ExerciseSessionSnapshot[]>;
@@ -91,12 +91,12 @@ export interface SessionRepository {
 export class KyselySessionRepository implements SessionRepository {
   constructor(private readonly db: Kysely<Database>) {}
 
-  async create(ownerId: string, input: NormalizedSession): Promise<SessionDetail> {
+  async create(userId: string, input: NormalizedSession): Promise<SessionDetail> {
     const id = await this.db.transaction().execute(async (trx) => {
       const session = await trx
         .insertInto("workout_sessions")
         .values({
-          owner_id: ownerId,
+          user_id: userId,
           workout_id: input.workoutId,
           workout_name: input.workoutName,
           workout_notes: input.workoutNotes,
@@ -134,14 +134,14 @@ export class KyselySessionRepository implements SessionRepository {
       return session.id;
     });
     // Appena creata: findDetail non puo' essere null.
-    return (await this.findDetail(ownerId, id)) as SessionDetail;
+    return (await this.findDetail(userId, id)) as SessionDetail;
   }
 
-  async listByOwner(ownerId: string, limit?: number): Promise<SessionDetail[]> {
+  async listByOwner(userId: string, limit?: number): Promise<SessionDetail[]> {
     const sessions = await this.db
       .selectFrom("workout_sessions")
       .selectAll()
-      .where("owner_id", "=", ownerId)
+      .where("user_id", "=", userId)
       .orderBy("performed_at", "desc")
       .orderBy("created_at", "desc")
       .$if(limit !== undefined, (qb) => qb.limit(limit as number))
@@ -208,12 +208,12 @@ export class KyselySessionRepository implements SessionRepository {
     }));
   }
 
-  async findDetail(ownerId: string, id: string): Promise<SessionDetail | null> {
+  async findDetail(userId: string, id: string): Promise<SessionDetail | null> {
     const session = await this.db
       .selectFrom("workout_sessions")
       .selectAll()
       .where("id", "=", id)
-      .where("owner_id", "=", ownerId)
+      .where("user_id", "=", userId)
       .executeTakeFirst();
     if (!session) {
       return null;
@@ -269,17 +269,17 @@ export class KyselySessionRepository implements SessionRepository {
     };
   }
 
-  async delete(ownerId: string, id: string): Promise<boolean> {
+  async delete(userId: string, id: string): Promise<boolean> {
     const result = await this.db
       .deleteFrom("workout_sessions")
       .where("id", "=", id)
-      .where("owner_id", "=", ownerId)
+      .where("user_id", "=", userId)
       .execute();
     return (result[0]?.numDeletedRows ?? 0n) > 0n;
   }
 
   async findRecentSetsForExercise(
-    ownerId: string,
+    userId: string,
     workoutId: string,
     exerciseId: string,
     limit: number,
@@ -288,7 +288,7 @@ export class KyselySessionRepository implements SessionRepository {
     const sessions = await this.db
       .selectFrom("workout_sessions as ws")
       .select(["ws.id", "ws.performed_at", "ws.created_at"])
-      .where("ws.owner_id", "=", ownerId)
+      .where("ws.user_id", "=", userId)
       .$if(scope === "workout", (qb) => qb.where("ws.workout_id", "=", workoutId))
       .where((eb) =>
         eb.exists(
@@ -345,13 +345,13 @@ export class KyselySessionRepository implements SessionRepository {
   }
 
   async findExerciseHistory(
-    ownerId: string,
+    userId: string,
     exerciseId: string,
     limit: number
   ): Promise<ExerciseSessionSnapshot[]> {
     // "" come workoutId: ignorato da findRecentSetsForExercise quando
     // scope === "exercise" (vedi $if sopra), quindi innocuo qui.
-    return this.findRecentSetsForExercise(ownerId, "", exerciseId, limit, "exercise");
+    return this.findRecentSetsForExercise(userId, "", exerciseId, limit, "exercise");
   }
 }
 
@@ -359,7 +359,7 @@ export class KyselySessionRepository implements SessionRepository {
 
 interface StoredSession {
   id: string;
-  ownerId: string;
+  userId: string;
   workoutId: string;
   workoutName: string;
   workoutNotes: string | null;
@@ -372,10 +372,10 @@ interface StoredSession {
 export class InMemorySessionRepository implements SessionRepository {
   private readonly byId = new Map<string, StoredSession>();
 
-  async create(ownerId: string, input: NormalizedSession): Promise<SessionDetail> {
+  async create(userId: string, input: NormalizedSession): Promise<SessionDetail> {
     const stored: StoredSession = {
       id: randomUUID(),
-      ownerId,
+      userId,
       workoutId: input.workoutId,
       workoutName: input.workoutName,
       workoutNotes: input.workoutNotes,
@@ -406,9 +406,9 @@ export class InMemorySessionRepository implements SessionRepository {
     return toDetail(stored);
   }
 
-  async listByOwner(ownerId: string, limit?: number): Promise<SessionDetail[]> {
+  async listByOwner(userId: string, limit?: number): Promise<SessionDetail[]> {
     const sorted = [...this.byId.values()]
-      .filter((s) => s.ownerId === ownerId)
+      .filter((s) => s.userId === userId)
       .sort((a, b) => {
         const byPerformed = b.performedAt.localeCompare(a.performedAt);
         return byPerformed !== 0 ? byPerformed : b.createdAt.getTime() - a.createdAt.getTime();
@@ -416,17 +416,17 @@ export class InMemorySessionRepository implements SessionRepository {
     return (limit !== undefined ? sorted.slice(0, limit) : sorted).map(toDetail);
   }
 
-  async findDetail(ownerId: string, id: string): Promise<SessionDetail | null> {
+  async findDetail(userId: string, id: string): Promise<SessionDetail | null> {
     const stored = this.byId.get(id);
-    if (!stored || stored.ownerId !== ownerId) {
+    if (!stored || stored.userId !== userId) {
       return null;
     }
     return toDetail(stored);
   }
 
-  async delete(ownerId: string, id: string): Promise<boolean> {
+  async delete(userId: string, id: string): Promise<boolean> {
     const stored = this.byId.get(id);
-    if (!stored || stored.ownerId !== ownerId) {
+    if (!stored || stored.userId !== userId) {
       return false;
     }
     this.byId.delete(id);
@@ -434,14 +434,14 @@ export class InMemorySessionRepository implements SessionRepository {
   }
 
   async findRecentSetsForExercise(
-    ownerId: string,
+    userId: string,
     workoutId: string,
     exerciseId: string,
     limit: number,
     scope: "workout" | "exercise" = "workout"
   ): Promise<ExerciseSessionSnapshot[]> {
     return [...this.byId.values()]
-      .filter((s) => s.ownerId === ownerId)
+      .filter((s) => s.userId === userId)
       .filter((s) => scope !== "workout" || s.workoutId === workoutId)
       .filter((s) => s.exercises.some((ex) => ex.exerciseId === exerciseId))
       .sort((a, b) => {
@@ -466,11 +466,11 @@ export class InMemorySessionRepository implements SessionRepository {
   }
 
   async findExerciseHistory(
-    ownerId: string,
+    userId: string,
     exerciseId: string,
     limit: number
   ): Promise<ExerciseSessionSnapshot[]> {
-    return this.findRecentSetsForExercise(ownerId, "", exerciseId, limit, "exercise");
+    return this.findRecentSetsForExercise(userId, "", exerciseId, limit, "exercise");
   }
 }
 

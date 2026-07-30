@@ -11,7 +11,7 @@ backend-poi-UI delle fasi precedenti).
 `Notification`: una riga per ogni evento di progressione consumato
 (esercizio, tipo di suggerimento, valore precedente/suggerito, motivo,
 sessione che l'ha generato), con `readAt` nullo finché non viene segnata
-come letta. Deduplicata per `(ownerId, progressionEventId)`: se RabbitMQ
+come letta. Deduplicata per `(userId, progressionEventId)`: se RabbitMQ
 riconsegna lo stesso messaggio (es. dopo un crash prima dell'ack), non
 crea una seconda notifica.
 

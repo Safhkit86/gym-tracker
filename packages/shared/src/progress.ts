@@ -123,12 +123,12 @@ export interface CreateSessionResponse extends SessionDetail {
 
 /**
  * Payload pubblicato su RabbitMQ (coda "progression-events"): include
- * `ownerId`, assente dal DTO di GET /progression perche' li' il chiamante e'
+ * `userId`, assente dal DTO di GET /progression perche' li' il chiamante e'
  * gia' autenticato come proprietario. notify-service (Fase 4) lo usa per
  * sapere a chi appartiene la notifica.
  */
 export interface ProgressionEventMessage extends ProgressionEvent {
-  ownerId: string;
+  userId: string;
 }
 
 /**

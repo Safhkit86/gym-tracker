@@ -8,7 +8,7 @@ const OWNER_B = "22222222-2222-2222-2222-222222222222";
 
 function notificationInput(overrides: Partial<NewNotification> = {}): NewNotification {
   return {
-    ownerId: OWNER_A,
+    userId: OWNER_A,
     exerciseId: "55555555-5555-5555-5555-555555555555",
     exerciseName: "Panca piana",
     suggestionType: "increase_weight",

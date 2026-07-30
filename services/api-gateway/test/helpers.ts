@@ -6,9 +6,9 @@ import type { RateLimitConfig } from "../src/rate-limit.js";
 export const TEST_JWT_SECRET = "test-secret-please-change";
 
 /** Genera un Bearer token valido per un utente di test. */
-export async function bearerFor(ownerId: string, email = "test@example.com"): Promise<string> {
+export async function bearerFor(userId: string, email = "test@example.com"): Promise<string> {
   const tokens = createAccessTokenService(TEST_JWT_SECRET);
-  return tokens.sign({ sub: ownerId, email });
+  return tokens.sign({ sub: userId, email });
 }
 
 /**

@@ -4,7 +4,7 @@ import type { ExerciseRecord, ExerciseRepository } from "../repositories/exercis
 function toDto(record: ExerciseRecord): Exercise {
   return {
     id: record.id,
-    ownerId: record.ownerId,
+    userId: record.userId,
     name: record.name,
     muscleGroup: record.muscleGroup,
     description: record.description,
@@ -16,15 +16,15 @@ function toDto(record: ExerciseRecord): Exercise {
 export class ExerciseService {
   constructor(private readonly exercises: ExerciseRepository) {}
 
-  async listAvailable(ownerId: string): Promise<Exercise[]> {
-    const records = await this.exercises.listAvailable(ownerId);
+  async listAvailable(userId: string): Promise<Exercise[]> {
+    const records = await this.exercises.listAvailable(userId);
     return records.map(toDto);
   }
 
-  async create(ownerId: string, input: CreateExerciseRequest): Promise<Exercise> {
+  async create(userId: string, input: CreateExerciseRequest): Promise<Exercise> {
     const muscleGroup = input.muscleGroup?.trim();
     const record = await this.exercises.create({
-      ownerId,
+      userId,
       name: input.name.trim(),
       muscleGroup: muscleGroup ? muscleGroup : null,
     });

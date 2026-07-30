@@ -20,7 +20,7 @@ export function createPreferencesRoutes(
   const router = Router();
   router.use(authenticate(tokens));
 
-  function ownerId(req: { userClaims?: { sub: string } }): string {
+  function userId(req: { userClaims?: { sub: string } }): string {
     const id = req.userClaims?.sub;
     if (!id) {
       throw new UnauthorizedError();
@@ -30,7 +30,7 @@ export function createPreferencesRoutes(
 
   router.get("/me/preferences", async (req, res, next) => {
     try {
-      const record = await preferences.find(ownerId(req));
+      const record = await preferences.find(userId(req));
       res.status(200).json(record);
     } catch (err) {
       next(err);
@@ -40,7 +40,7 @@ export function createPreferencesRoutes(
   router.put("/me/preferences", async (req, res, next) => {
     try {
       const body = preferencesSchema.parse(req.body);
-      const record = await preferences.upsert(ownerId(req), body);
+      const record = await preferences.upsert(userId(req), body);
       res.status(200).json(record);
     } catch (err) {
       next(err);

@@ -54,7 +54,7 @@ describe("POST /exercises", () => {
     expect(response.body).toMatchObject({
       name: "Hack squat",
       muscleGroup: "Gambe",
-      ownerId: OWNER_A,
+      userId: OWNER_A,
     });
   });
 

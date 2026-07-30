@@ -17,7 +17,7 @@ function validMessage(overrides: Record<string, unknown> = {}): Record<string, u
     reason: "Obiettivo di ripetizioni raggiunto per 2 sessioni consecutive a 80kg.",
     source: "rule",
     createdAt: new Date().toISOString(),
-    ownerId: OWNER_ID,
+    userId: OWNER_ID,
     ...overrides,
   };
 }
@@ -27,13 +27,13 @@ describe("parseProgressionEventMessage", () => {
     const raw = Buffer.from(JSON.stringify(validMessage()));
     expect(parseProgressionEventMessage(raw)).toMatchObject({
       exerciseName: "Panca piana",
-      ownerId: OWNER_ID,
+      userId: OWNER_ID,
     });
   });
 
   it("lancia per un messaggio con un campo obbligatorio mancante", () => {
     const message = validMessage();
-    delete message.ownerId;
+    delete message.userId;
     const raw = Buffer.from(JSON.stringify(message));
     expect(() => parseProgressionEventMessage(raw)).toThrow();
   });

@@ -90,7 +90,7 @@ export function createWorkoutRoutes(workouts: WorkoutService, tokens: AccessToke
   const router = Router();
   router.use(authenticate(tokens));
 
-  function ownerId(req: { userClaims?: { sub: string } }): string {
+  function userId(req: { userClaims?: { sub: string } }): string {
     const id = req.userClaims?.sub;
     if (!id) {
       throw new UnauthorizedError();
@@ -101,7 +101,7 @@ export function createWorkoutRoutes(workouts: WorkoutService, tokens: AccessToke
   router.post("/workouts", async (req, res, next) => {
     try {
       const body = workoutSchema.parse(req.body);
-      const created = await workouts.create(ownerId(req), body);
+      const created = await workouts.create(userId(req), body);
       res.status(201).json(created);
     } catch (err) {
       next(err);
@@ -110,7 +110,7 @@ export function createWorkoutRoutes(workouts: WorkoutService, tokens: AccessToke
 
   router.get("/workouts", async (req, res, next) => {
     try {
-      const list = await workouts.list(ownerId(req));
+      const list = await workouts.list(userId(req));
       res.status(200).json(list);
     } catch (err) {
       next(err);
@@ -119,7 +119,7 @@ export function createWorkoutRoutes(workouts: WorkoutService, tokens: AccessToke
 
   router.get("/workouts/:id", async (req, res, next) => {
     try {
-      const detail = await workouts.get(ownerId(req), req.params.id);
+      const detail = await workouts.get(userId(req), req.params.id);
       res.status(200).json(detail);
     } catch (err) {
       next(err);
@@ -131,7 +131,7 @@ export function createWorkoutRoutes(workouts: WorkoutService, tokens: AccessToke
   router.put("/workouts/reorder", async (req, res, next) => {
     try {
       const body = reorderSchema.parse(req.body);
-      await workouts.reorder(ownerId(req), body.workoutIds);
+      await workouts.reorder(userId(req), body.workoutIds);
       res.status(204).send();
     } catch (err) {
       next(err);
@@ -141,7 +141,7 @@ export function createWorkoutRoutes(workouts: WorkoutService, tokens: AccessToke
   router.put("/workouts/:id", async (req, res, next) => {
     try {
       const body = workoutSchema.parse(req.body);
-      const updated = await workouts.replace(ownerId(req), req.params.id, body);
+      const updated = await workouts.replace(userId(req), req.params.id, body);
       res.status(200).json(updated);
     } catch (err) {
       next(err);
@@ -150,7 +150,7 @@ export function createWorkoutRoutes(workouts: WorkoutService, tokens: AccessToke
 
   router.delete("/workouts/:id", async (req, res, next) => {
     try {
-      await workouts.delete(ownerId(req), req.params.id);
+      await workouts.delete(userId(req), req.params.id);
       res.status(204).send();
     } catch (err) {
       next(err);
