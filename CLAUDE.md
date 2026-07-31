@@ -109,6 +109,14 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   in contesa sullo stesso builder `buildx`, senza produrre alcun output, finché
   non si riavvia Docker Desktop. Se serve costruire più immagini, farlo in
   sequenza, una alla volta.
+- Esiste un secondo stack Docker Compose di produzione, isolato da quello
+  di sviluppo (vedi README.md, "Produzione (locale)"): va **sempre**
+  avviato con `docker compose -f docker-compose.prod.yml --env-file
+.env.production ...` esplicito, mai con un semplice `docker compose up`
+  (che userebbe `docker-compose.yml`/`.env` di dev). Se aggiungi un nuovo
+  servizio o una nuova variabile d'ambiente allo stack di dev, valuta se
+  serve rispecchiarla anche in `docker-compose.prod.yml`/
+  `.env.production.example`.
 
 ## Comandi utili
 
