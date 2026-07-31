@@ -182,10 +182,27 @@ docker compose logs -f account-service    # solo un servizio
 docker compose logs --tail 100 api-gateway  # ultime 100 righe, senza seguire
 ```
 
-Per un formato leggibile invece del JSON grezzo:
+Per un formato leggibile invece del JSON grezzo (`--no-log-prefix` è
+necessario: senza, `docker compose logs` antepone `<servizio>-1  |` a ogni
+riga, che rompe il parsing JSON di pino-pretty e fa stampare le righe grezze
+invece di formattarle):
 
 ```bash
-docker compose logs -f api-gateway | npx pino-pretty
+docker compose logs -f --no-log-prefix api-gateway | npx pino-pretty
+```
+
+Su Windows con **PowerShell** questo pipe può restare bloccato senza
+stampare nulla (buffering nativo-a-nativo tra `docker` e `node`, non
+riproducibile in **Git Bash**, dove il comando sopra funziona senza
+problemi): se capita, usa Git Bash per questo comando, oppure disaccoppia
+cattura e formattazione con un file (in un altro terminale, dopo aver
+lasciato girare un po' il primo comando):
+
+```powershell
+# terminale 1: scrive i log su file in continuo
+docker compose logs -f --no-log-prefix api-gateway > gateway.ndjson
+# terminale 2: rilegge e segue il file, aggirando il pipe nativo-a-nativo
+Get-Content gateway.ndjson -Wait | npx pino-pretty
 ```
 
 Per seguire una singola richiesta attraverso più servizi (es. capire perché
