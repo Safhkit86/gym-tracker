@@ -23,6 +23,10 @@ const mailer = createNodemailerMailer({
   host: config.SMTP_HOST,
   port: config.SMTP_PORT,
   from: config.SMTP_FROM,
+  auth:
+    config.SMTP_USER && config.SMTP_PASSWORD
+      ? { user: config.SMTP_USER, pass: config.SMTP_PASSWORD }
+      : undefined,
 });
 
 const consumer = await startReliableConsumer({

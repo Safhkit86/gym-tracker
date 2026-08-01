@@ -266,8 +266,11 @@ DATABASE_URL=postgres://gymtracker:<password>@localhost:6432/gymtracker \
 
 **Limite noto**: nessun Mailpit in produzione (a differenza di dev) e
 nessun relay SMTP configurato di default — le email (reset password,
-avviso dead-letter) falliscono finché `SMTP_HOST`/`SMTP_PORT` in
-`.env.production` non puntano a un vero server SMTP. È un TODO esplicito,
+avviso dead-letter) falliscono finché `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/
+`SMTP_PASSWORD` in `.env.production` non puntano a un vero server SMTP
+autenticato (es. Gmail risponde "530-5.7.0 Authentication Required" senza
+`SMTP_USER`/`SMTP_PASSWORD` — vedi i commenti in `.env.production.example`
+per come generare una password per le app di Gmail). È un TODO esplicito,
 non un bug: il resto dell'app funziona normalmente.
 
 ## CI/CD

@@ -21,6 +21,13 @@ const envSchema = z.object({
   SMTP_HOST: z.string().min(1).default("localhost"),
   SMTP_PORT: z.coerce.number().int().positive().default(1025),
   SMTP_FROM: z.string().min(1).default("no-reply@gym-tracker.local"),
+  // Assenti con Mailpit (nessuna autenticazione); un vero relay SMTP le
+  // richiede entrambe, vedi createNodemailerMailer in @gym-tracker/shared.
+  // Il preprocess tratta "" come non impostata: docker-compose.prod.yml usa
+  // "${SMTP_USER:-}", che senza un valore reale passa una stringa vuota
+  // (non la variabile assente), altrimenti bocciata da min(1).
+  SMTP_USER: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(1).optional()),
+  SMTP_PASSWORD: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(1).optional()),
   WEB_APP_URL: z.string().url().default("http://localhost:5173"),
   RABBITMQ_URL: z.string().url(),
   REDIS_URL: z.string().url(),

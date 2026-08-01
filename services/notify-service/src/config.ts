@@ -17,6 +17,13 @@ const envSchema = z.object({
   SMTP_HOST: z.string().min(1),
   SMTP_PORT: z.coerce.number().int().positive(),
   SMTP_FROM: z.string().min(1),
+  // Assenti con Mailpit (nessuna autenticazione); un vero relay SMTP le
+  // richiede entrambe, vedi createNodemailerMailer in @gym-tracker/shared.
+  // Il preprocess tratta "" come non impostata: docker-compose.prod.yml usa
+  // "${SMTP_USER:-}", che senza un valore reale passa una stringa vuota
+  // (non la variabile assente), altrimenti bocciata da min(1).
+  SMTP_USER: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(1).optional()),
+  SMTP_PASSWORD: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(1).optional()),
   /** Contatto operativo avvisato quando un messaggio finisce in dead-letter
    *  (nessun nuovo ruolo/utente applicativo: e' solo un indirizzo email). */
   OPS_ALERT_EMAIL: z.string().email(),
