@@ -1764,6 +1764,62 @@ details.muscle-accordion[open] summary::after {
   }
 }
 
+/* Dashboard: tile compatte per le misure (valore + delta + sparkline),
+   piu' dense dei grafici completi di Statistiche > Misure. */
+.measure-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.measure-tile {
+  background: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
+  min-width: 0;
+}
+
+.measure-tile__label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-1);
+}
+
+.measure-tile__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.measure-tile__value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.measure-tile__value small {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.spark-svg {
+  display: block;
+}
+
+.spark-svg .spark-line {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+}
+
+.spark-svg .spark-dot {
+  fill: var(--color-accent);
+}
+
 .streak-cal {
   display: grid;
   grid-template-columns: repeat(7, 1fr);

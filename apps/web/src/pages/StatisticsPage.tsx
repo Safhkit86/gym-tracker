@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import type {
   DashboardStats,
   Exercise,
@@ -20,19 +21,13 @@ import {
   sortExerciseGroups,
   type ExerciseRef,
 } from "../utils/muscle-groups";
+import { MEASUREMENT_FIELDS } from "../utils/measurements";
 
 type StatisticsTab = "sessions" | "measurements";
 
-const MEASUREMENT_FIELDS = [
-  { key: "weightKg", label: "Peso", unit: "kg" },
-  { key: "chestCm", label: "Petto", unit: "cm" },
-  { key: "armCm", label: "Braccia", unit: "cm" },
-  { key: "waistCm", label: "Vita", unit: "cm" },
-  { key: "legCm", label: "Gamba", unit: "cm" },
-] as const;
-
 export function StatisticsPage() {
   const { token } = useAuth();
+  const [searchParams] = useSearchParams();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   /** Solo gli esercizi che compaiono in almeno una scheda attuale, stesso
@@ -44,7 +39,9 @@ export function StatisticsPage() {
   );
   const [error, setError] = useState<string | null>(null);
 
-  const [tab, setTab] = useState<StatisticsTab>("sessions");
+  const [tab, setTab] = useState<StatisticsTab>(
+    searchParams.get("tab") === "measurements" ? "measurements" : "sessions"
+  );
   const [measurements, setMeasurements] = useState<MeasurementEntry[] | null>(null);
   const [measurementsError, setMeasurementsError] = useState<string | null>(null);
 
