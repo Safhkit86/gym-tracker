@@ -278,6 +278,8 @@ button.secondary:hover:not(:disabled) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
   min-height: var(--nav-height);
   padding: var(--space-4) var(--space-6);
   background: var(--color-surface);
@@ -285,6 +287,17 @@ button.secondary:hover:not(:disabled) {
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+/* Sotto questa soglia i due gruppi di link non ci stanno piu' affiancati
+   sulla stessa riga (5 voci di navigazione + email + pulsante Esci):
+   .app-nav va comunque in wrap grazie alle regole sopra, ma senza
+   min-height fisso la barra sticky si "schiaccerebbe" sul contenuto,
+   sovrapponendo la seconda riga a quella sotto. */
+@media (max-width: 640px) {
+  .app-nav {
+    min-height: auto;
+  }
 }
 
 .form-sticky-toolbar {
@@ -334,7 +347,15 @@ button.secondary:hover:not(:disabled) {
 .app-nav__links {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
   gap: var(--space-5);
+}
+
+@media (max-width: 640px) {
+  .app-nav__links {
+    gap: var(--space-3);
+  }
 }
 
 .app-nav__links a {
@@ -1689,6 +1710,55 @@ details.muscle-accordion[open] summary::after {
 .chart-empty {
   font-size: 0.85rem;
   color: var(--color-text-muted);
+}
+
+/* Pagina Statistiche: sezioni per gruppo muscolare/misura sempre aperte
+   (a differenza di .muscle-accordion in Dashboard, qui i grafici vanno
+   mostrati tutti a vista, non dietro un accordion). */
+.stat-group {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-3);
+  overflow: hidden;
+}
+
+.stat-group:last-child {
+  margin-bottom: 0;
+}
+
+.stat-group__header {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  font-weight: 600;
+  font-size: 0.92rem;
+  background: var(--color-surface-2);
+}
+
+.stat-group__body {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.stat-group__body > div + div {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Tab Misure della pagina Statistiche: due grafici per riga su schermi
+   larghi, impilati sotto la stessa soglia usata per le tabelle a colonne
+   fisse (vedi CLAUDE.md). */
+.measure-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5) var(--space-6);
+}
+
+@media (max-width: 860px) {
+  .measure-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .streak-cal {
