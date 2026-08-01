@@ -413,6 +413,15 @@ button.secondary:hover:not(:disabled) {
   margin-bottom: var(--space-4);
 }
 
+/* Solo quando una toolbar segue direttamente una card (es. i pulsanti di
+   tab in Statistiche, subito sotto StatisticheCard): senza questo i
+   pulsanti toccano il bordo della card sopra. Le altre pagine con
+   .toolbar (Profilo, Storico, dettaglio scheda) non hanno una card subito
+   prima, quindi restano invariate. */
+.card + .toolbar {
+  margin-top: var(--space-5);
+}
+
 /* Solo per lo Storico: il pulsante di ordinamento va a destra, allineato
    al bordo destro delle card sottostanti (non tocca .toolbar in generale,
    usato anche altrove con i pulsanti a sinistra, es. Profilo/Scheda). */
@@ -457,21 +466,17 @@ button.secondary:hover:not(:disabled) {
   height: 18px;
 }
 
-.icon-btn[data-tip]::after,
-.icon-btn[data-tip]::before {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.12s ease;
-}
-
-.icon-btn[data-tip]:hover::after,
-.icon-btn[data-tip]:focus-visible::after {
-  content: attr(data-tip);
-  opacity: 1;
-  position: absolute;
-  bottom: 125%;
-  left: 50%;
-  transform: translateX(-50%);
+/* Tooltip di IconButton: renderizzato in portal su document.body con
+   position: fixed (coordinate calcolate in JS dalla bounding box del
+   pulsante, vedi IconButton.tsx), non piu' un discendente assoluto del
+   pulsante. Cosi' non contribuisce piu' allo scrollWidth di eventuali
+   contenitori con scroll orizzontale (es. le tabelle di "Registra
+   sessione", causava una scrollbar orizzontale indesiderata) e un solo
+   z-index alto basta a tenerlo sopra qualunque elemento sticky/altro
+   stacking context locale, senza doverlo alzare caso per caso. */
+.icon-btn-tooltip {
+  position: fixed;
+  transform: translate(-50%, calc(-100% - 8px));
   background: var(--color-surface-2);
   color: var(--color-text);
   padding: 0.3rem 0.55rem;
@@ -481,20 +486,18 @@ button.secondary:hover:not(:disabled) {
   white-space: nowrap;
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-card);
-  z-index: 5;
+  pointer-events: none;
+  z-index: 1000;
 }
 
-.icon-btn[data-tip]:hover::before,
-.icon-btn[data-tip]:focus-visible::before {
+.icon-btn-tooltip::after {
   content: "";
-  opacity: 1;
   position: absolute;
-  bottom: 108%;
+  top: 100%;
   left: 50%;
   transform: translateX(-50%);
   border: 4px solid transparent;
   border-top-color: var(--color-surface-2);
-  z-index: 5;
 }
 
 /* --- Auth pages --- */
