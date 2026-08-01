@@ -59,7 +59,9 @@ const STATS = {
   sessionCount: 12,
   consecutiveWeeks: 4,
   totalKgLifted: 3240,
-  currentWeekVolumeByExercise: [{ exerciseId: "e1", exerciseName: "Dip", setCount: 4, repCount: 40 }],
+  currentWeekVolumeByExercise: [
+    { exerciseId: "e1", exerciseName: "Dip", setCount: 4, repCount: 40 },
+  ],
   recentExercises: [],
   streakCalendar: [],
 };
@@ -112,7 +114,10 @@ function baseHandlers(
         u.includes("exerciseId=e2") && u.includes("exercise-history") && m === "GET",
       body: [{ sessionId: "s2", performedAt: "2026-07-01T00:00:00.000Z", value: 12, unit: "reps" }],
     },
-    { match: (u: string, m: string) => u.endsWith("/measurements") && m === "GET", body: MEASUREMENTS },
+    {
+      match: (u: string, m: string) => u.endsWith("/measurements") && m === "GET",
+      body: MEASUREMENTS,
+    },
   ];
 }
 
