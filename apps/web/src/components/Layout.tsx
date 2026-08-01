@@ -27,6 +27,7 @@ export function Layout() {
           </Link>
           <NavLink to="/workouts">Schede</NavLink>
           <NavLink to="/sessions">Storico</NavLink>
+          <NavLink to="/statistics">Statistiche</NavLink>
           <NavLink to="/notifications">
             Notifiche{unreadCount > 0 && <span className="badge">{unreadCount}</span>}
           </NavLink>

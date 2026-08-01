@@ -1,7 +1,14 @@
-import type { ExerciseHistoryPoint } from "@gym-tracker/shared";
+export interface ChartPoint {
+  id: string;
+  date: string;
+  value: number;
+}
 
 interface MiniLineChartProps {
-  points: ExerciseHistoryPoint[];
+  points: ChartPoint[];
+  /** Es. "kg", "cm": appeso al valore. "reps" mostra il numero senza suffisso. */
+  unit: string;
+  emptyMessage?: string;
 }
 
 const CHART_WIDTH = 400;
@@ -11,24 +18,23 @@ const PLOT_RIGHT = 340;
 const PLOT_TOP = 20;
 const PLOT_BOTTOM = 80;
 
-function formatValue(value: number, unit: "kg" | "reps"): string {
-  return unit === "kg" ? `${value}kg` : `${value}`;
+function formatValue(value: number, unit: string): string {
+  return unit === "reps" ? `${value}` : `${value}${unit}`;
 }
 
 function formatTickDate(iso: string): string {
   return new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
 }
 
-/** Grafico a linea per lo storico di un esercizio (peso o ripetizioni nel
- *  tempo): stesso linguaggio visivo validato nel mockup della Dashboard, ma
- *  con punti reali normalizzati su min/max invece di coordinate scritte a
- *  mano. Serie singola: niente legenda, solo l'ultimo punto etichettato. */
-export function MiniLineChart({ points }: MiniLineChartProps) {
+/** Grafico a linea riusabile per uno storico nel tempo (peso/ripetizioni di
+ *  un esercizio, o una misura corporea): stesso linguaggio visivo validato
+ *  nel mockup della Dashboard, con punti reali normalizzati su min/max.
+ *  Serie singola: niente legenda, solo l'ultimo punto etichettato. */
+export function MiniLineChart({ points, unit, emptyMessage }: MiniLineChartProps) {
   if (points.length === 0) {
-    return <p className="chart-empty">Nessuno storico disponibile per questo esercizio.</p>;
+    return <p className="chart-empty">{emptyMessage ?? "Nessuno storico disponibile."}</p>;
   }
 
-  const unit = points[0].unit;
   const values = points.map((p) => p.value);
   const minValue = Math.min(...values);
   const maxValue = Math.max(...values);
@@ -80,7 +86,7 @@ export function MiniLineChart({ points }: MiniLineChartProps) {
       {coords.length > 1 && <polyline className="data-line" points={polylinePoints} />}
       {coords.map((c, i) => (
         <circle
-          key={c.point.sessionId}
+          key={c.point.id}
           className={i === coords.length - 1 ? "data-dot data-dot--last" : "data-dot"}
           cx={c.x}
           cy={c.y}
@@ -96,13 +102,13 @@ export function MiniLineChart({ points }: MiniLineChartProps) {
       </text>
       {uniqueTickIndexes.map((i) => (
         <text
-          key={coords[i].point.sessionId}
+          key={coords[i].point.id}
           x={coords[i].x}
           y={PLOT_BOTTOM + 18}
           fontSize={10}
           textAnchor="middle"
         >
-          {formatTickDate(coords[i].point.performedAt)}
+          {formatTickDate(coords[i].point.date)}
         </text>
       ))}
     </svg>

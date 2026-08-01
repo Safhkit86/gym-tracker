@@ -23,45 +23,17 @@ import { listNotifications, markNotificationRead } from "../api/notifications";
 import { acceptProgressionDefaults } from "../api/profile";
 import { ApiRequestError } from "../api/client";
 import { usePager } from "../hooks/usePager";
-import { useIsNarrowViewport } from "../hooks/useIsNarrowViewport";
 import { PagerControls } from "../components/PagerControls";
 import { MiniLineChart } from "../components/MiniLineChart";
 import { StreakCalendar } from "../components/StreakCalendar";
-
-const UNSPECIFIED_MUSCLE_GROUP = "Altro";
-const MUSCLE_GROUP_CAROUSEL_QUERY = "(max-width: 860px)";
-
-interface MuscleGroupSummary {
-  muscleGroup: string;
-  setCount: number;
-  repCount: number;
-}
-
-interface ExerciseRef {
-  exerciseId: string;
-  exerciseName: string;
-}
-
-/** I polpacci sono un sotto-gruppo di Gambe nel catalogo esercizi, ma nella
- *  Dashboard vanno mostrati insieme, non come gruppo a parte. */
-function normalizeMuscleGroup(muscleGroup: string): string {
-  return muscleGroup === "Polpacci" ? "Gambe" : muscleGroup;
-}
-
-function groupVolumeByMuscleGroup(
-  stats: DashboardStats,
-  muscleGroupByExerciseId: Map<string, string>
-): MuscleGroupSummary[] {
-  const map = new Map<string, MuscleGroupSummary>();
-  for (const entry of stats.currentWeekVolumeByExercise) {
-    const muscleGroup = muscleGroupByExerciseId.get(entry.exerciseId) ?? UNSPECIFIED_MUSCLE_GROUP;
-    const existing = map.get(muscleGroup) ?? { muscleGroup, setCount: 0, repCount: 0 };
-    existing.setCount += entry.setCount;
-    existing.repCount += entry.repCount;
-    map.set(muscleGroup, existing);
-  }
-  return [...map.values()].sort((a, b) => b.setCount - a.setCount);
-}
+import { StatisticheCard } from "../components/StatisticheCard";
+import {
+  UNSPECIFIED_MUSCLE_GROUP,
+  normalizeMuscleGroup,
+  groupVolumeByMuscleGroup,
+  sortExerciseGroups,
+  type ExerciseRef,
+} from "../utils/muscle-groups";
 
 function formatWorkoutPrescription(exercise: WorkoutExercise): string {
   const setCount = exercise.sets.length;
@@ -95,8 +67,8 @@ export function DashboardPage() {
   const [lastSession, setLastSession] = useState<SessionDetail | null>(null);
   /** Esercizi che compaiono in almeno una scheda attuale (unione su tutte le
    *  schede): "Progressioni per esercizio" mostra solo questi, non lo
-   *  storico di esercizi rimossi dalle schede/di schede passate (quello
-   *  andra' in una futura pagina Statistiche a parte). */
+   *  storico di esercizi rimossi dalle schede/di schede passate. Stesso
+   *  criterio in StatisticsPage. */
   const [currentSchedeExercises, setCurrentSchedeExercises] = useState<ExerciseRef[]>([]);
   const [pendingSuggestions, setPendingSuggestions] = useState<Notification[]>([]);
   const [confirmingIds, setConfirmingIds] = useState<Set<string>>(new Set());
@@ -317,80 +289,6 @@ export function DashboardPage() {
   );
 }
 
-function StatisticheCard({
-  stats,
-  muscleGroupVolume,
-}: {
-  stats: DashboardStats;
-  muscleGroupVolume: MuscleGroupSummary[];
-}) {
-  const isNarrow = useIsNarrowViewport(MUSCLE_GROUP_CAROUSEL_QUERY);
-  const pageSize = isNarrow ? 1 : 3;
-  const pager = usePager(muscleGroupVolume, pageSize);
-
-  return (
-    <section className="card">
-      <div className="card__header">
-        <h2>Statistiche</h2>
-      </div>
-      <div className="stat-tiles">
-        <div>
-          <div className="stat-tile__label">Sessioni registrate</div>
-          <div className="stat-tile__value">{stats.sessionCount}</div>
-        </div>
-        <div>
-          <div className="stat-tile__label">Settimane consecutive</div>
-          <div className="stat-tile__value">{stats.consecutiveWeeks}</div>
-        </div>
-        <div>
-          <div className="stat-tile__label">Kg totali sollevati</div>
-          <div className="stat-tile__value">
-            {stats.totalKgLifted.toLocaleString("it-IT")}
-            <small> kg</small>
-          </div>
-        </div>
-      </div>
-
-      {muscleGroupVolume.length > 0 && (
-        <div className="muscle-groups-block">
-          <div className="muscle-groups-block__header">
-            <h3>Per gruppo muscolare · questa settimana</h3>
-            {muscleGroupVolume.length > pageSize && (
-              <PagerControls
-                start={pager.start}
-                pageSize={pageSize}
-                total={pager.total}
-                canPrev={pager.canPrev}
-                canNext={pager.canNext}
-                onPrev={pager.prev}
-                onNext={pager.next}
-                orientation="horizontal"
-                prevLabel="Gruppi precedenti"
-                nextLabel="Gruppi successivi"
-              />
-            )}
-          </div>
-          <div className="muscle-groups">
-            {pager.visible.map((mg) => (
-              <div className="muscle-group" key={mg.muscleGroup}>
-                <h3>{mg.muscleGroup}</h3>
-                <div className="row">
-                  <span>Serie</span>
-                  <strong>{mg.setCount}</strong>
-                </div>
-                <div className="row">
-                  <span>Ripetizioni</span>
-                  <strong>{mg.repCount}</strong>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </section>
-  );
-}
-
 function SuggerimentiCard({
   notifications,
   confirmingIds,
@@ -454,71 +352,66 @@ function ProgressioniCard({
   exercisesByMuscleGroup: Map<string, ExerciseRef[]>;
   exerciseHistories: Map<string, ExerciseHistoryPoint[]>;
 }) {
-  const muscleGroups = [...exercisesByMuscleGroup.keys()].sort((a, b) => a.localeCompare(b, "it"));
+  const sortedGroups = sortExerciseGroups(exercisesByMuscleGroup, exerciseHistories);
   // Solo un accordion aperto alla volta, altrimenti la card cresce troppo
   // con molti gruppi muscolari. null = nessuna scelta esplicita ancora,
   // apri il primo gruppo di default.
   const [openGroup, setOpenGroup] = useState<string | null>(null);
-  const effectiveOpenGroup = openGroup ?? muscleGroups[0] ?? null;
-
-  function maxValueFor(exerciseId: string): number {
-    const points = exerciseHistories.get(exerciseId);
-    return points && points.length > 0 ? Math.max(...points.map((p) => p.value)) : -Infinity;
-  }
+  const effectiveOpenGroup = openGroup ?? sortedGroups[0]?.[0] ?? null;
 
   return (
     <section className="card">
       <div className="card__header">
         <h2>Progressioni per esercizio</h2>
       </div>
-      {muscleGroups.length === 0 ? (
+      {sortedGroups.length === 0 ? (
         <p className="section-note">Non ci sono ancora abbastanza dati.</p>
       ) : (
-        muscleGroups.map((muscleGroup) => {
-          // In alto l'esercizio col miglior risultato raggiunto, poi gli
-          // altri della scheda in ordine decrescente.
-          const exercisesInGroup = [...(exercisesByMuscleGroup.get(muscleGroup) ?? [])].sort(
-            (a, b) => maxValueFor(b.exerciseId) - maxValueFor(a.exerciseId)
-          );
-          return (
-            <details
-              className="muscle-accordion"
-              key={muscleGroup}
-              open={effectiveOpenGroup === muscleGroup}
+        sortedGroups.map(([muscleGroup, exercisesInGroup]) => (
+          <details
+            className="muscle-accordion"
+            key={muscleGroup}
+            open={effectiveOpenGroup === muscleGroup}
+          >
+            <summary
+              onClick={(event) => {
+                event.preventDefault();
+                setOpenGroup(effectiveOpenGroup === muscleGroup ? null : muscleGroup);
+              }}
             >
-              <summary
-                onClick={(event) => {
-                  event.preventDefault();
-                  setOpenGroup(effectiveOpenGroup === muscleGroup ? null : muscleGroup);
-                }}
-              >
-                {muscleGroup}
-              </summary>
-              <div className="accordion-body">
-                {exercisesInGroup.map((ref) => {
-                  const points = exerciseHistories.get(ref.exerciseId) ?? [];
-                  const latest = points[points.length - 1];
-                  return (
-                    <div key={ref.exerciseId}>
-                      <div className="exercise-chart__title">
-                        <span>
-                          {ref.exerciseName} —{" "}
-                          {latest?.unit === "reps" ? "ripetizioni" : "peso (kg)"}
+              {muscleGroup}
+            </summary>
+            <div className="accordion-body">
+              {exercisesInGroup.map((ref) => {
+                const points = exerciseHistories.get(ref.exerciseId) ?? [];
+                const latest = points[points.length - 1];
+                return (
+                  <div key={ref.exerciseId}>
+                    <div className="exercise-chart__title">
+                      <span>
+                        {ref.exerciseName} — {latest?.unit === "reps" ? "ripetizioni" : "peso (kg)"}
+                      </span>
+                      {latest && (
+                        <span className="latest">
+                          {latest.unit === "kg" ? `${latest.value}kg` : `${latest.value} rip.`}
                         </span>
-                        {latest && (
-                          <span className="latest">
-                            {latest.unit === "kg" ? `${latest.value}kg` : `${latest.value} rip.`}
-                          </span>
-                        )}
-                      </div>
-                      <MiniLineChart points={points} />
+                      )}
                     </div>
-                  );
-                })}
-              </div>
-            </details>
-          );
-        })
+                    <MiniLineChart
+                      points={points.map((p) => ({
+                        id: p.sessionId,
+                        date: p.performedAt,
+                        value: p.value,
+                      }))}
+                      unit={latest?.unit ?? "kg"}
+                      emptyMessage="Nessuno storico disponibile per questo esercizio."
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </details>
+        ))
       )}
     </section>
   );
