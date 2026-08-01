@@ -21,6 +21,10 @@ export interface MailerConfig {
   host: string;
   port: number;
   from: string;
+  /** Assente con Mailpit (nessuna autenticazione); richiesto da un vero
+   *  relay SMTP (es. Gmail risponde "530-5.7.0 Authentication Required"
+   *  senza queste credenziali). */
+  auth?: { user: string; pass: string };
 }
 
 /**
@@ -32,6 +36,7 @@ export function createNodemailerMailer(config: MailerConfig): Mailer {
     host: config.host,
     port: config.port,
     secure: false,
+    auth: config.auth,
   });
 
   return {
