@@ -219,6 +219,57 @@ escono direttamente sul terminale di quel processo, stesso formato.
 L'header `Authorization` è sempre redatto (`[Redacted]`) nei log, anche
 sulle risposte 401, quindi è sicuro incollarli altrove senza esporre token.
 
+## Produzione (locale)
+
+Un secondo stack Docker Compose, isolato da quello di sviluppo (container,
+rete, volumi e porte tutti diversi, così i due non si mescolano mai anche
+girando sulla stessa macchina): `docker-compose.prod.yml` invece di
+`docker-compose.yml`, con il proprio file di variabili `.env.production`
+invece di `.env`. Include anche la webapp (`apps/web`), containerizzata qui
+per la prima volta (in dev gira solo con `npm run dev`).
+
+**Va sempre avviato con il file esplicito**, mai con un semplice
+`docker compose up` (che userebbe lo stack di dev):
+
+```bash
+# solo la prima volta
+cp .env.production.example .env.production
+# poi apri .env.production e sostituisci OGNI segnaposto CAMBIAMI/
+# CONFIGURA_SMTP_REALE con un valore vero (vedi i commenti nel file per
+# come generare un JWT_SECRET forte) -- non lasciare i default di esempio
+
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+docker compose -f docker-compose.prod.yml --env-file .env.production ps
+docker compose -f docker-compose.prod.yml --env-file .env.production logs -f
+docker compose -f docker-compose.prod.yml --env-file .env.production down
+```
+
+Le porte pubblicate sono diverse da quelle di dev (schema "porta di dev +
+1000": gateway su `5000` invece di `4000`, Postgres su `6432` invece di
+`5432`, ecc. — vedi `.env.production.example` per l'elenco completo), così
+i due stack possono girare **contemporaneamente** senza conflitti. La
+webapp è su `http://localhost:8080` (nginx, build statica — non
+`npm run dev`).
+
+**Migrazioni**: le tabelle non esistono finché non le crei, esattamente
+come per lo stack di dev. Vanno lanciate dall'host puntando `DATABASE_URL`
+al Postgres di produzione (mai scambiare/rinominare `.env`/`.env.production`
+per farlo — basta anteporre la variabile al comando, che ha la precedenza
+su quella caricata da `.env`):
+
+```bash
+DATABASE_URL=postgres://gymtracker:<password>@localhost:6432/gymtracker \
+  npm run db:migrate --workspace=@gym-tracker/account-service
+# ripeti per workout-service, progress-service, history-service (dopo
+# progress-service, riusa le sue tabelle), notify-service
+```
+
+**Limite noto**: nessun Mailpit in produzione (a differenza di dev) e
+nessun relay SMTP configurato di default — le email (reset password,
+avviso dead-letter) falliscono finché `SMTP_HOST`/`SMTP_PORT` in
+`.env.production` non puntano a un vero server SMTP. È un TODO esplicito,
+non un bug: il resto dell'app funziona normalmente.
+
 ## CI/CD
 
 Ogni Pull Request verso `master` esegue automaticamente (`.github/workflows/ci.yml`):

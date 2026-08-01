@@ -1,0 +1,218 @@
+name: gym-tracker-prod
+
+# Stack di produzione (locale, stessa macchina di sviluppo): container, rete
+# e volumi separati da quelli di docker-compose.yml grazie al `name` diverso
+# qui sopra. Va SEMPRE avviato con questo file esplicito + --env-file
+# .env.production (mai con un semplice `docker compose up`, che userebbe
+# docker-compose.yml/.env di dev): vedi README.md, sezione "Produzione
+# (locale)".
+#
+# Differenze dallo stack di dev (docker-compose.yml):
+# - nessun servizio mailpit (SMTP resta un TODO esplicito, non mascherato
+#   da un finto server SMTP locale);
+# - account-service/notify-service leggono SMTP_HOST/SMTP_PORT da variabile
+#   invece del letterale "mailpit" hardcodato in dev;
+# - nuovo servizio "web" (la webapp, mai containerizzata prima d'ora);
+# - ogni servizio resta in ascolto INTERNAMENTE sulla stessa porta di dev
+#   (deve combaciare con l'HEALTHCHECK/EXPOSE hardcodato nel suo Dockerfile,
+#   condiviso con lo stack di dev): cambia solo la porta lato HOST
+#   (sinistra del mapping "host:container" in ogni `ports:`), con un default
+#   diverso da dev cosi' anche dimenticare --env-file non fa collidere le
+#   due istanze sulla stessa macchina.
+
+services:
+  # --- Infrastruttura condivisa ---
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-gymtracker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CAMBIAMI}
+      POSTGRES_DB: ${POSTGRES_DB:-gymtracker}
+    ports:
+      - "${POSTGRES_PORT:-6432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gymtracker}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-7379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-gymtracker}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-CAMBIAMI}
+    ports:
+      - "${RABBITMQ_PORT:-6672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-16672}:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # --- Microservizi ---
+  # PORT resta fisso alla stessa porta di dev (4000-4005): deve combaciare
+  # con l'HEALTHCHECK/EXPOSE hardcodato nel Dockerfile, condiviso con lo
+  # stack di dev. Solo la porta pubblicata sull'host (sinistra di ogni
+  # "ports:") cambia rispetto a dev.
+  account-service:
+    build:
+      context: .
+      dockerfile: services/account-service/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 4001
+      JWT_SECRET: ${JWT_SECRET:-CAMBIAMI}
+      DATABASE_URL: postgres://${POSTGRES_USER:-gymtracker}:${POSTGRES_PASSWORD:-CAMBIAMI}@postgres:5432/${POSTGRES_DB:-gymtracker}
+      # Nessun mailpit in produzione: finche' non e' configurato un relay
+      # SMTP reale, l'invio email fallira' in modo comprensibile (connessione
+      # rifiutata/host sconosciuto), non con un mailpit che finge funzioni.
+      SMTP_HOST: ${SMTP_HOST:-CONFIGURA_SMTP_REALE}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_FROM: ${SMTP_FROM:-no-reply@gym-tracker.local}
+      WEB_APP_URL: ${WEB_APP_URL:-http://localhost:8080}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-gymtracker}:${RABBITMQ_PASSWORD:-CAMBIAMI}@rabbitmq:5672
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "${ACCOUNT_SERVICE_PORT:-5001}:4001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  workout-service:
+    build:
+      context: .
+      dockerfile: services/workout-service/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 4002
+      JWT_SECRET: ${JWT_SECRET:-CAMBIAMI}
+      DATABASE_URL: postgres://${POSTGRES_USER:-gymtracker}:${POSTGRES_PASSWORD:-CAMBIAMI}@postgres:5432/${POSTGRES_DB:-gymtracker}
+    ports:
+      - "${WORKOUT_SERVICE_PORT:-5002}:4002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  progress-service:
+    build:
+      context: .
+      dockerfile: services/progress-service/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 4003
+      JWT_SECRET: ${JWT_SECRET:-CAMBIAMI}
+      DATABASE_URL: postgres://${POSTGRES_USER:-gymtracker}:${POSTGRES_PASSWORD:-CAMBIAMI}@postgres:5432/${POSTGRES_DB:-gymtracker}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-gymtracker}:${RABBITMQ_PASSWORD:-CAMBIAMI}@rabbitmq:5672
+    ports:
+      - "${PROGRESS_SERVICE_PORT:-5003}:4003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  history-service:
+    build:
+      context: .
+      dockerfile: services/history-service/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 4005
+      JWT_SECRET: ${JWT_SECRET:-CAMBIAMI}
+      DATABASE_URL: postgres://${POSTGRES_USER:-gymtracker}:${POSTGRES_PASSWORD:-CAMBIAMI}@postgres:5432/${POSTGRES_DB:-gymtracker}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-gymtracker}:${RABBITMQ_PASSWORD:-CAMBIAMI}@rabbitmq:5672
+    ports:
+      - "${HISTORY_SERVICE_PORT:-5005}:4005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  notify-service:
+    build:
+      context: .
+      dockerfile: services/notify-service/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 4004
+      JWT_SECRET: ${JWT_SECRET:-CAMBIAMI}
+      DATABASE_URL: postgres://${POSTGRES_USER:-gymtracker}:${POSTGRES_PASSWORD:-CAMBIAMI}@postgres:5432/${POSTGRES_DB:-gymtracker}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-gymtracker}:${RABBITMQ_PASSWORD:-CAMBIAMI}@rabbitmq:5672
+      SMTP_HOST: ${SMTP_HOST:-CONFIGURA_SMTP_REALE}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_FROM: ${SMTP_FROM:-no-reply@gym-tracker.local}
+      OPS_ALERT_EMAIL: ${OPS_ALERT_EMAIL:-ops@gym-tracker.local}
+    ports:
+      - "${NOTIFY_SERVICE_PORT:-5004}:4004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # --- API Gateway: unico punto di ingresso per i client (web/Android) ---
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      JWT_SECRET: ${JWT_SECRET:-CAMBIAMI}
+      ACCOUNT_SERVICE_URL: http://account-service:4001
+      WORKOUT_SERVICE_URL: http://workout-service:4002
+      PROGRESS_SERVICE_URL: http://progress-service:4003
+      HISTORY_SERVICE_URL: http://history-service:4005
+      NOTIFY_SERVICE_URL: http://notify-service:4004
+    ports:
+      - "${API_GATEWAY_PORT:-5000}:4000"
+    depends_on:
+      - account-service
+      - workout-service
+      - progress-service
+      - history-service
+      - notify-service
+
+  # --- Webapp: build statica servita da nginx (mai containerizzata in dev,
+  # dove gira con `npm run dev` sull'host) ---
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Indirizzo raggiungibile dal BROWSER (fuori da Docker), non
+        # l'hostname interno "api-gateway": e' cotto nel bundle in build
+        # time (env Vite), non letto a runtime dal container. Attenzione:
+        # se cambi API_GATEWAY_PORT in .env.production devi ricostruire
+        # l'immagine web (questo valore e' fissato al build, non a runtime).
+        VITE_API_BASE_URL: http://localhost:${API_GATEWAY_PORT:-5000}
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - api-gateway
+
+volumes:
+  postgres-data:
