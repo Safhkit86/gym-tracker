@@ -154,6 +154,7 @@ function baseHandlers(
       match: (u: string, m: string) => u.includes("/sessions/exercise-history") && m === "GET",
       body: [],
     },
+    { match: (u: string, m: string) => u.endsWith("/measurements") && m === "GET", body: [] },
   ];
 }
 
@@ -590,5 +591,70 @@ describe("DashboardPage", () => {
       expect(titles[0].textContent).toMatch(/Croci ai cavi/);
       expect(titles[1].textContent).toMatch(/Dip/);
     });
+  });
+
+  it("nasconde la card 'Misure' quando non ci sono misurazioni", async () => {
+    seedAuthToken();
+    mockFetchResponses(baseHandlers());
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/" element={<DashboardPage />} />
+      </Routes>
+    );
+
+    await screen.findByText("Pull day");
+    expect(screen.queryByRole("heading", { name: "Misure" })).not.toBeInTheDocument();
+  });
+
+  it("mostra le tile 'Misure' con valore, delta e link a Statistiche > Misure", async () => {
+    seedAuthToken();
+    mockFetchResponses(
+      baseHandlers([
+        {
+          match: (u, m) => u.endsWith("/measurements") && m === "GET",
+          body: [
+            {
+              id: "m2",
+              measuredOn: "2026-07-20",
+              weightKg: 79.1,
+              chestCm: 106,
+              armCm: null,
+              waistCm: null,
+              legCm: null,
+              createdAt: "2026-07-20T00:00:00.000Z",
+              updatedAt: "2026-07-20T00:00:00.000Z",
+            },
+            {
+              id: "m1",
+              measuredOn: "2026-06-20",
+              weightKg: 80.2,
+              chestCm: 105,
+              armCm: null,
+              waistCm: null,
+              legCm: null,
+              createdAt: "2026-06-20T00:00:00.000Z",
+              updatedAt: "2026-06-20T00:00:00.000Z",
+            },
+          ],
+        },
+      ])
+    );
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/" element={<DashboardPage />} />
+      </Routes>
+    );
+
+    const heading = await screen.findByRole("heading", { name: "Misure" });
+    const card = heading.closest(".card") as HTMLElement;
+    expect(within(card).getByText(/Peso/)).toBeInTheDocument();
+    expect(within(card).getByText("79.1")).toBeInTheDocument();
+    expect(within(card).getByText(/▼ 1\.1/)).toBeInTheDocument();
+    // Braccia/Vita/Gamba non hanno dati in questo fixture: nessuna tile per loro.
+    expect(within(card).queryByText("Braccia")).not.toBeInTheDocument();
+    const link = within(card).getByRole("link", { name: "Vedi tutte →" });
+    expect(link).toHaveAttribute("href", "/statistics?tab=measurements");
   });
 });

@@ -4,6 +4,7 @@ import type {
   DashboardStats,
   Exercise,
   ExerciseHistoryPoint,
+  MeasurementEntry,
   Notification,
   SessionDetail,
   SessionExercise,
@@ -19,12 +20,14 @@ import { getDashboardStats, getExerciseHistory, getStalledExercise } from "../ap
 import { listExercises } from "../api/exercises";
 import { getWorkout, listWorkouts } from "../api/workouts";
 import { listSessions } from "../api/sessions";
+import { listMeasurements } from "../api/measurements";
 import { listNotifications, markNotificationRead } from "../api/notifications";
 import { acceptProgressionDefaults } from "../api/profile";
 import { ApiRequestError } from "../api/client";
 import { usePager } from "../hooks/usePager";
 import { PagerControls } from "../components/PagerControls";
 import { MiniLineChart } from "../components/MiniLineChart";
+import { Sparkline } from "../components/Sparkline";
 import { StreakCalendar } from "../components/StreakCalendar";
 import { StatisticheCard } from "../components/StatisticheCard";
 import {
@@ -34,6 +37,7 @@ import {
   sortExerciseGroups,
   type ExerciseRef,
 } from "../utils/muscle-groups";
+import { MEASUREMENT_FIELDS, computeDelta } from "../utils/measurements";
 
 function formatWorkoutPrescription(exercise: WorkoutExercise): string {
   const setCount = exercise.sets.length;
@@ -76,6 +80,7 @@ export function DashboardPage() {
   const [exerciseHistories, setExerciseHistories] = useState<Map<string, ExerciseHistoryPoint[]>>(
     new Map()
   );
+  const [measurements, setMeasurements] = useState<MeasurementEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -138,12 +143,25 @@ export function DashboardPage() {
 
       // Sezioni secondarie: un fallimento qui non deve impedire la
       // visualizzazione del resto della pagina (stesso pattern di
-      // WorkoutDetailPage per i suggerimenti di progressione).
+      // WorkoutDetailPage per i suggerimenti di progressione). Ognuna ha il
+      // proprio .catch(), cosi' il fallimento di una non ne impedisce altre
+      // (es. le misure non ancora configurate non devono nascondere i
+      // suggerimenti di progressione).
       Promise.all([listNotifications(authToken, true), getStalledExercise(authToken)])
         .then(([notifications, stalled]) => {
           if (!cancelled) {
             setPendingSuggestions(notifications);
             setStalledExercise(stalled);
+          }
+        })
+        .catch(() => {
+          /* opzionale: nessun errore bloccante */
+        });
+
+      listMeasurements(authToken)
+        .then((measurementsResult) => {
+          if (!cancelled) {
+            setMeasurements(measurementsResult);
           }
         })
         .catch(() => {
@@ -276,6 +294,7 @@ export function DashboardPage() {
             exercisesByMuscleGroup={exercisesByMuscleGroup}
             exerciseHistories={exerciseHistories}
           />
+          <MisureCard measurements={measurements} />
           <CostanzaCard streakCalendar={stats.streakCalendar} />
         </div>
 
@@ -413,6 +432,66 @@ function ProgressioniCard({
           </details>
         ))
       )}
+    </section>
+  );
+}
+
+interface MeasureTileData {
+  field: (typeof MEASUREMENT_FIELDS)[number];
+  values: number[];
+  current: number;
+  delta: number | null;
+}
+
+/** Tile compatte per le misure (valore attuale + delta + sparkline), non
+ *  mostrate se l'utente non ha ancora registrato nessuna misura. Il
+ *  dettaglio completo (grafici con date, tutte le misurazioni) resta in
+ *  Statistiche > Misure, raggiungibile dal link. */
+function MisureCard({ measurements }: { measurements: MeasurementEntry[] }) {
+  const tiles: MeasureTileData[] = MEASUREMENT_FIELDS.map((field) => {
+    // measurements e' piu' recenti prima (vedi listMeasurements): i valori
+    // non nulli in ordine cronologico (piu' vecchio -> piu' nuovo) servono
+    // sia per lo sparkline sia per calcolare il delta sull'ultimo cambiamento.
+    const nonNull = measurements.filter((m) => m[field.key] !== null);
+    if (nonNull.length === 0) {
+      return null;
+    }
+    const chronological = [...nonNull].reverse();
+    const values = chronological.map((m) => m[field.key] as number);
+    const current = values[values.length - 1];
+    const previous = values.length > 1 ? values[values.length - 2] : null;
+    return { field, values, current, delta: computeDelta(previous, current) };
+  }).filter((tile): tile is MeasureTileData => tile !== null);
+
+  if (tiles.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="card">
+      <div className="card__header">
+        <h2>Misure</h2>
+        <Link to="/statistics?tab=measurements">Vedi tutte →</Link>
+      </div>
+      <div className="measure-tiles">
+        {tiles.map(({ field, values, current, delta }) => (
+          <div className="measure-tile" key={field.key}>
+            <div className="measure-tile__label">{field.label}</div>
+            <div className="measure-tile__row">
+              <span className="measure-tile__value">
+                {current}
+                <small>{field.unit}</small>
+              </span>
+              {delta !== null && (
+                <span className={`delta delta--${delta > 0 ? "up" : "down"}`}>
+                  {delta > 0 ? "▲" : "▼"} {Math.abs(delta)}
+                </span>
+              )}
+            </div>
+            <Sparkline values={values} />
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
