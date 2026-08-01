@@ -184,6 +184,13 @@ conversazione corrente:
   scratchpad. Se la cartella scratchpad di una nuova sessione non ha ancora
   `playwright` installato, installalo li' (`npm install playwright` dentro
   quella cartella, non nel repo) prima di scrivere lo script.
+- Da quando lo stack di produzione (`docker-compose.prod.yml`,
+  `.env.production`) contiene dati reali dell'utente, Claude non deve
+  accedere o operare direttamente su di esso (comandi `docker compose -f
+docker-compose.prod.yml ...`, query/modifiche al DB di prod, rebuild o
+  riavvio dei suoi container) a meno di un'esplicita autorizzazione
+  dell'utente caso per caso — non vale come autorizzazione permanente
+  un'autorizzazione data in passato per un intervento specifico.
 
 ## Cosa NON fare
 
