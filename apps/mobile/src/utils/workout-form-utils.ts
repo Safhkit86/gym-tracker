@@ -1,5 +1,5 @@
 import * as Crypto from "expo-crypto";
-import type { Exercise, WorkoutInput } from "@gym-tracker/shared";
+import type { Exercise, WorkoutDetail, WorkoutInput } from "@gym-tracker/shared";
 
 export interface SetForm {
   targetMinReps: string;
@@ -99,6 +99,46 @@ export function toWorkoutInput(
       })),
     })),
   };
+}
+
+/** Converte una scheda esistente nei valori iniziali del form (inverso di
+ * toWorkoutInput): numeri nullable -> stringa vuota, riordinati per
+ * position/setNumber nel caso il server non li restituisca gia' ordinati. */
+export function workoutDetailToFormValues(workout: WorkoutDetail): {
+  name: string;
+  notes: string;
+  exercises: ExerciseForm[];
+} {
+  const exercises = [...workout.exercises]
+    .sort((a, b) => a.position - b.position)
+    .map((exercise) => ({
+      formId: Crypto.randomUUID(),
+      exerciseId: exercise.exerciseId,
+      notes: exercise.notes ?? "",
+      restSeconds: exercise.restSeconds !== null ? String(exercise.restSeconds) : "",
+      progressionIncrement:
+        exercise.progressionIncrement !== null ? String(exercise.progressionIncrement) : "",
+      sets: [...exercise.sets]
+        .sort((a, b) => a.setNumber - b.setNumber)
+        .map((set) => ({
+          targetMinReps: set.targetMinReps !== null ? String(set.targetMinReps) : "",
+          targetMaxReps: set.targetMaxReps !== null ? String(set.targetMaxReps) : "",
+          targetWeight: set.targetWeight !== null ? String(set.targetWeight) : "",
+          restMinSeconds: set.restMinSeconds !== null ? String(set.restMinSeconds) : "",
+          restMaxSeconds: set.restMaxSeconds !== null ? String(set.restMaxSeconds) : "",
+          isMaxEffort: set.isMaxEffort ?? false,
+        })),
+    }));
+  return { name: workout.name, notes: workout.notes ?? "", exercises };
+}
+
+/** Costruisce il WorkoutInput per una scheda duplicata: stesso contenuto
+ * della scheda di partenza (notes/esercizi/set) con un nome nuovo. Passando
+ * per toWorkoutInput/createWorkout, la copia ottiene id nuovi per ogni
+ * workout_exercise/workout_set: nessun riferimento condiviso con l'originale. */
+export function duplicateWorkoutInput(workout: WorkoutDetail, newName: string): WorkoutInput {
+  const { notes, exercises } = workoutDetailToFormValues(workout);
+  return toWorkoutInput(newName, notes, exercises);
 }
 
 /** Estrae i path dei campi (formato zod, es. "exercises.0.sets.0.targetMinReps"

@@ -1,14 +1,24 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import type { WorkoutDetail, WorkoutSet } from "@gym-tracker/shared";
 import { useAuth } from "../../auth/useAuth";
-import { getWorkout } from "../../api/workouts";
+import { createWorkout, deleteWorkout, getWorkout } from "../../api/workouts";
 import { ApiRequestError } from "../../api/client";
 import { colors, radius, spacing } from "../../theme/theme";
 import type { WorkoutsStackParamList } from "../../navigation/WorkoutsNavigator";
+import { PromptModal } from "../../components/PromptModal";
+import { duplicateWorkoutInput } from "../../utils/workout-form-utils";
 
 type Props = NativeStackScreenProps<WorkoutsStackParamList, "WorkoutDetail">;
 
@@ -36,12 +46,14 @@ function formatRest(set: WorkoutSet): string {
   return `${set.restMinSeconds}s`;
 }
 
-export function WorkoutDetailScreen({ route }: Props) {
+export function WorkoutDetailScreen({ navigation, route }: Props) {
   const { t } = useTranslation();
   const { token } = useAuth();
   const { id } = route.params;
   const [workout, setWorkout] = useState<WorkoutDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isDuplicating, setIsDuplicating] = useState(false);
+  const [showDuplicatePrompt, setShowDuplicatePrompt] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -63,6 +75,41 @@ export function WorkoutDetailScreen({ route }: Props) {
       cancelled = true;
     };
   }, [token, id, t]);
+
+  function requestDelete(): void {
+    Alert.alert(t("workouts.detail.deleteConfirmTitle"), undefined, [
+      { text: t("workouts.create.cancel"), style: "cancel" },
+      {
+        text: t("workouts.detail.delete"),
+        style: "destructive",
+        onPress: () => {
+          if (!token) {
+            return;
+          }
+          deleteWorkout(token, id)
+            .then(() => navigation.replace("WorkoutsList"))
+            .catch((err: unknown) => {
+              setError(err instanceof ApiRequestError ? err.message : t("common.errorUnexpected"));
+            });
+        },
+      },
+    ]);
+  }
+
+  async function handleDuplicateConfirm(newName: string): Promise<void> {
+    setShowDuplicatePrompt(false);
+    if (!token || !workout) {
+      return;
+    }
+    setIsDuplicating(true);
+    try {
+      const result = await createWorkout(token, duplicateWorkoutInput(workout, newName));
+      navigation.replace("WorkoutDetail", { id: result.id });
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("common.errorUnexpected"));
+      setIsDuplicating(false);
+    }
+  }
 
   if (error) {
     return (
@@ -86,6 +133,34 @@ export function WorkoutDetailScreen({ route }: Props) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>{workout.name}</Text>
       {workout.notes && <Text style={styles.notes}>{workout.notes}</Text>}
+
+      <View style={styles.actionRow}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.actionButtonPrimary]}
+          onPress={() => navigation.navigate("EditWorkout", { id: workout.id })}
+          accessibilityRole="button"
+          accessibilityLabel={t("workouts.detail.edit")}
+        >
+          <Text style={styles.actionButtonPrimaryText}>{t("workouts.detail.edit")}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => setShowDuplicatePrompt(true)}
+          disabled={isDuplicating}
+          accessibilityRole="button"
+          accessibilityLabel={t("workouts.detail.duplicate")}
+        >
+          <Text style={styles.actionButtonText}>{t("workouts.detail.duplicate")}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.actionButtonDanger]}
+          onPress={requestDelete}
+          accessibilityRole="button"
+          accessibilityLabel={t("workouts.detail.delete")}
+        >
+          <Text style={styles.actionButtonDangerText}>{t("workouts.detail.delete")}</Text>
+        </TouchableOpacity>
+      </View>
 
       {workout.exercises.map((exercise) => (
         <View key={exercise.id} style={styles.exerciseCard}>
@@ -124,6 +199,15 @@ export function WorkoutDetailScreen({ route }: Props) {
           )}
         </View>
       ))}
+
+      <PromptModal
+        visible={showDuplicatePrompt}
+        message={t("workouts.detail.duplicatePromptMessage", { name: workout.name })}
+        label={t("workouts.detail.duplicatePromptLabel")}
+        initialValue={t("workouts.detail.duplicatePromptDefaultName", { name: workout.name })}
+        onConfirm={handleDuplicateConfirm}
+        onCancel={() => setShowDuplicatePrompt(false)}
+      />
     </ScrollView>
   );
 }
@@ -154,6 +238,44 @@ const styles = StyleSheet.create({
   title: {
     color: colors.text,
     fontSize: 24,
+    fontWeight: "700",
+  },
+  actionRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: -spacing.sm,
+  },
+  actionButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+  },
+  actionButtonText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  actionButtonPrimary: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  actionButtonPrimaryText: {
+    color: colors.accentContrast,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  actionButtonDanger: {
+    backgroundColor: colors.dangerBg,
+    borderColor: colors.danger,
+  },
+  actionButtonDangerText: {
+    color: colors.danger,
+    fontSize: 12,
     fontWeight: "700",
   },
   notes: {
