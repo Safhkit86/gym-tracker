@@ -1,12 +1,15 @@
+import { Text, TouchableOpacity } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
-import { colors } from "../theme/theme";
+import { colors, spacing } from "../theme/theme";
 import { WorkoutsListScreen } from "../screens/workouts/WorkoutsListScreen";
 import { WorkoutDetailScreen } from "../screens/workouts/WorkoutDetailScreen";
+import { CreateWorkoutScreen } from "../screens/workouts/CreateWorkoutScreen";
 
 export type WorkoutsStackParamList = {
   WorkoutsList: undefined;
   WorkoutDetail: { id: string };
+  CreateWorkout: undefined;
 };
 
 const Stack = createNativeStackNavigator<WorkoutsStackParamList>();
@@ -25,12 +28,29 @@ export function WorkoutsNavigator() {
       <Stack.Screen
         name="WorkoutsList"
         component={WorkoutsListScreen}
-        options={{ title: t("nav.workouts") }}
+        options={({ navigation }) => ({
+          title: t("nav.workouts"),
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => navigation.navigate("CreateWorkout")}
+              accessibilityRole="button"
+              accessibilityLabel={t("workouts.list.newWorkout")}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={{ color: colors.accent, fontSize: 28, marginRight: spacing.sm }}>+</Text>
+            </TouchableOpacity>
+          ),
+        })}
       />
       <Stack.Screen
         name="WorkoutDetail"
         component={WorkoutDetailScreen}
         options={{ title: t("workouts.detail.title") }}
+      />
+      <Stack.Screen
+        name="CreateWorkout"
+        component={CreateWorkoutScreen}
+        options={{ title: t("workouts.create.title") }}
       />
     </Stack.Navigator>
   );

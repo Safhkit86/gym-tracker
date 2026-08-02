@@ -279,13 +279,16 @@ non un bug: il resto dell'app funziona normalmente.
 Fase 8 della roadmap: un client mobile che copra tutte le funzionalità della
 webapp, parlando solo con l'API Gateway (stessa regola di `apps/web`, mai
 un servizio contattato direttamente). Piano dettagliato e mockup validati
-il 2026-08-02. Sotto-fasi 1-2/8 implementate (`apps/mobile`): setup del
+il 2026-08-02. Sotto-fasi 1-3/8 implementate (`apps/mobile`): setup del
 progetto Expo, tema "Night Track", navigazione a tab (schermate segnaposto
 per Storico/Statistiche/Notifiche), autenticazione funzionante
-(login/registrazione) contro il backend reale, ed elenco/dettaglio schede
-(sola lettura: nome, note, esercizi con set/reps/peso/recupero). Le
-sotto-fasi successive (creazione/modifica schede, registra sessione,
-storico, dashboard, statistiche, notifiche, profilo) restano da fare.
+(login/registrazione) contro il backend reale, elenco/dettaglio schede
+(nome, note, esercizi con set/reps/peso/recupero) e creazione di una nuova
+scheda (form con esercizi/set dinamici, picker esercizi dal catalogo,
+riordino esercizi con pulsanti ↑/↓ — non drag-and-drop come nella webapp,
+vedi nota sotto). Le sotto-fasi successive (modifica/elimina/duplica
+schede, registra sessione, storico, dashboard, statistiche, notifiche,
+profilo) restano da fare.
 
 Decisioni prese:
 
@@ -304,6 +307,15 @@ Decisioni prese:
   webapp che oggi ha l'italiano hardcoded. I messaggi di errore restano
   però in italiano lato backend: l'app mappa i `code` di `ApiError` su un
   proprio catalogo di traduzioni, col `message` italiano come fallback.
+- **Riordino liste senza drag-and-drop nativo**: il riordino esercizi nel
+  form "Nuova scheda" usa due pulsanti ↑/↓ invece del drag-and-drop della
+  webapp (dnd-kit). Motivo: la libreria RN equivalente
+  (`react-native-draggable-flatlist`) richiede `react-native-reanimated`
+  4.x, il cui modulo nativo (`react-native-worklets`) manda in crash **Expo
+  Go** (SIGSEGV nativo, versione del binario non compatibile con quella
+  bundlata in Expo Go) — testato e verificato su questo progetto. Finché
+  lo sviluppo passa da Expo Go (non da una dev build EAS custom),
+  reanimated resta da evitare per qualunque nuova interazione a gesture.
 
 Verifica: sviluppo e test avvengono su un telefono reale via app **Expo
 Go** (scan di un QR code), senza installare alcun SDK nativo sulla
