@@ -95,6 +95,29 @@
       "submitting": "Saving…"
     }
   },
+  "session": {
+    "title": "Log session",
+    "loadError": "Unable to load the workout.",
+    "date": "Date",
+    "set": "Set {{number}}",
+    "weight": "Kg",
+    "rest": "Rest",
+    "actualReps": "{{exercise}} set {{number}} actual reps",
+    "actualWeight": "{{exercise}} actual kg",
+    "actualRest": "{{exercise}} actual rest",
+    "startTimer": "Start rest timer",
+    "timerLabelBetweenSets": "{{exercise}} — rest between sets",
+    "timerLabelBeforeNext": "Before {{exercise}}",
+    "timerRinging": "Rest over",
+    "timerCancel": "Delete",
+    "timerStop": "Stop alarm",
+    "submit": "Log session",
+    "resultTitle": "Session logged",
+    "checkingSuggestions": "Checking for progression suggestions…",
+    "noSuggestion": "No progression suggestion this time.",
+    "suggestionsTimeout": "Session logged. Still checking — if available, you'll see it in your notifications.",
+    "backToWorkout": "Back to workout"
+  },
   "errors": {
     "INVALID_CREDENTIALS": "Invalid email or password.",
     "EMAIL_ALREADY_IN_USE": "A user with this email already exists.",

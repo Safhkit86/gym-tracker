@@ -134,14 +134,23 @@ export function WorkoutDetailScreen({ navigation, route }: Props) {
       <Text style={styles.title}>{workout.name}</Text>
       {workout.notes && <Text style={styles.notes}>{workout.notes}</Text>}
 
+      <TouchableOpacity
+        style={styles.logSessionButton}
+        onPress={() => navigation.navigate("LogSession", { id: workout.id })}
+        accessibilityRole="button"
+        accessibilityLabel={t("session.title")}
+      >
+        <Text style={styles.logSessionButtonText}>{t("session.title")}</Text>
+      </TouchableOpacity>
+
       <View style={styles.actionRow}>
         <TouchableOpacity
-          style={[styles.actionButton, styles.actionButtonPrimary]}
+          style={styles.actionButton}
           onPress={() => navigation.navigate("EditWorkout", { id: workout.id })}
           accessibilityRole="button"
           accessibilityLabel={t("workouts.detail.edit")}
         >
-          <Text style={styles.actionButtonPrimaryText}>{t("workouts.detail.edit")}</Text>
+          <Text style={styles.actionButtonText}>{t("workouts.detail.edit")}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.actionButton}
@@ -240,10 +249,21 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "700",
   },
+  logSessionButton: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    marginTop: -spacing.sm,
+  },
+  logSessionButtonText: {
+    color: colors.accentContrast,
+    fontSize: 14,
+    fontWeight: "700",
+  },
   actionRow: {
     flexDirection: "row",
     gap: spacing.sm,
-    marginTop: -spacing.sm,
   },
   actionButton: {
     flex: 1,
@@ -257,15 +277,6 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     color: colors.text,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  actionButtonPrimary: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  actionButtonPrimaryText: {
-    color: colors.accentContrast,
     fontSize: 12,
     fontWeight: "700",
   },

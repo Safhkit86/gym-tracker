@@ -6,12 +6,14 @@ import { WorkoutsListScreen } from "../screens/workouts/WorkoutsListScreen";
 import { WorkoutDetailScreen } from "../screens/workouts/WorkoutDetailScreen";
 import { CreateWorkoutScreen } from "../screens/workouts/CreateWorkoutScreen";
 import { EditWorkoutScreen } from "../screens/workouts/EditWorkoutScreen";
+import { LogSessionScreen } from "../screens/workouts/LogSessionScreen";
 
 export type WorkoutsStackParamList = {
   WorkoutsList: undefined;
   WorkoutDetail: { id: string };
   CreateWorkout: undefined;
   EditWorkout: { id: string };
+  LogSession: { id: string };
 };
 
 const Stack = createNativeStackNavigator<WorkoutsStackParamList>();
@@ -58,6 +60,11 @@ export function WorkoutsNavigator() {
         name="EditWorkout"
         component={EditWorkoutScreen}
         options={{ title: t("workouts.edit.title") }}
+      />
+      <Stack.Screen
+        name="LogSession"
+        component={LogSessionScreen}
+        options={{ title: t("session.title") }}
       />
     </Stack.Navigator>
   );
