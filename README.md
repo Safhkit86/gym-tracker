@@ -274,12 +274,17 @@ autenticato (es. Gmail risponde "530-5.7.0 Authentication Required" senza
 per come generare una password per le app di Gmail). È un TODO esplicito,
 non un bug: il resto dell'app funziona normalmente.
 
-## App mobile (pianificazione)
+## App mobile
 
 Fase 8 della roadmap: un client mobile che copra tutte le funzionalità della
 webapp, parlando solo con l'API Gateway (stessa regola di `apps/web`, mai
 un servizio contattato direttamente). Piano dettagliato e mockup validati
-il 2026-08-02; nessuna riga di codice ancora scritta.
+il 2026-08-02. Sotto-fase 1/8 implementata (`apps/mobile`): setup del
+progetto Expo, tema "Night Track", navigazione a tab (schermate segnaposto
+per Schede/Storico/Statistiche/Notifiche) e autenticazione funzionante
+(login/registrazione) contro il backend reale. Le sotto-fasi successive
+(schede, registra sessione, storico, dashboard, statistiche, notifiche,
+profilo) restano da fare.
 
 Decisioni prese:
 

@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "gym-tracker",
+    "slug": "gym-tracker",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "scheme": "gymtracker",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.gymtracker.app"
+    },
+    "android": {
+      "package": "com.gymtracker.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0c1420"
+      }
+    },
+    "plugins": ["expo-localization"]
+  }
+}

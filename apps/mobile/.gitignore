@@ -1,0 +1,19 @@
+node_modules/
+.expo/
+dist/
+web-build/
+*.tsbuildinfo
+
+# Xcode / Android native project folders: generati solo se si esce dal
+# managed workflow con `expo prebuild` — non li usiamo ora, ma se
+# comparissero non vanno mai committati.
+ios/
+android/
+
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+.env*.local
