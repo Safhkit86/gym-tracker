@@ -118,6 +118,28 @@
     "suggestionsTimeout": "Session logged. Still checking — if available, you'll see it in your notifications.",
     "backToWorkout": "Back to workout"
   },
+  "history": {
+    "sessionsTab": "Workout sessions",
+    "measurementsTab": "Measurements",
+    "noSessions": "You haven't logged any session yet.",
+    "noMeasurements": "You haven't recorded any measurement yet.",
+    "sortToggle": "Change sort order",
+    "sortDesc": "Newest first",
+    "sortAsc": "Oldest first",
+    "week": "Week {{number}}",
+    "deleteSession": "Delete session",
+    "deleteSessionConfirmTitle": "Are you sure you want to delete this session?",
+    "deleteMeasurement": "Delete measurement",
+    "deleteMeasurementConfirmTitle": "Are you sure you want to delete this measurement?",
+    "measurementsNote": "Newest first. The arrow next to a value compares it with the previous measurement.",
+    "measurements": {
+      "weightKg": "Weight",
+      "chestCm": "Chest",
+      "armCm": "Arm",
+      "waistCm": "Waist",
+      "legCm": "Leg"
+    }
+  },
   "errors": {
     "INVALID_CREDENTIALS": "Invalid email or password.",
     "EMAIL_ALREADY_IN_USE": "A user with this email already exists.",

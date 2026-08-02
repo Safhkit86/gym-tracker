@@ -118,6 +118,28 @@
     "suggestionsTimeout": "Sessione registrata. Verifica in corso — se disponibile, lo vedrai tra le notifiche.",
     "backToWorkout": "Torna alla scheda"
   },
+  "history": {
+    "sessionsTab": "Sessioni di allenamento",
+    "measurementsTab": "Misure",
+    "noSessions": "Non hai ancora registrato nessuna sessione.",
+    "noMeasurements": "Non hai ancora registrato nessuna misurazione.",
+    "sortToggle": "Cambia ordinamento",
+    "sortDesc": "Più recenti prima",
+    "sortAsc": "Meno recenti prima",
+    "week": "Settimana {{number}}",
+    "deleteSession": "Elimina sessione",
+    "deleteSessionConfirmTitle": "Sei sicuro di voler eliminare questa sessione?",
+    "deleteMeasurement": "Elimina misurazione",
+    "deleteMeasurementConfirmTitle": "Sei sicuro di voler eliminare questa misurazione?",
+    "measurementsNote": "Più recenti prima. La freccia accanto a un valore lo confronta con la misurazione precedente.",
+    "measurements": {
+      "weightKg": "Peso",
+      "chestCm": "Petto",
+      "armCm": "Braccia",
+      "waistCm": "Vita",
+      "legCm": "Gamba"
+    }
+  },
   "errors": {
     "INVALID_CREDENTIALS": "Email o password non validi.",
     "EMAIL_ALREADY_IN_USE": "Esiste già un utente con questa email.",

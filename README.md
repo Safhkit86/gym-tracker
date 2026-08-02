@@ -279,21 +279,24 @@ non un bug: il resto dell'app funziona normalmente.
 Fase 8 della roadmap: un client mobile che copra tutte le funzionalità della
 webapp, parlando solo con l'API Gateway (stessa regola di `apps/web`, mai
 un servizio contattato direttamente). Piano dettagliato e mockup validati
-il 2026-08-02. Sotto-fasi 1-5/8 implementate (`apps/mobile`): setup del
+il 2026-08-02. Sotto-fasi 1-6/8 implementate (`apps/mobile`): setup del
 progetto Expo, tema "Night Track", navigazione a tab (schermate segnaposto
-per Storico/Statistiche/Notifiche), autenticazione funzionante
+per Statistiche/Notifiche), autenticazione funzionante
 (login/registrazione) contro il backend reale, elenco/dettaglio schede
 (nome, note, esercizi con set/reps/peso/recupero), creazione/modifica di
 una scheda (form condiviso con esercizi/set dinamici, picker esercizi dal
 catalogo, riordino esercizi con pulsanti ↑/↓ — non drag-and-drop come
 nella webapp, vedi nota sotto), duplica/elimina scheda (azioni nella
 schermata di dettaglio, non nella lista — scelta fatta con l'utente via
-un artifact di confronto tra le due opzioni) e registra sessione (form di
+un artifact di confronto tra le due opzioni), registra sessione (form di
 log con precompilazione dallo storico/preferenze utente, timer di
 recupero con vibrazione via expo-haptics — solo a schermo acceso/app in
 primo piano, nessuna notifica in background — e suggerimenti di
-progressione mostrati dopo il salvataggio). Le sotto-fasi successive
-(storico, dashboard, statistiche, notifiche, profilo) restano da fare.
+progressione mostrati dopo il salvataggio) e storico (sessioni con
+divisore di settimana e ordinamento, misure con delta rispetto alla
+rilevazione precedente, eliminazione di entrambe con conferma). Le
+sotto-fasi successive (dashboard, statistiche, notifiche, profilo)
+restano da fare.
 
 Decisioni prese:
 

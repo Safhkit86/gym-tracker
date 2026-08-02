@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useTranslation } from "react-i18next";
 import { colors } from "../theme/theme";
 import { PlaceholderScreen } from "../screens/PlaceholderScreen";
+import { HistoryNavigator } from "./HistoryNavigator";
 import { WorkoutsNavigator } from "./WorkoutsNavigator";
 
 export type MainTabParamList = {
@@ -59,7 +60,7 @@ export function MainTabNavigator() {
       <Tab.Screen
         name="History"
         options={{ title: t("nav.history") }}
-        children={() => <PlaceholderScreen title={t("nav.history")} />}
+        component={HistoryNavigator}
       />
       <Tab.Screen
         name="Statistics"
