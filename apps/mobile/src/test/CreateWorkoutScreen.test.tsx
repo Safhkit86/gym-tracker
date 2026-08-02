@@ -16,7 +16,14 @@ const emptyRoute = {} as Props["route"];
 const fakeUser = { id: "u1", email: "a@b.com", createdAt: new Date().toISOString() };
 
 const catalog = [
-  { id: "e1", userId: null, name: "Panca piana", muscleGroup: "Petto", description: null, sourceUrl: null },
+  {
+    id: "e1",
+    userId: null,
+    name: "Panca piana",
+    muscleGroup: "Petto",
+    description: null,
+    sourceUrl: null,
+  },
 ];
 
 beforeEach(async () => {
