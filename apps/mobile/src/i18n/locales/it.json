@@ -95,6 +95,29 @@
       "submitting": "Salvataggio…"
     }
   },
+  "session": {
+    "title": "Registra sessione",
+    "loadError": "Impossibile caricare la scheda.",
+    "date": "Data",
+    "set": "Set {{number}}",
+    "weight": "Kg",
+    "rest": "Recupero",
+    "actualReps": "{{exercise}} set {{number}} rep effettive",
+    "actualWeight": "{{exercise}} kg effettivi",
+    "actualRest": "{{exercise}} recupero effettivo",
+    "startTimer": "Avvia timer recupero",
+    "timerLabelBetweenSets": "{{exercise}} — recupero tra le serie",
+    "timerLabelBeforeNext": "Prima di {{exercise}}",
+    "timerRinging": "Recupero terminato",
+    "timerCancel": "Elimina",
+    "timerStop": "Interrompi sveglia",
+    "submit": "Registra sessione",
+    "resultTitle": "Sessione registrata",
+    "checkingSuggestions": "Verifica suggerimenti di progressione…",
+    "noSuggestion": "Nessun suggerimento di progressione questa volta.",
+    "suggestionsTimeout": "Sessione registrata. Verifica in corso — se disponibile, lo vedrai tra le notifiche.",
+    "backToWorkout": "Torna alla scheda"
+  },
   "errors": {
     "INVALID_CREDENTIALS": "Email o password non validi.",
     "EMAIL_ALREADY_IN_USE": "Esiste già un utente con questa email.",
