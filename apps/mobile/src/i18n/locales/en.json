@@ -35,6 +35,23 @@
   "placeholder": {
     "comingSoon": "Coming in the next sub-phases."
   },
+  "workouts": {
+    "list": {
+      "empty": "You don't have any workouts yet.",
+      "exerciseCount_one": "{{count}} exercise",
+      "exerciseCount_other": "{{count}} exercises"
+    },
+    "detail": {
+      "title": "Workout detail",
+      "set": "Set",
+      "reps": "Reps",
+      "weight": "Weight",
+      "rest": "Rest",
+      "maxEffort": "Max",
+      "bodyweight": "bodyweight",
+      "restAfterExercise": "Rest before the next exercise: {{seconds}}s"
+    }
+  },
   "errors": {
     "INVALID_CREDENTIALS": "Invalid email or password.",
     "EMAIL_ALREADY_IN_USE": "A user with this email already exists.",

@@ -35,6 +35,23 @@
   "placeholder": {
     "comingSoon": "In arrivo nelle prossime sotto-fasi."
   },
+  "workouts": {
+    "list": {
+      "empty": "Non hai ancora nessuna scheda.",
+      "exerciseCount_one": "{{count}} esercizio",
+      "exerciseCount_other": "{{count}} esercizi"
+    },
+    "detail": {
+      "title": "Dettaglio scheda",
+      "set": "Set",
+      "reps": "Reps",
+      "weight": "Peso",
+      "rest": "Recupero",
+      "maxEffort": "Max",
+      "bodyweight": "corpo libero",
+      "restAfterExercise": "Recupero prima del prossimo esercizio: {{seconds}}s"
+    }
+  },
   "errors": {
     "INVALID_CREDENTIALS": "Email o password non validi.",
     "EMAIL_ALREADY_IN_USE": "Esiste già un utente con questa email.",
