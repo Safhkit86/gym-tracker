@@ -3,12 +3,13 @@
 App di tracking allenamenti in palestra, costruita come progetto didattico
 hands-on: monorepo a microservizi (Node.js/TypeScript), Docker, CI/CD con
 validazione automatica delle PR — pensato per essere consumato sia da una
-web app che, in futuro, da un'app Android, tramite un API Gateway condiviso.
+web app che, in futuro, da un'app mobile (Android + iOS), tramite un API
+Gateway condiviso.
 
 ## Architettura
 
 ```
-Web app (apps/web) / Android app (futuro)
+Web app (apps/web) / App mobile React Native (apps/mobile, futuro)
             │
        API Gateway            (minimo: reverse-proxy verso i servizi)
             │
@@ -273,6 +274,38 @@ autenticato (es. Gmail risponde "530-5.7.0 Authentication Required" senza
 per come generare una password per le app di Gmail). È un TODO esplicito,
 non un bug: il resto dell'app funziona normalmente.
 
+## App mobile (pianificazione)
+
+Fase 8 della roadmap: un client mobile che copra tutte le funzionalità della
+webapp, parlando solo con l'API Gateway (stessa regola di `apps/web`, mai
+un servizio contattato direttamente). Piano dettagliato e mockup validati
+il 2026-08-02; nessuna riga di codice ancora scritta.
+
+Decisioni prese:
+
+- **Stack**: React Native + Expo (TypeScript), non un'app Android nativa —
+  un solo codebase per Android e iOS, con `@gym-tracker/shared` importato
+  direttamente per i tipi/contratti (stesso schema già usato da `apps/web`).
+- **Posizione**: nuovo workspace `apps/mobile` in questo stesso monorepo
+  (non un repo separato) — toolchain npm-based come il resto del progetto.
+- **Bundle identifier/applicationId**: `com.gymtracker.app`.
+- **Versioni minime**: iOS 15+, Android 8.0+ (API 26).
+- **Distribuzione**: solo uso personale per ora (Expo Go per sviluppo/test,
+  EAS Build per eventuali build installabili) — nessuna pubblicazione sugli
+  store, quindi nessun account Apple Developer necessario per ora.
+- **Lingua**: multi-lingua fin dal principio (i18next/react-i18next +
+  expo-localization; partenza italiano + inglese), a differenza della
+  webapp che oggi ha l'italiano hardcoded. I messaggi di errore restano
+  però in italiano lato backend: l'app mappa i `code` di `ApiError` su un
+  proprio catalogo di traduzioni, col `message` italiano come fallback.
+
+Verifica: sviluppo e test avvengono su un telefono reale via app **Expo
+Go** (scan di un QR code), senza installare alcun SDK nativo sulla
+macchina di sviluppo — build installabili (APK/IPA) quando servono
+passano da **EAS Build** (cloud). Implementazione a sotto-fasi
+incrementali (una PR alla volta), a partire dal solo setup del progetto +
+autenticazione.
+
 ## CI/CD
 
 Ogni Pull Request verso `master` esegue automaticamente (`.github/workflows/ci.yml`):
@@ -314,7 +347,7 @@ entrambi.
   - ✅ Rifinitura webapp
 - ✅ **Fase 6** — osservabilità leggera (log strutturati + correlation ID)
 - ⬜ **Fase 7** — Kubernetes (opzionale)
-- ⬜ **Fase 8** — app Android
+- ⬜ **Fase 8** — app mobile (React Native, Android + iOS)
 
 L'API Gateway in versione minima (solo reverse-proxy, vedi `services/api-gateway`)
 è stato anticipato rispetto alla Fase 5 originale: serviva da subito per non
@@ -322,7 +355,11 @@ far parlare la webapp direttamente con i singoli servizi (vedi "Cosa NON fare"
 in `CLAUDE.md`). L'hardening (autenticazione centralizzata, rate limiting) e
 la rifinitura webapp (restyling "Night Track" completo su tutte le pagine,
 standard responsive unico per le tabelle a larghezza fissa, storico misure)
-sono entrambi arrivati in Fase 5.
+sono entrambi arrivati in Fase 5. La Fase 8 è stata ripianificata il
+2026-08-02: non più un'app Android nativa (Kotlin) ma un client React
+Native che copre Android e iOS con un solo codebase — vedi "App mobile
+(pianificazione)" più sopra per le decisioni prese; pianificazione
+completa, implementazione non ancora iniziata.
 
 Vedi `CLAUDE.md` per le convenzioni di codice usate da Claude Code in questo
 repo.
