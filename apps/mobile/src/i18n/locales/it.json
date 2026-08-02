@@ -39,7 +39,8 @@
     "list": {
       "empty": "Non hai ancora nessuna scheda.",
       "exerciseCount_one": "{{count}} esercizio",
-      "exerciseCount_other": "{{count}} esercizi"
+      "exerciseCount_other": "{{count}} esercizi",
+      "newWorkout": "Nuova scheda"
     },
     "detail": {
       "title": "Dettaglio scheda",
@@ -50,6 +51,34 @@
       "maxEffort": "Max",
       "bodyweight": "corpo libero",
       "restAfterExercise": "Recupero prima del prossimo esercizio: {{seconds}}s"
+    },
+    "create": {
+      "title": "Nuova scheda",
+      "loadError": "Impossibile caricare il catalogo esercizi.",
+      "emptyCatalog": "Nessun esercizio disponibile nel catalogo.",
+      "name": "Nome",
+      "notes": "Note",
+      "submit": "Crea scheda",
+      "addExercise": "Aggiungi esercizio",
+      "removeExercise": "Rimuovi esercizio",
+      "removeExerciseConfirmTitle": "Sei sicuro di voler eliminare l'esercizio?",
+      "cancel": "Annulla",
+      "noExercisesError": "Aggiungi almeno un esercizio.",
+      "exerciseLegend": "Esercizio {{number}}",
+      "moveUp": "Sposta su",
+      "moveDown": "Sposta giù",
+      "exercise": "Esercizio",
+      "maxEffort": "Max sforzo (AMRAP)",
+      "minReps": "Rep minime",
+      "maxReps": "Rep massime (opzionale)",
+      "weight": "Peso (kg)",
+      "restMin": "Recupero minimo (s)",
+      "restMax": "Recupero massimo (s) (opzionale)",
+      "addSet": "Aggiungi set",
+      "duplicateSet": "Duplica ultimo set",
+      "removeSet": "Rimuovi set",
+      "restSeconds": "Recupero prima del prossimo esercizio (s)",
+      "progressionIncrement": "Incremento di progressione (kg o reps)"
     }
   },
   "errors": {

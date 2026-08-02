@@ -1,4 +1,4 @@
-import type { WorkoutDetail, WorkoutSummary } from "@gym-tracker/shared";
+import type { WorkoutDetail, WorkoutInput, WorkoutSummary } from "@gym-tracker/shared";
 import { apiRequest } from "./client";
 
 export function listWorkouts(token: string): Promise<WorkoutSummary[]> {
@@ -7,4 +7,8 @@ export function listWorkouts(token: string): Promise<WorkoutSummary[]> {
 
 export function getWorkout(token: string, id: string): Promise<WorkoutDetail> {
   return apiRequest<WorkoutDetail>(`/workouts/${id}`, { token });
+}
+
+export function createWorkout(token: string, body: WorkoutInput): Promise<WorkoutDetail> {
+  return apiRequest<WorkoutDetail>("/workouts", { method: "POST", body, token });
 }

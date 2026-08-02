@@ -39,7 +39,8 @@
     "list": {
       "empty": "You don't have any workouts yet.",
       "exerciseCount_one": "{{count}} exercise",
-      "exerciseCount_other": "{{count}} exercises"
+      "exerciseCount_other": "{{count}} exercises",
+      "newWorkout": "New workout"
     },
     "detail": {
       "title": "Workout detail",
@@ -50,6 +51,34 @@
       "maxEffort": "Max",
       "bodyweight": "bodyweight",
       "restAfterExercise": "Rest before the next exercise: {{seconds}}s"
+    },
+    "create": {
+      "title": "New workout",
+      "loadError": "Unable to load the exercise catalog.",
+      "emptyCatalog": "No exercises available in the catalog.",
+      "name": "Name",
+      "notes": "Notes",
+      "submit": "Create workout",
+      "addExercise": "Add exercise",
+      "removeExercise": "Remove exercise",
+      "removeExerciseConfirmTitle": "Are you sure you want to remove this exercise?",
+      "cancel": "Cancel",
+      "noExercisesError": "Add at least one exercise.",
+      "exerciseLegend": "Exercise {{number}}",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "exercise": "Exercise",
+      "maxEffort": "Max effort (AMRAP)",
+      "minReps": "Min reps",
+      "maxReps": "Max reps (optional)",
+      "weight": "Weight (kg)",
+      "restMin": "Min rest (s)",
+      "restMax": "Max rest (s) (optional)",
+      "addSet": "Add set",
+      "duplicateSet": "Duplicate last set",
+      "removeSet": "Remove set",
+      "restSeconds": "Rest before the next exercise (s)",
+      "progressionIncrement": "Progression increment (kg or reps)"
     }
   },
   "errors": {

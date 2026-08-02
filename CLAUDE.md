@@ -90,7 +90,18 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   jest-expo (init i18next, prima renderizzazione di `AuthProvider`, ecc.):
   con il timeout di default di Jest (5000ms) il primo test di una suite
   puo' scadere in CI pur passando in locale, da qui `testTimeout: 15000`
-  nel blocco `jest` di `apps/mobile/package.json`.
+  nel blocco `jest` di `apps/mobile/package.json`. **Niente
+  `react-native-reanimated` (ne' direttamente ne' via una libreria che lo
+  richiede, es. `react-native-draggable-flatlist`) finche' si testa via
+  Expo Go**: reanimated 4.x delega l'inizializzazione al modulo nativo
+  separato `react-native-worklets`, la cui versione bundle dentro
+  l'eseguibile di Expo Go non e' detto combaci con quella richiesta dal
+  pacchetto JS — su questo progetto ha causato un crash nativo (SIGSEGV
+  dentro `libworklets.so`, thread `mqt_v_js`) al primo utilizzo, non un
+  errore JS gestibile. Per interazioni che richiederebbero normalmente
+  reanimated/gesture-handler (es. riordino di una lista), preferire
+  un'alternativa senza gesture nativi (es. pulsanti ↑/↓) finche' non si
+  passa a una dev build custom (EAS Build) invece di Expo Go.
 - Un restyling grafico di `apps/web` copre **tutte** le pagine esistenti, non
   solo quelle toccate dalla feature che lo ha motivato: prima di chiudere una
   PR di restyling, passa in rassegna ogni file in `src/pages/` e applica le
