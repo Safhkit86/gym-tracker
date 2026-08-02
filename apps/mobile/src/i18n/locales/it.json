@@ -1,0 +1,44 @@
+{
+  "common": {
+    "loading": "Caricamento…",
+    "errorUnexpected": "Errore imprevisto. Riprova."
+  },
+  "auth": {
+    "login": {
+      "title": "Bentornato",
+      "subtitle": "Accedi al tuo account gym-tracker",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Accedi",
+      "submitting": "Accesso in corso…",
+      "noAccount": "Non hai un account?",
+      "registerLink": "Registrati"
+    },
+    "register": {
+      "title": "Crea account",
+      "subtitle": "Registrati per iniziare a tracciare i tuoi allenamenti",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Registrati",
+      "submitting": "Registrazione in corso…",
+      "haveAccount": "Hai già un account?",
+      "loginLink": "Accedi"
+    }
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "workouts": "Schede",
+    "history": "Storico",
+    "statistics": "Statistiche",
+    "notifications": "Notifiche"
+  },
+  "placeholder": {
+    "comingSoon": "In arrivo nelle prossime sotto-fasi."
+  },
+  "errors": {
+    "INVALID_CREDENTIALS": "Email o password non validi.",
+    "EMAIL_ALREADY_IN_USE": "Esiste già un utente con questa email.",
+    "VALIDATION_ERROR": "Dati non validi. Controlla i campi e riprova.",
+    "UNKNOWN_ERROR": "Errore imprevisto. Riprova."
+  }
+}

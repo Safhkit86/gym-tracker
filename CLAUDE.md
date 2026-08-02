@@ -13,6 +13,8 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
 - `services/progress-service` — storico + regole di progressione (Fase 3, TODO)
 - `services/notify-service` — notifiche (Fase 4, TODO)
 - `apps/web` — webapp React/Vite/TypeScript, parla solo con `api-gateway`
+- `apps/mobile` — app React Native/Expo (Android + iOS, Fase 8, in corso),
+  parla solo con `api-gateway` come `apps/web`
 
 ## Convenzioni di codice
 
@@ -70,6 +72,20 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   o un dominio statico) lo chiama via fetch da browser: senza CORS le
   richieste vengono bloccate lato client. Nessun altro servizio ne ha bisogno,
   la webapp non li chiama mai direttamente.
+- `apps/mobile` (React Native/Expo) usa **Jest**, non Vitest: l'ecosistema
+  React Native richiede il preset `jest-expo`, che Vitest non supporta.
+  Test con `@testing-library/react-native` — usa la **v13** (`^13.3.3`),
+  non la v14: la v14 ha spostato il renderer da `react-test-renderer` al
+  nuovo pacchetto `test-renderer`, e al momento della Fase 8 `jest-expo`
+  non e' ancora compatibile con questo cambio (`render()` in test ritorna
+  silenziosamente un oggetto vuoto, nessun errore esplicito — sintomo da
+  ricordare se in futuro un aggiornamento di `jest-expo` permette di
+  tornare alla v14). `react`/`react-dom` di `apps/web` e `react` di
+  `apps/mobile` vanno sempre tenuti sullo stesso range/versione hoisted:
+  npm non forza da solo `react`/`react-dom` alla stessa versione (sono due
+  pacchetti distinti dal suo punto di vista), ma React stesso si rifiuta di
+  partire se non combaciano esattamente — se cambi la versione di uno,
+  allinea anche l'altro nello stesso commit.
 - Un restyling grafico di `apps/web` copre **tutte** le pagine esistenti, non
   solo quelle toccate dalla feature che lo ha motivato: prima di chiudere una
   PR di restyling, passa in rassegna ogni file in `src/pages/` e applica le
@@ -127,6 +143,7 @@ npm run test                       # test su tutti i workspace
 npm run build                      # build su tutti i workspace
 docker compose up -d               # avvia infrastruttura + servizi
 docker compose up -d postgres redis rabbitmq   # solo infrastruttura
+npm run start --workspace=@gym-tracker/mobile  # dev server Expo (scansiona il QR con l'app Expo Go)
 ```
 
 ## Dove salvare quello che impari

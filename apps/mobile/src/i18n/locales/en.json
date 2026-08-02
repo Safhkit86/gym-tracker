@@ -1,0 +1,44 @@
+{
+  "common": {
+    "loading": "Loading…",
+    "errorUnexpected": "Unexpected error. Please try again."
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to your gym-tracker account",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "noAccount": "Don't have an account?",
+      "registerLink": "Sign up"
+    },
+    "register": {
+      "title": "Create account",
+      "subtitle": "Sign up to start tracking your workouts",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign up",
+      "submitting": "Creating account…",
+      "haveAccount": "Already have an account?",
+      "loginLink": "Sign in"
+    }
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "workouts": "Workouts",
+    "history": "History",
+    "statistics": "Statistics",
+    "notifications": "Notifications"
+  },
+  "placeholder": {
+    "comingSoon": "Coming in the next sub-phases."
+  },
+  "errors": {
+    "INVALID_CREDENTIALS": "Invalid email or password.",
+    "EMAIL_ALREADY_IN_USE": "A user with this email already exists.",
+    "VALIDATION_ERROR": "Invalid data. Please check the fields and try again.",
+    "UNKNOWN_ERROR": "Unexpected error. Please try again."
+  }
+}
