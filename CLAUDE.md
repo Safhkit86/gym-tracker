@@ -85,7 +85,12 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   npm non forza da solo `react`/`react-dom` alla stessa versione (sono due
   pacchetti distinti dal suo punto di vista), ma React stesso si rifiuta di
   partire se non combaciano esattamente — se cambi la versione di uno,
-  allinea anche l'altro nello stesso commit.
+  allinea anche l'altro nello stesso commit. Il runner CI (Linux) e' piu'
+  lento della macchina di sviluppo sul cold-start di ogni test suite
+  jest-expo (init i18next, prima renderizzazione di `AuthProvider`, ecc.):
+  con il timeout di default di Jest (5000ms) il primo test di una suite
+  puo' scadere in CI pur passando in locale, da qui `testTimeout: 15000`
+  nel blocco `jest` di `apps/mobile/package.json`.
 - Un restyling grafico di `apps/web` copre **tutte** le pagine esistenti, non
   solo quelle toccate dalla feature che lo ha motivato: prima di chiudere una
   PR di restyling, passa in rassegna ogni file in `src/pages/` e applica le
