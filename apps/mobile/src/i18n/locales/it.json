@@ -50,7 +50,15 @@
       "rest": "Recupero",
       "maxEffort": "Max",
       "bodyweight": "corpo libero",
-      "restAfterExercise": "Recupero prima del prossimo esercizio: {{seconds}}s"
+      "restAfterExercise": "Recupero prima del prossimo esercizio: {{seconds}}s",
+      "edit": "Modifica",
+      "duplicate": "Duplica",
+      "delete": "Elimina",
+      "deleteConfirmTitle": "Sei sicuro di voler eliminare la scheda?",
+      "duplicatePromptMessage": "Duplica \"{{name}}\"",
+      "duplicatePromptLabel": "Nome della nuova scheda",
+      "duplicatePromptDefaultName": "{{name}} (copia)",
+      "confirmYes": "Sì"
     },
     "create": {
       "title": "Nuova scheda",
@@ -59,6 +67,7 @@
       "name": "Nome",
       "notes": "Note",
       "submit": "Crea scheda",
+      "submitting": "Salvataggio…",
       "addExercise": "Aggiungi esercizio",
       "removeExercise": "Rimuovi esercizio",
       "removeExerciseConfirmTitle": "Sei sicuro di voler eliminare l'esercizio?",
@@ -79,6 +88,11 @@
       "removeSet": "Rimuovi set",
       "restSeconds": "Recupero prima del prossimo esercizio (s)",
       "progressionIncrement": "Incremento di progressione (kg o reps)"
+    },
+    "edit": {
+      "title": "Modifica scheda",
+      "submit": "Salva modifiche",
+      "submitting": "Salvataggio…"
     }
   },
   "errors": {

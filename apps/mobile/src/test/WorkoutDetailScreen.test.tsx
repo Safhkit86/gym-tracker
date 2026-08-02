@@ -1,4 +1,6 @@
 import * as SecureStore from "expo-secure-store";
+import { Alert } from "react-native";
+import { fireEvent, waitFor } from "@testing-library/react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { renderWithProviders, mockFetchResponses } from "./helpers";
 import { WorkoutDetailScreen } from "../screens/workouts/WorkoutDetailScreen";
@@ -7,7 +9,7 @@ import type { WorkoutsStackParamList } from "../navigation/WorkoutsNavigator";
 type Props = NativeStackScreenProps<WorkoutsStackParamList, "WorkoutDetail">;
 
 function mockNavigation(): Props["navigation"] {
-  return { navigate: jest.fn() } as unknown as Props["navigation"];
+  return { navigate: jest.fn(), replace: jest.fn() } as unknown as Props["navigation"];
 }
 
 function mockRoute(id: string): Props["route"] {
@@ -15,6 +17,37 @@ function mockRoute(id: string): Props["route"] {
 }
 
 const fakeUser = { id: "u1", email: "a@b.com", createdAt: new Date().toISOString() };
+
+const simpleWorkout = {
+  id: "w1",
+  name: "Spinta",
+  notes: null,
+  createdAt: "",
+  updatedAt: "",
+  exercises: [
+    {
+      id: "we1",
+      exerciseId: "e1",
+      exerciseName: "Panca piana",
+      position: 1,
+      notes: null,
+      restSeconds: null,
+      progressionIncrement: null,
+      sets: [
+        {
+          id: "s1",
+          setNumber: 1,
+          targetMinReps: 8,
+          targetMaxReps: null,
+          targetWeight: 60,
+          restMinSeconds: null,
+          restMaxSeconds: null,
+          isMaxEffort: false,
+        },
+      ],
+    },
+  ],
+};
 
 // Stesso motivo di WorkoutsListScreen.test.tsx: serve un token idratato +
 // GET /me mockato perche' la schermata legge useAuth().token.
@@ -105,5 +138,69 @@ describe("WorkoutDetailScreen", () => {
     );
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Scheda non trovata.");
+  });
+
+  it("naviga alla modifica quando si tocca 'Modifica'", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: simpleWorkout },
+    ]);
+
+    const navigation = mockNavigation();
+    const screen = await renderWithProviders(
+      <WorkoutDetailScreen navigation={navigation} route={mockRoute("w1")} />
+    );
+
+    fireEvent.press(await screen.findByRole("button", { name: "Modifica" }));
+
+    expect(navigation.navigate).toHaveBeenCalledWith("EditWorkout", { id: "w1" });
+  });
+
+  it("elimina la scheda dopo conferma e torna all'elenco", async () => {
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation((_title, _msg, buttons) => {
+      const confirmButton = buttons?.find((b) => b.style === "destructive");
+      confirmButton?.onPress?.();
+    });
+
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: simpleWorkout },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "DELETE", body: undefined },
+    ]);
+
+    const navigation = mockNavigation();
+    const screen = await renderWithProviders(
+      <WorkoutDetailScreen navigation={navigation} route={mockRoute("w1")} />
+    );
+
+    fireEvent.press(await screen.findByRole("button", { name: "Elimina" }));
+
+    expect(alertSpy).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(navigation.replace).toHaveBeenCalledWith("WorkoutsList");
+    });
+  });
+
+  it("duplica la scheda e naviga al dettaglio della copia", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: simpleWorkout },
+      {
+        match: (u, m) => u.endsWith("/workouts") && m === "POST",
+        body: { ...simpleWorkout, id: "w2", name: "Spinta (copia)" },
+      },
+    ]);
+
+    const navigation = mockNavigation();
+    const screen = await renderWithProviders(
+      <WorkoutDetailScreen navigation={navigation} route={mockRoute("w1")} />
+    );
+
+    fireEvent.press(await screen.findByRole("button", { name: "Duplica" }));
+    fireEvent.press(screen.getByRole("button", { name: "Sì" }));
+
+    await waitFor(() => {
+      expect(navigation.replace).toHaveBeenCalledWith("WorkoutDetail", { id: "w2" });
+    });
   });
 });

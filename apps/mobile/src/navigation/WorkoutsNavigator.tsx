@@ -5,11 +5,13 @@ import { colors, spacing } from "../theme/theme";
 import { WorkoutsListScreen } from "../screens/workouts/WorkoutsListScreen";
 import { WorkoutDetailScreen } from "../screens/workouts/WorkoutDetailScreen";
 import { CreateWorkoutScreen } from "../screens/workouts/CreateWorkoutScreen";
+import { EditWorkoutScreen } from "../screens/workouts/EditWorkoutScreen";
 
 export type WorkoutsStackParamList = {
   WorkoutsList: undefined;
   WorkoutDetail: { id: string };
   CreateWorkout: undefined;
+  EditWorkout: { id: string };
 };
 
 const Stack = createNativeStackNavigator<WorkoutsStackParamList>();
@@ -51,6 +53,11 @@ export function WorkoutsNavigator() {
         name="CreateWorkout"
         component={CreateWorkoutScreen}
         options={{ title: t("workouts.create.title") }}
+      />
+      <Stack.Screen
+        name="EditWorkout"
+        component={EditWorkoutScreen}
+        options={{ title: t("workouts.edit.title") }}
       />
     </Stack.Navigator>
   );
