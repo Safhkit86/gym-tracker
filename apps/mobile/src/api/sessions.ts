@@ -10,6 +10,10 @@ export function logSession(token: string, body: SessionInput): Promise<SessionDe
   return apiRequest<SessionDetail>("/sessions", { method: "POST", body, token });
 }
 
+export function deleteSession(token: string, id: string): Promise<void> {
+  return apiRequest<void>(`/sessions/${id}`, { method: "DELETE", token });
+}
+
 export function getSessionStatus(token: string, sessionId: string): Promise<SessionStatus> {
   return apiRequest<SessionStatus>(`/sessions/${sessionId}/status`, { token });
 }
