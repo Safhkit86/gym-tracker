@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as Crypto from "expo-crypto";
 import * as Haptics from "expo-haptics";
+import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import alarmSoundSource from "../../assets/sounds/rest-timer-alarm.wav";
 
 export interface RestTimer {
   id: string;
@@ -19,25 +21,47 @@ interface UseRestTimersResult {
   snoozeTimer: (id: string) => void;
 }
 
-function triggerAlarmPulse(): void {
-  void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-}
-
 /**
  * Timer di recupero per Registra sessione, stesso ruolo di
- * apps/web/src/hooks/useRestTimers.ts ma con vibrazione (expo-haptics)
- * invece di navigator.vibrate/beep audio — nessun suono, solo primo piano
- * (vedi CLAUDE.md/README per la decisione). Stato locale alla schermata:
- * lasciandola il conto alla rovescia si interrompe, come sulla webapp. Un
- * solo intervallo condiviso ricalcola il tempo residuo da un timestamp
- * assoluto di scadenza (`endAt`), non da un contatore decrementato ogni
- * tick, cosi' non accumula drift.
+ * apps/web/src/hooks/useRestTimers.ts: vibrazione sempre (expo-haptics),
+ * suono solo se `soundEnabled` (preferenza `timerSoundEnabled`
+ * dell'account) — stesso asset per entrambe le piattaforme, un WAV
+ * generato offline (`scripts/generate-alarm-sound.mjs`) che riproduce la
+ * stessa identica matematica del chirp sintetizzato via Web Audio API
+ * sulla webapp (`apps/web/src/utils/alarm-sound.ts`): React Native non ha
+ * un equivalente per sintetizzare toni al volo. Stato locale alla
+ * schermata: lasciandola il conto alla rovescia si interrompe, come sulla
+ * webapp. Un solo intervallo condiviso ricalcola il tempo residuo da un
+ * timestamp assoluto di scadenza (`endAt`), non da un contatore
+ * decrementato ogni tick, cosi' non accumula drift.
  */
-export function useRestTimers(): UseRestTimersResult {
+export function useRestTimers(soundEnabled: boolean): UseRestTimersResult {
   const [timers, setTimers] = useState<RestTimer[]>([]);
   const endAtById = useRef(new Map<string, number>());
   const ringingIntervalById = useRef(new Map<string, ReturnType<typeof setInterval>>());
   const alertedIds = useRef(new Set<string>());
+  const player = useAudioPlayer(alarmSoundSource);
+  // Sottoscrizione allo stato del player: senza questo hook le proprieta'
+  // lette direttamente da `player` (es. `player.isLoaded`) restano
+  // un'istantanea presa alla creazione e non si aggiornano mai, causando
+  // riproduzioni silenziosamente fallite — verificato empiricamente
+  // sull'emulatore. Il valore di ritorno non serve altrove.
+  useAudioPlayerStatus(player);
+  const soundEnabledRef = useRef(soundEnabled);
+  soundEnabledRef.current = soundEnabled;
+
+  const triggerAlarmPulse = useCallback(() => {
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    if (soundEnabledRef.current) {
+      // seekTo(0) esplicito prima di play(): la clip dura 0.36s contro un
+      // impulso ogni 1.5s, quindi ogni pulsazione trova il player già in
+      // stato "ended" — riportarlo all'inizio garantisce che risuoni a ogni
+      // impulso invece di restare fermo dopo il primo (verificato che
+      // play() da solo, senza riposizionare, non è affidabile in questo
+      // scenario).
+      player.seekTo(0).then(() => player.play());
+    }
+  }, [player]);
 
   const stopRinging = useCallback((id: string) => {
     const interval = ringingIntervalById.current.get(id);
@@ -94,9 +118,9 @@ export function useRestTimers(): UseRestTimersResult {
     return () => clearInterval(interval);
   }, [timers.length]);
 
-  // Effetti collaterali (vibrazione) per i timer appena diventati "ringing":
-  // separati dal calcolo dello stato sopra, per non innescarli dentro
-  // l'updater di setState.
+  // Effetti collaterali (vibrazione/suono) per i timer appena diventati
+  // "ringing": separati dal calcolo dello stato sopra, per non innescarli
+  // dentro l'updater di setState.
   useEffect(() => {
     for (const timer of timers) {
       if (timer.status === "ringing" && !alertedIds.current.has(timer.id)) {
@@ -106,7 +130,7 @@ export function useRestTimers(): UseRestTimersResult {
         ringingIntervalById.current.set(timer.id, interval);
       }
     }
-  }, [timers]);
+  }, [timers, triggerAlarmPulse]);
 
   // Pulizia totale allo smontaggio della schermata.
   useEffect(() => {

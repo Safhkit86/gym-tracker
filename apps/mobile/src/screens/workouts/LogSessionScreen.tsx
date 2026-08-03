@@ -66,7 +66,8 @@ export function LogSessionScreen({ navigation, route }: Props) {
     "pending"
   );
   const [suggestions, setSuggestions] = useState<ProgressionEvent[]>([]);
-  const { timers, startTimer, cancelTimer, snoozeTimer } = useRestTimers();
+  const [timerSoundEnabled, setTimerSoundEnabled] = useState(false);
+  const { timers, startTimer, cancelTimer, snoozeTimer } = useRestTimers(timerSoundEnabled);
 
   useEffect(() => {
     if (!token) {
@@ -90,6 +91,7 @@ export function LogSessionScreen({ navigation, route }: Props) {
               progressionDefaults
             )
           );
+          setTimerSoundEnabled(preferences.timerSoundEnabled);
         }
       })
       .catch((err: unknown) => {

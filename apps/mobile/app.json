@@ -17,6 +17,6 @@
         "backgroundColor": "#0c1420"
       }
     },
-    "plugins": ["expo-localization", "@react-native-community/datetimepicker"]
+    "plugins": ["expo-localization", "@react-native-community/datetimepicker", "expo-audio"]
   }
 }
