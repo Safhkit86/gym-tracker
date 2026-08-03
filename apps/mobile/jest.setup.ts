@@ -23,3 +23,24 @@ jest.mock("expo-secure-store", () => {
 jest.mock("expo-localization", () => ({
   getLocales: () => [{ languageCode: "it", languageTag: "it-IT" }],
 }));
+
+// expo-audio: AudioPlayer estende una classe nativa (SharedObject) non
+// disponibile in ambiente Jest — a differenza di expo-haptics/expo-crypto,
+// il mocking generico di jest-expo non basta, l'import nudo del modulo
+// fallisce ("Cannot read properties of undefined (reading 'prototype')").
+// Mock minimo con solo i metodi usati da useRestTimers.ts.
+jest.mock("expo-audio", () => ({
+  useAudioPlayer: () => ({
+    play: jest.fn(),
+    seekTo: jest.fn(async () => {}),
+  }),
+  useAudioPlayerStatus: () => ({
+    isLoaded: true,
+    duration: 0.36,
+    playbackState: "ready",
+    reasonForWaitingToPlay: null,
+    playing: false,
+    currentTime: 0,
+  }),
+  setAudioModeAsync: jest.fn(async () => {}),
+}));

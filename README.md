@@ -290,9 +290,12 @@ nota sotto), duplica/elimina scheda (azioni nella schermata di dettaglio,
 non nella lista — scelta fatta con l'utente via un artifact di confronto
 tra le due opzioni), registra sessione (form di log con precompilazione
 dallo storico/preferenze utente, timer di recupero con vibrazione via
-expo-haptics — solo a schermo acceso/app in primo piano, nessuna notifica
-in background — e suggerimenti di progressione mostrati dopo il
-salvataggio), storico (sessioni con divisore di settimana e ordinamento,
+expo-haptics e sveglia sonora opzionale via expo-audio — preferenza
+`timerSoundEnabled` del Profilo, un chirp a due toni generato offline
+(`scripts/generate-alarm-sound.mjs`, stessa matematica del beep sintetizzato
+via Web Audio API sulla webapp) — solo a schermo acceso/app in primo piano,
+nessuna notifica in background — e suggerimenti di progressione mostrati
+dopo il salvataggio), storico (sessioni con divisore di settimana e ordinamento,
 misure con delta rispetto alla rilevazione precedente, eliminazione di
 entrambe con conferma), dashboard (statistiche, suggerimenti di
 progressione con azione "Accetta", progressioni per esercizio con
