@@ -1,6 +1,7 @@
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { DarkTheme, NavigationContainer, type Theme } from "@react-navigation/native";
 import { useAuth } from "../auth/useAuth";
+import { NotificationsProvider } from "../notifications/NotificationsProvider";
 import { colors } from "../theme/theme";
 import { AuthNavigator } from "./AuthNavigator";
 import { MainTabNavigator } from "./MainTabNavigator";
@@ -33,9 +34,11 @@ export function RootNavigator() {
   }
 
   return (
-    <NavigationContainer theme={navigationTheme}>
-      {token ? <MainTabNavigator /> : <AuthNavigator />}
-    </NavigationContainer>
+    <NotificationsProvider>
+      <NavigationContainer theme={navigationTheme}>
+        {token ? <MainTabNavigator /> : <AuthNavigator />}
+      </NavigationContainer>
+    </NotificationsProvider>
   );
 }
 

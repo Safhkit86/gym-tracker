@@ -26,6 +26,7 @@ import type {
   WorkoutSummary,
 } from "@gym-tracker/shared";
 import { useAuth } from "../../auth/useAuth";
+import { useUnreadCount } from "../../notifications/useUnreadCount";
 import type { MainTabParamList } from "../../navigation/MainTabNavigator";
 import type { DashboardStackParamList } from "../../navigation/DashboardNavigator";
 import { formatSuggestionDelta, toOverride } from "../../utils/suggestion-format";
@@ -93,6 +94,7 @@ function formatSessionExerciseSummary(exercise: SessionExercise, t: TFunction): 
 export function DashboardScreen({ navigation }: Props) {
   const { t, i18n } = useTranslation();
   const { token } = useAuth();
+  const { refreshUnreadCount } = useUnreadCount();
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -259,6 +261,7 @@ export function DashboardScreen({ navigation }: Props) {
     try {
       await acceptProgressionDefaults(token, [override]);
       await markNotificationRead(token, notification.id);
+      refreshUnreadCount();
       setTimeout(() => {
         setPendingSuggestions((prev) => prev.filter((n) => n.id !== notification.id));
         setConfirmingIds((prev) => {
