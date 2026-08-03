@@ -330,6 +330,25 @@ Decisioni prese:
   bundlata in Expo Go) — testato e verificato su questo progetto. Finché
   lo sviluppo passa da Expo Go (non da una dev build EAS custom),
   reanimated resta da evitare per qualunque nuova interazione a gesture.
+- **Card della Dashboard con più elementi: swipe invece di pulsanti
+  freccia** (`PagerControls`/`usePager`, rimossi). Ogni card scorre nella
+  stessa direzione delle frecce che sostituisce, non una direzione fissa
+  per tutte: verticale (su/giù) per Suggerimenti di progressione,
+  Prossima/Ultima sessione — liste di righe, stessa direzione dello
+  scroll della pagina in cui sono annidate, ma con una zona di
+  trascinamento volutamente bassa (una riga + un accenno della
+  successiva) per non creare ambiguità col gesto; orizzontale (laterale)
+  per Gruppi muscolare, perché i riquadri restano affiancati in riga come
+  oggi (nessun cambio di layout) e non ha alcun conflitto col scroll
+  verticale della pagina. Validato con un mockup interattivo (HTML) prima
+  di implementare. Un solo elemento alla volta invece della finestra di
+  2-3 della versione a frecce: indicatore "N di M" testuale, niente
+  frecce da mantenere/tradurre.
+- **Tablet: fuori scope, esplicitamente in coda** (non nella Fase 8
+  sopra). Oggi già escluso di fatto da `app.json`
+  (`"orientation": "portrait"` globale, `ios.supportsTablet: false`): un
+  eventuale supporto va valutato come iniziativa a sé quando/se richiesta,
+  non implicito in nessuna sotto-fase attuale.
 
 Verifica: sviluppo e test avvengono su un telefono reale via app **Expo
 Go** (scan di un QR code), senza installare alcun SDK nativo sulla

@@ -147,8 +147,7 @@
     "setsCount_other": "{{count}} serie",
     "repsShort": "rip.",
     "weightTarget": "{{weight}}kg (target)",
-    "pagerIndicator": "{{start}}–{{end}} di {{total}}",
-    "pagerIndicatorEmpty": "0 di 0",
+    "itemIndicator": "{{index}} di {{total}}",
     "stats": {
       "title": "Statistiche",
       "sessionCount": "Sessioni registrate",
@@ -156,9 +155,7 @@
       "totalKgLifted": "Kg totali sollevati",
       "muscleGroupsTitle": "Per gruppo muscolare · questa settimana",
       "sets": "Serie",
-      "reps": "Ripetizioni",
-      "prevGroups": "Gruppi precedenti",
-      "nextGroups": "Gruppi successivi"
+      "reps": "Ripetizioni"
     },
     "suggestions": {
       "title": "Suggerimenti di progressione",
@@ -166,8 +163,6 @@
       "accept": "Accetta",
       "accepted": "✓ Accettato",
       "viewAll": "Vedi tutte →",
-      "prev": "Suggerimenti precedenti",
-      "next": "Suggerimenti successivi",
       "repsUnit": "rip.",
       "error": "Impossibile accettare la progressione."
     },
@@ -195,8 +190,6 @@
     "lastSession": {
       "title": "Ultima sessione"
     },
-    "exercisesPagerPrev": "Esercizi precedenti",
-    "exercisesPagerNext": "Esercizi successivi",
     "stalled": {
       "title": "Esercizio in stallo",
       "text": "Nessuna progressione da {{weeks}} settimane — potrebbe essere il momento di alzare l'asticella manualmente."

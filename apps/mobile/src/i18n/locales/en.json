@@ -147,8 +147,7 @@
     "setsCount_other": "{{count}} sets",
     "repsShort": "reps",
     "weightTarget": "{{weight}}kg (target)",
-    "pagerIndicator": "{{start}}–{{end}} of {{total}}",
-    "pagerIndicatorEmpty": "0 of 0",
+    "itemIndicator": "{{index}} of {{total}}",
     "stats": {
       "title": "Statistics",
       "sessionCount": "Sessions logged",
@@ -156,9 +155,7 @@
       "totalKgLifted": "Total kg lifted",
       "muscleGroupsTitle": "By muscle group · this week",
       "sets": "Sets",
-      "reps": "Reps",
-      "prevGroups": "Previous groups",
-      "nextGroups": "Next groups"
+      "reps": "Reps"
     },
     "suggestions": {
       "title": "Progression suggestions",
@@ -166,8 +163,6 @@
       "accept": "Accept",
       "accepted": "✓ Accepted",
       "viewAll": "View all →",
-      "prev": "Previous suggestions",
-      "next": "Next suggestions",
       "repsUnit": "reps",
       "error": "Unable to accept the progression."
     },
@@ -195,8 +190,6 @@
     "lastSession": {
       "title": "Last session"
     },
-    "exercisesPagerPrev": "Previous exercises",
-    "exercisesPagerNext": "Next exercises",
     "stalled": {
       "title": "Stalled exercise",
       "text": "No progression in {{weeks}} weeks — it might be time to raise the bar manually."
