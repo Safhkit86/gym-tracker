@@ -279,30 +279,33 @@ non un bug: il resto dell'app funziona normalmente.
 Fase 8 della roadmap: un client mobile che copra tutte le funzionalità della
 webapp, parlando solo con l'API Gateway (stessa regola di `apps/web`, mai
 un servizio contattato direttamente). Piano dettagliato e mockup validati
-il 2026-08-02. Sotto-fasi 1-7/8 implementate (`apps/mobile`): setup del
-progetto Expo, tema "Night Track", navigazione a tab (schermate segnaposto
-per Statistiche/Notifiche), autenticazione funzionante
-(login/registrazione) contro il backend reale, elenco/dettaglio schede
-(nome, note, esercizi con set/reps/peso/recupero), creazione/modifica di
-una scheda (form condiviso con esercizi/set dinamici, picker esercizi dal
-catalogo, riordino esercizi con pulsanti ↑/↓ — non drag-and-drop come
-nella webapp, vedi nota sotto), duplica/elimina scheda (azioni nella
-schermata di dettaglio, non nella lista — scelta fatta con l'utente via
-un artifact di confronto tra le due opzioni), registra sessione (form di
-log con precompilazione dallo storico/preferenze utente, timer di
-recupero con vibrazione via expo-haptics — solo a schermo acceso/app in
-primo piano, nessuna notifica in background — e suggerimenti di
-progressione mostrati dopo il salvataggio), storico (sessioni con
-divisore di settimana e ordinamento, misure con delta rispetto alla
-rilevazione precedente, eliminazione di entrambe con conferma) e
-dashboard (statistiche, suggerimenti di progressione con azione
-"Accetta", progressioni per esercizio con mini-grafici a linea per
-gruppo muscolare, misure con sparkline, calendario di costanza,
-prossima/ultima sessione, esercizio in stallo — grafici disegnati con
-`react-native-svg`, libreria puramente JS+SVG senza dipendenze
-reanimated/skia/worklets per restare compatibile con Expo Go, vedi nota
-sotto). Le sotto-fasi successive (statistiche, notifiche, profilo)
-restano da fare.
+il 2026-08-02. Sotto-fasi 1-8/8 implementate (`apps/mobile`): setup del
+progetto Expo, tema "Night Track", navigazione a tab (schermata segnaposto
+per Notifiche), autenticazione funzionante (login/registrazione) contro
+il backend reale, elenco/dettaglio schede (nome, note, esercizi con
+set/reps/peso/recupero), creazione/modifica di una scheda (form condiviso
+con esercizi/set dinamici, picker esercizi dal catalogo, riordino
+esercizi con pulsanti ↑/↓ — non drag-and-drop come nella webapp, vedi
+nota sotto), duplica/elimina scheda (azioni nella schermata di dettaglio,
+non nella lista — scelta fatta con l'utente via un artifact di confronto
+tra le due opzioni), registra sessione (form di log con precompilazione
+dallo storico/preferenze utente, timer di recupero con vibrazione via
+expo-haptics — solo a schermo acceso/app in primo piano, nessuna notifica
+in background — e suggerimenti di progressione mostrati dopo il
+salvataggio), storico (sessioni con divisore di settimana e ordinamento,
+misure con delta rispetto alla rilevazione precedente, eliminazione di
+entrambe con conferma), dashboard (statistiche, suggerimenti di
+progressione con azione "Accetta", progressioni per esercizio con
+mini-grafici a linea per gruppo muscolare, misure con sparkline,
+calendario di costanza, prossima/ultima sessione, esercizio in stallo —
+grafici disegnati con `react-native-svg`, libreria puramente JS+SVG senza
+dipendenze reanimated/skia/worklets per restare compatibile con Expo Go,
+vedi nota sotto) e statistiche (stessa card riepilogo di Statistiche/
+Dashboard più grafici a linea completi — non collassati in un accordion
+come sulla Dashboard, c'è spazio dedicato — per ogni esercizio delle
+schede attuali raggruppati per gruppo muscolare, e per ognuna delle 5
+misure corporee). Le sotto-fasi successive (notifiche, profilo) restano
+da fare.
 
 Decisioni prese:
 

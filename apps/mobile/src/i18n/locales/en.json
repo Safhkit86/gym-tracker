@@ -195,6 +195,15 @@
       "text": "No progression in {{weeks}} weeks — it might be time to raise the bar manually."
     }
   },
+  "statistics": {
+    "subtitle": "Your progress over time, per exercise and per body measurement.",
+    "loadError": "Unable to load the statistics.",
+    "sessionsTab": "Workout sessions",
+    "measurementsTab": "Measurements",
+    "noData": "Not enough data yet.",
+    "noMeasurements": "You haven't recorded any measurement yet.",
+    "noMeasurementFor": "No {{label}} measurement recorded."
+  },
   "errors": {
     "INVALID_CREDENTIALS": "Invalid email or password.",
     "EMAIL_ALREADY_IN_USE": "A user with this email already exists.",

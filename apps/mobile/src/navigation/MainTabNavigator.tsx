@@ -6,6 +6,7 @@ import { colors } from "../theme/theme";
 import { PlaceholderScreen } from "../screens/PlaceholderScreen";
 import { DashboardNavigator } from "./DashboardNavigator";
 import { HistoryNavigator } from "./HistoryNavigator";
+import { StatisticsNavigator } from "./StatisticsNavigator";
 import { WorkoutsNavigator, type WorkoutsStackParamList } from "./WorkoutsNavigator";
 
 export type MainTabParamList = {
@@ -74,7 +75,7 @@ export function MainTabNavigator() {
       <Tab.Screen
         name="Statistics"
         options={{ title: t("nav.statistics") }}
-        children={() => <PlaceholderScreen title={t("nav.statistics")} />}
+        component={StatisticsNavigator}
       />
       <Tab.Screen
         name="Notifications"

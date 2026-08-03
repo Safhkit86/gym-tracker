@@ -195,6 +195,15 @@
       "text": "Nessuna progressione da {{weeks}} settimane — potrebbe essere il momento di alzare l'asticella manualmente."
     }
   },
+  "statistics": {
+    "subtitle": "Il tuo andamento nel tempo, per esercizio e per misura corporea.",
+    "loadError": "Impossibile caricare le statistiche.",
+    "sessionsTab": "Sessioni di allenamento",
+    "measurementsTab": "Misure",
+    "noData": "Non ci sono ancora abbastanza dati.",
+    "noMeasurements": "Non hai ancora registrato nessuna misurazione.",
+    "noMeasurementFor": "Nessuna misurazione di {{label}} registrata."
+  },
   "errors": {
     "INVALID_CREDENTIALS": "Email o password non validi.",
     "EMAIL_ALREADY_IN_USE": "Esiste già un utente con questa email.",
