@@ -24,13 +24,17 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 // Glifi testuali invece di un'icon library dedicata: sono solo schermate
 // segnaposto in questa sotto-fase, un pacchetto icone si aggiunge quando le
 // tab avranno contenuto vero (stesso principio "non costruire finche' non
-// serve" del resto del progetto).
+// serve" del resto del progetto). "✉" invece del più ovvio "🔔": quest'ultimo
+// ha presentazione emoji di default (sempre a colori, ignora la prop `color`
+// di TabIcon), mentre gli altri quattro sono glifi testuali monocromatici che
+// ereditano correttamente il tint attivo/inattivo — "✉" (Dingbats, come "‼")
+// ha presentazione testuale di default e si comporta come gli altri.
 const TAB_ICONS: Record<keyof MainTabParamList, string> = {
   Dashboard: "⌂",
   Workouts: "▤",
   History: "↺",
   Statistics: "▲",
-  Notifications: "🔔",
+  Notifications: "✉",
 };
 
 function TabIcon({ route, color }: { route: keyof MainTabParamList; color: string }) {
