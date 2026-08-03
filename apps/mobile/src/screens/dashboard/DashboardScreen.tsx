@@ -37,20 +37,20 @@ import { listMeasurements } from "../../api/measurements";
 import { listNotifications, markNotificationRead } from "../../api/notifications";
 import { acceptProgressionDefaults } from "../../api/profile";
 import { ApiRequestError } from "../../api/client";
-import { HorizontalPeekCarousel } from "../../components/HorizontalPeekCarousel";
 import { VerticalPeekList } from "../../components/VerticalPeekList";
 import { MiniLineChart } from "../../components/MiniLineChart";
 import { Sparkline } from "../../components/Sparkline";
 import { StreakCalendar } from "../../components/StreakCalendar";
+import { StatisticheCard } from "../../components/StatisticheCard";
 import {
   UNSPECIFIED_MUSCLE_GROUP,
   normalizeMuscleGroup,
   groupVolumeByMuscleGroup,
   sortExerciseGroups,
   type ExerciseRef,
-  type MuscleGroupSummary,
 } from "../../utils/muscle-groups";
 import { MEASUREMENT_FIELDS, computeDelta } from "../../utils/measurements";
+import { formatItemIndicator } from "../../utils/item-indicator";
 import { colors, radius, spacing } from "../../theme/theme";
 
 // CompositeScreenProps: DashboardScreen vive in DashboardNavigator (stack a
@@ -62,10 +62,6 @@ export type Props = CompositeScreenProps<
   NativeStackScreenProps<DashboardStackParamList, "DashboardHome">,
   BottomTabScreenProps<MainTabParamList>
 >;
-
-function formatItemIndicator(t: TFunction, index: number, total: number): string {
-  return t("dashboard.itemIndicator", { index: index + 1, total });
-}
 
 function formatWorkoutPrescription(exercise: WorkoutExercise, t: TFunction): string {
   const setCount = exercise.sets.length;
@@ -331,79 +327,6 @@ export function DashboardScreen({ navigation }: Props) {
       {lastSession && <UltimaSessioneCard session={lastSession} locale={i18n.language} />}
       {stalledExercise && <StalloCard stalled={stalledExercise} />}
     </ScrollView>
-  );
-}
-
-function MuscleGroupTile({ mg, t }: { mg: MuscleGroupSummary; t: TFunction }) {
-  return (
-    <View style={styles.muscleGroupTile}>
-      <Text style={styles.muscleGroupName}>{mg.muscleGroup}</Text>
-      <View style={styles.muscleGroupRow}>
-        <Text style={styles.muscleGroupRowLabel}>{t("dashboard.stats.sets")}</Text>
-        <Text style={styles.muscleGroupRowValue}>{mg.setCount}</Text>
-      </View>
-      <View style={styles.muscleGroupRow}>
-        <Text style={styles.muscleGroupRowLabel}>{t("dashboard.stats.reps")}</Text>
-        <Text style={styles.muscleGroupRowValue}>{mg.repCount}</Text>
-      </View>
-    </View>
-  );
-}
-
-function StatisticheCard({
-  stats,
-  muscleGroupVolume,
-}: {
-  stats: DashboardStats;
-  muscleGroupVolume: MuscleGroupSummary[];
-}) {
-  const { t } = useTranslation();
-  const [muscleIndex, setMuscleIndex] = useState(0);
-  const firstGroup = muscleGroupVolume[0];
-
-  return (
-    <View style={styles.card}>
-      <Text style={styles.cardTitle}>{t("dashboard.stats.title")}</Text>
-      <View style={styles.statTiles}>
-        <View style={styles.statTile}>
-          <Text style={styles.statTileLabel}>{t("dashboard.stats.sessionCount")}</Text>
-          <Text style={styles.statTileValue}>{stats.sessionCount}</Text>
-        </View>
-        <View style={styles.statTile}>
-          <Text style={styles.statTileLabel}>{t("dashboard.stats.consecutiveWeeks")}</Text>
-          <Text style={styles.statTileValue}>{stats.consecutiveWeeks}</Text>
-        </View>
-        <View style={styles.statTile}>
-          <Text style={styles.statTileLabel}>{t("dashboard.stats.totalKgLifted")}</Text>
-          <Text style={styles.statTileValue}>
-            {stats.totalKgLifted.toLocaleString()} <Text style={styles.statTileUnit}>kg</Text>
-          </Text>
-        </View>
-      </View>
-
-      {firstGroup && (
-        <View style={styles.muscleBlock}>
-          <View style={styles.muscleBlockHeader}>
-            <Text style={styles.cardSubtitle}>{t("dashboard.stats.muscleGroupsTitle")}</Text>
-            {muscleGroupVolume.length > 1 && (
-              <Text style={styles.indicator}>
-                {formatItemIndicator(t, muscleIndex, muscleGroupVolume.length)}
-              </Text>
-            )}
-          </View>
-          {muscleGroupVolume.length > 1 ? (
-            <HorizontalPeekCarousel
-              items={muscleGroupVolume}
-              keyExtractor={(mg) => mg.muscleGroup}
-              onIndexChange={setMuscleIndex}
-              renderItem={(mg) => <MuscleGroupTile mg={mg} t={t} />}
-            />
-          ) : (
-            <MuscleGroupTile mg={firstGroup} t={t} />
-          )}
-        </View>
-      )}
-    </View>
   );
 }
 
@@ -828,11 +751,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-  cardSubtitle: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: "600",
-  },
   cardSubtitleTight: {
     color: colors.textMuted,
     fontSize: 13,
@@ -855,63 +773,6 @@ const styles = StyleSheet.create({
   sectionNote: {
     color: colors.textMuted,
     fontSize: 12,
-  },
-  statTiles: {
-    flexDirection: "row",
-    gap: spacing.md,
-  },
-  statTile: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  statTileLabel: {
-    color: colors.textMuted,
-    fontSize: 11,
-  },
-  statTileValue: {
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  statTileUnit: {
-    fontSize: 12,
-    fontWeight: "400",
-    color: colors.textMuted,
-  },
-  muscleBlock: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: spacing.sm,
-    gap: spacing.sm,
-  },
-  muscleBlockHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  muscleGroupTile: {
-    backgroundColor: colors.surface2,
-    borderRadius: radius.sm,
-    padding: spacing.sm,
-    gap: spacing.xs,
-  },
-  muscleGroupName: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  muscleGroupRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  muscleGroupRowLabel: {
-    color: colors.textMuted,
-    fontSize: 12,
-  },
-  muscleGroupRowValue: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: "600",
   },
   suggestionRow: {
     flexDirection: "row",
