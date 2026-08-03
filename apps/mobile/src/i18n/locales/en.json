@@ -140,6 +140,68 @@
       "legCm": "Leg"
     }
   },
+  "dashboard": {
+    "subtitle": "Welcome back — here's a quick summary of your training.",
+    "loadError": "Unable to load the dashboard.",
+    "setsCount_one": "{{count}} set",
+    "setsCount_other": "{{count}} sets",
+    "repsShort": "reps",
+    "weightTarget": "{{weight}}kg (target)",
+    "pagerIndicator": "{{start}}–{{end}} of {{total}}",
+    "pagerIndicatorEmpty": "0 of 0",
+    "stats": {
+      "title": "Statistics",
+      "sessionCount": "Sessions logged",
+      "consecutiveWeeks": "Consecutive weeks",
+      "totalKgLifted": "Total kg lifted",
+      "muscleGroupsTitle": "By muscle group · this week",
+      "sets": "Sets",
+      "reps": "Reps",
+      "prevGroups": "Previous groups",
+      "nextGroups": "Next groups"
+    },
+    "suggestions": {
+      "title": "Progression suggestions",
+      "empty": "No suggestions pending.",
+      "accept": "Accept",
+      "accepted": "✓ Accepted",
+      "viewAll": "View all →",
+      "prev": "Previous suggestions",
+      "next": "Next suggestions",
+      "repsUnit": "reps",
+      "error": "Unable to accept the progression."
+    },
+    "progressions": {
+      "title": "Progression per exercise",
+      "empty": "Not enough data yet.",
+      "unitReps": "reps",
+      "unitWeight": "weight (kg)",
+      "chartEmpty": "No history available for this exercise."
+    },
+    "measurements": {
+      "title": "Measurements",
+      "viewAll": "View all →"
+    },
+    "streak": {
+      "title": "Recent consistency",
+      "trainedLegend": "Session logged",
+      "restLegend": "Rest day",
+      "note": "Last 5 weeks, one tile per day."
+    },
+    "nextSession": {
+      "title": "Next session",
+      "start": "Start session"
+    },
+    "lastSession": {
+      "title": "Last session"
+    },
+    "exercisesPagerPrev": "Previous exercises",
+    "exercisesPagerNext": "Next exercises",
+    "stalled": {
+      "title": "Stalled exercise",
+      "text": "No progression in {{weeks}} weeks — it might be time to raise the bar manually."
+    }
+  },
   "errors": {
     "INVALID_CREDENTIALS": "Invalid email or password.",
     "EMAIL_ALREADY_IN_USE": "A user with this email already exists.",

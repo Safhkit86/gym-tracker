@@ -1,0 +1,1100 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
+import type { CompositeScreenProps } from "@react-navigation/native";
+import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type {
+  DashboardStats,
+  Exercise,
+  ExerciseHistoryPoint,
+  MeasurementEntry,
+  Notification,
+  SessionDetail,
+  SessionExercise,
+  StalledExercise,
+  WorkoutDetail,
+  WorkoutExercise,
+  WorkoutSummary,
+} from "@gym-tracker/shared";
+import { useAuth } from "../../auth/useAuth";
+import type { MainTabParamList } from "../../navigation/MainTabNavigator";
+import type { DashboardStackParamList } from "../../navigation/DashboardNavigator";
+import { formatSuggestionDelta, toOverride } from "../../utils/suggestion-format";
+import { getDashboardStats, getExerciseHistory, getStalledExercise } from "../../api/stats";
+import { listExercises } from "../../api/exercises";
+import { getWorkout, listWorkouts } from "../../api/workouts";
+import { listSessions } from "../../api/sessions";
+import { listMeasurements } from "../../api/measurements";
+import { listNotifications, markNotificationRead } from "../../api/notifications";
+import { acceptProgressionDefaults } from "../../api/profile";
+import { ApiRequestError } from "../../api/client";
+import { usePager } from "../../hooks/usePager";
+import { PagerControls } from "../../components/PagerControls";
+import { MiniLineChart } from "../../components/MiniLineChart";
+import { Sparkline } from "../../components/Sparkline";
+import { StreakCalendar } from "../../components/StreakCalendar";
+import {
+  UNSPECIFIED_MUSCLE_GROUP,
+  normalizeMuscleGroup,
+  groupVolumeByMuscleGroup,
+  sortExerciseGroups,
+  type ExerciseRef,
+  type MuscleGroupSummary,
+} from "../../utils/muscle-groups";
+import { MEASUREMENT_FIELDS, computeDelta } from "../../utils/measurements";
+import { colors, radius, spacing } from "../../theme/theme";
+
+// CompositeScreenProps: DashboardScreen vive in DashboardNavigator (stack a
+// una schermata) ma deve navigare anche verso altre tab (es. "Avvia
+// sessione" -> Workouts>LogSession, "Vedi tutte" -> Notifications/
+// Statistics) — la prop navigation deve quindi combinare i metodi dello
+// stack locale con quelli del tab navigator genitore.
+export type Props = CompositeScreenProps<
+  NativeStackScreenProps<DashboardStackParamList, "DashboardHome">,
+  BottomTabScreenProps<MainTabParamList>
+>;
+
+function formatPagerIndicator(
+  t: TFunction,
+  start: number,
+  pageSize: number,
+  total: number
+): string {
+  if (total === 0) {
+    return t("dashboard.pagerIndicatorEmpty");
+  }
+  return t("dashboard.pagerIndicator", {
+    start: start + 1,
+    end: Math.min(start + pageSize, total),
+    total,
+  });
+}
+
+function formatWorkoutPrescription(exercise: WorkoutExercise, t: TFunction): string {
+  const setCount = exercise.sets.length;
+  const first = exercise.sets[0];
+  const setsLabel = t("dashboard.setsCount", { count: setCount });
+  if (!first) {
+    return setsLabel;
+  }
+  const reps = first.isMaxEffort
+    ? t("workouts.detail.maxEffort")
+    : first.targetMaxReps !== null
+      ? `${first.targetMinReps}-${first.targetMaxReps} ${t("dashboard.repsShort")}`
+      : `${first.targetMinReps} ${t("dashboard.repsShort")}`;
+  const weight =
+    first.targetWeight !== null
+      ? t("dashboard.weightTarget", { weight: first.targetWeight })
+      : t("workouts.detail.bodyweight");
+  return `${setsLabel} · ${reps} · ${weight}`;
+}
+
+function formatSessionExerciseSummary(exercise: SessionExercise, t: TFunction): string {
+  const reps = exercise.sets.map((s) => s.actualReps).join(", ");
+  const weight = exercise.sets[0]?.actualWeight;
+  const weightLabel =
+    weight !== null && weight !== undefined ? `${weight}kg` : t("workouts.detail.bodyweight");
+  return `${reps} ${t("dashboard.repsShort")} · ${weightLabel}`;
+}
+
+export function DashboardScreen({ navigation }: Props) {
+  const { t, i18n } = useTranslation();
+  const { token } = useAuth();
+
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [nextWorkout, setNextWorkout] = useState<WorkoutDetail | null>(null);
+  const [lastSession, setLastSession] = useState<SessionDetail | null>(null);
+  const [currentSchedeExercises, setCurrentSchedeExercises] = useState<ExerciseRef[]>([]);
+  const [pendingSuggestions, setPendingSuggestions] = useState<Notification[]>([]);
+  const [confirmingIds, setConfirmingIds] = useState<Set<string>>(new Set());
+  const [stalledExercise, setStalledExercise] = useState<StalledExercise | null>(null);
+  const [exerciseHistories, setExerciseHistories] = useState<Map<string, ExerciseHistoryPoint[]>>(
+    new Map()
+  );
+  const [measurements, setMeasurements] = useState<MeasurementEntry[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+    let cancelled = false;
+
+    async function load(authToken: string): Promise<void> {
+      try {
+        const [statsResult, exercisesResult, workoutsResult, sessionsResult] = await Promise.all([
+          getDashboardStats(authToken),
+          listExercises(authToken),
+          listWorkouts(authToken),
+          listSessions(authToken, 1),
+        ]);
+        if (cancelled) {
+          return;
+        }
+        setStats(statsResult);
+        setExercises(exercisesResult);
+        const last = sessionsResult[0] ?? null;
+        setLastSession(last);
+
+        if (workoutsResult.length > 0) {
+          const workoutDetails = await Promise.all(
+            workoutsResult.map((w: WorkoutSummary) => getWorkout(authToken, w.id))
+          );
+          if (cancelled) {
+            return;
+          }
+
+          const lastIndex = last
+            ? workoutsResult.findIndex((w: WorkoutSummary) => w.id === last.workoutId)
+            : -1;
+          const nextIndex = (lastIndex + 1) % workoutsResult.length;
+          setNextWorkout(workoutDetails[nextIndex] ?? null);
+
+          const exerciseUnion = new Map<string, string>();
+          for (const detail of workoutDetails) {
+            for (const ex of detail.exercises) {
+              exerciseUnion.set(ex.exerciseId, ex.exerciseName);
+            }
+          }
+          setCurrentSchedeExercises(
+            [...exerciseUnion.entries()].map(([exerciseId, exerciseName]) => ({
+              exerciseId,
+              exerciseName,
+            }))
+          );
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof ApiRequestError ? err.message : t("dashboard.loadError"));
+        }
+        return;
+      }
+
+      // Sezioni secondarie: un fallimento qui non deve impedire la
+      // visualizzazione del resto della pagina (stesso pattern della
+      // webapp). Ognuna ha il proprio .catch(), cosi' il fallimento di una
+      // non ne impedisce altre.
+      Promise.all([listNotifications(authToken, true), getStalledExercise(authToken)])
+        .then(([notifications, stalled]) => {
+          if (!cancelled) {
+            setPendingSuggestions(notifications);
+            setStalledExercise(stalled);
+          }
+        })
+        .catch(() => {
+          /* opzionale: nessun errore bloccante */
+        });
+
+      listMeasurements(authToken)
+        .then((measurementsResult) => {
+          if (!cancelled) {
+            setMeasurements(measurementsResult);
+          }
+        })
+        .catch(() => {
+          /* opzionale: nessun errore bloccante */
+        });
+    }
+
+    void load(token);
+    return () => {
+      cancelled = true;
+    };
+  }, [token, t]);
+
+  // Storico per i grafici: solo dopo aver saputo quali esercizi fanno
+  // ancora parte delle schede attuali, in parallelo, non bloccante.
+  useEffect(() => {
+    if (!token || currentSchedeExercises.length === 0) {
+      return;
+    }
+    let cancelled = false;
+    Promise.all(
+      currentSchedeExercises.map((ref) =>
+        getExerciseHistory(token, ref.exerciseId).then(
+          (points) => [ref.exerciseId, points] as const
+        )
+      )
+    )
+      .then((entries) => {
+        if (!cancelled) {
+          setExerciseHistories(new Map(entries));
+        }
+      })
+      .catch(() => {
+        /* opzionale: nessun errore bloccante */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, currentSchedeExercises]);
+
+  const muscleGroupByExerciseId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const ex of exercises) {
+      map.set(ex.id, normalizeMuscleGroup(ex.muscleGroup ?? UNSPECIFIED_MUSCLE_GROUP));
+    }
+    return map;
+  }, [exercises]);
+
+  const muscleGroupVolume = useMemo(
+    () => (stats ? groupVolumeByMuscleGroup(stats, muscleGroupByExerciseId) : []),
+    [stats, muscleGroupByExerciseId]
+  );
+
+  const exercisesByMuscleGroup = useMemo(() => {
+    const map = new Map<string, ExerciseRef[]>();
+    for (const ref of currentSchedeExercises) {
+      const muscleGroup = muscleGroupByExerciseId.get(ref.exerciseId) ?? UNSPECIFIED_MUSCLE_GROUP;
+      const list = map.get(muscleGroup) ?? [];
+      list.push(ref);
+      map.set(muscleGroup, list);
+    }
+    return map;
+  }, [currentSchedeExercises, muscleGroupByExerciseId]);
+
+  async function handleAccept(notification: Notification): Promise<void> {
+    if (!token) {
+      return;
+    }
+    const override = toOverride(notification);
+    if (!override) {
+      return;
+    }
+    setConfirmingIds((prev) => new Set(prev).add(notification.id));
+    try {
+      await acceptProgressionDefaults(token, [override]);
+      await markNotificationRead(token, notification.id);
+      setTimeout(() => {
+        setPendingSuggestions((prev) => prev.filter((n) => n.id !== notification.id));
+        setConfirmingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(notification.id);
+          return next;
+        });
+      }, 1200);
+    } catch (err) {
+      setConfirmingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(notification.id);
+        return next;
+      });
+      setError(err instanceof ApiRequestError ? err.message : t("dashboard.suggestions.error"));
+    }
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.error} accessibilityRole="alert">
+          {error}
+        </Text>
+      </View>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator color={colors.accent} />
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.subtitle}>{t("dashboard.subtitle")}</Text>
+
+      <StatisticheCard stats={stats} muscleGroupVolume={muscleGroupVolume} />
+      <SuggerimentiCard
+        notifications={pendingSuggestions}
+        confirmingIds={confirmingIds}
+        onAccept={handleAccept}
+        onViewAll={() => navigation.navigate("Notifications")}
+      />
+      <ProgressioniCard
+        exercisesByMuscleGroup={exercisesByMuscleGroup}
+        exerciseHistories={exerciseHistories}
+      />
+      <MisureCard measurements={measurements} onViewAll={() => navigation.navigate("Statistics")} />
+      <CostanzaCard streakCalendar={stats.streakCalendar} />
+
+      {nextWorkout && (
+        <ProssimaSessioneCard
+          workout={nextWorkout}
+          onStart={() =>
+            navigation.navigate("Workouts", {
+              screen: "LogSession",
+              params: { id: nextWorkout.id },
+            })
+          }
+        />
+      )}
+      {lastSession && <UltimaSessioneCard session={lastSession} locale={i18n.language} />}
+      {stalledExercise && <StalloCard stalled={stalledExercise} />}
+    </ScrollView>
+  );
+}
+
+function StatisticheCard({
+  stats,
+  muscleGroupVolume,
+}: {
+  stats: DashboardStats;
+  muscleGroupVolume: MuscleGroupSummary[];
+}) {
+  const { t } = useTranslation();
+  const pageSize = 2;
+  const pager = usePager(muscleGroupVolume, pageSize);
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>{t("dashboard.stats.title")}</Text>
+      <View style={styles.statTiles}>
+        <View style={styles.statTile}>
+          <Text style={styles.statTileLabel}>{t("dashboard.stats.sessionCount")}</Text>
+          <Text style={styles.statTileValue}>{stats.sessionCount}</Text>
+        </View>
+        <View style={styles.statTile}>
+          <Text style={styles.statTileLabel}>{t("dashboard.stats.consecutiveWeeks")}</Text>
+          <Text style={styles.statTileValue}>{stats.consecutiveWeeks}</Text>
+        </View>
+        <View style={styles.statTile}>
+          <Text style={styles.statTileLabel}>{t("dashboard.stats.totalKgLifted")}</Text>
+          <Text style={styles.statTileValue}>
+            {stats.totalKgLifted.toLocaleString()} <Text style={styles.statTileUnit}>kg</Text>
+          </Text>
+        </View>
+      </View>
+
+      {muscleGroupVolume.length > 0 && (
+        <View style={styles.muscleBlock}>
+          <View style={styles.muscleBlockHeader}>
+            <Text style={styles.cardSubtitle}>{t("dashboard.stats.muscleGroupsTitle")}</Text>
+            {muscleGroupVolume.length > pageSize && (
+              <PagerControls
+                start={pager.start}
+                pageSize={pageSize}
+                total={pager.total}
+                canPrev={pager.canPrev}
+                canNext={pager.canNext}
+                onPrev={pager.prev}
+                onNext={pager.next}
+                orientation="horizontal"
+                prevLabel={t("dashboard.stats.prevGroups")}
+                nextLabel={t("dashboard.stats.nextGroups")}
+                indicatorLabel={formatPagerIndicator(t, pager.start, pageSize, pager.total)}
+              />
+            )}
+          </View>
+          <View style={styles.muscleGroupsRow}>
+            {pager.visible.map((mg) => (
+              <View style={styles.muscleGroupTile} key={mg.muscleGroup}>
+                <Text style={styles.muscleGroupName}>{mg.muscleGroup}</Text>
+                <View style={styles.muscleGroupRow}>
+                  <Text style={styles.muscleGroupRowLabel}>{t("dashboard.stats.sets")}</Text>
+                  <Text style={styles.muscleGroupRowValue}>{mg.setCount}</Text>
+                </View>
+                <View style={styles.muscleGroupRow}>
+                  <Text style={styles.muscleGroupRowLabel}>{t("dashboard.stats.reps")}</Text>
+                  <Text style={styles.muscleGroupRowValue}>{mg.repCount}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function SuggerimentiCard({
+  notifications,
+  confirmingIds,
+  onAccept,
+  onViewAll,
+}: {
+  notifications: Notification[];
+  confirmingIds: Set<string>;
+  onAccept: (notification: Notification) => void;
+  onViewAll: () => void;
+}) {
+  const { t } = useTranslation();
+  const pageSize = 2;
+  const pager = usePager(notifications, pageSize);
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>{t("dashboard.suggestions.title")}</Text>
+        <View style={styles.cardHeaderControls}>
+          {notifications.length > pageSize && (
+            <PagerControls
+              start={pager.start}
+              pageSize={pageSize}
+              total={pager.total}
+              canPrev={pager.canPrev}
+              canNext={pager.canNext}
+              onPrev={pager.prev}
+              onNext={pager.next}
+              orientation="vertical"
+              prevLabel={t("dashboard.suggestions.prev")}
+              nextLabel={t("dashboard.suggestions.next")}
+              indicatorLabel={formatPagerIndicator(t, pager.start, pageSize, pager.total)}
+            />
+          )}
+          <TouchableOpacity onPress={onViewAll} accessibilityRole="button">
+            <Text style={styles.link}>{t("dashboard.suggestions.viewAll")}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      {notifications.length === 0 ? (
+        <Text style={styles.infoText}>{t("dashboard.suggestions.empty")}</Text>
+      ) : (
+        pager.visible.map((notification) => (
+          <View style={styles.suggestionRow} key={notification.id}>
+            <View style={styles.suggestionText}>
+              <Text style={styles.suggestionName}>{notification.exerciseName}</Text>
+              <Text style={styles.suggestionDelta}>
+                {formatSuggestionDelta(notification, t("dashboard.suggestions.repsUnit"))}
+              </Text>
+            </View>
+            {confirmingIds.has(notification.id) ? (
+              <Text style={styles.suggestionAccepted}>{t("dashboard.suggestions.accepted")}</Text>
+            ) : (
+              <TouchableOpacity
+                style={styles.acceptButton}
+                onPress={() => onAccept(notification)}
+                accessibilityRole="button"
+              >
+                <Text style={styles.acceptButtonText}>{t("dashboard.suggestions.accept")}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ))
+      )}
+    </View>
+  );
+}
+
+function ProgressioniCard({
+  exercisesByMuscleGroup,
+  exerciseHistories,
+}: {
+  exercisesByMuscleGroup: Map<string, ExerciseRef[]>;
+  exerciseHistories: Map<string, ExerciseHistoryPoint[]>;
+}) {
+  const { t } = useTranslation();
+  const sortedGroups = sortExerciseGroups(exercisesByMuscleGroup, exerciseHistories);
+  // Solo un accordion aperto alla volta, altrimenti la card cresce troppo
+  // con molti gruppi muscolari. null = nessuna scelta esplicita ancora,
+  // apri il primo gruppo di default.
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const effectiveOpenGroup = openGroup ?? sortedGroups[0]?.[0] ?? null;
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>{t("dashboard.progressions.title")}</Text>
+      {sortedGroups.length === 0 ? (
+        <Text style={styles.infoText}>{t("dashboard.progressions.empty")}</Text>
+      ) : (
+        sortedGroups.map(([muscleGroup, exercisesInGroup]) => {
+          const isOpen = effectiveOpenGroup === muscleGroup;
+          return (
+            <View style={styles.accordion} key={muscleGroup}>
+              <TouchableOpacity
+                style={styles.accordionHeader}
+                onPress={() => setOpenGroup(isOpen ? null : muscleGroup)}
+                accessibilityRole="button"
+              >
+                <Text style={styles.accordionTitle}>{muscleGroup}</Text>
+                <Text style={styles.accordionGlyph}>{isOpen ? "−" : "+"}</Text>
+              </TouchableOpacity>
+              {isOpen && (
+                <View style={styles.accordionBody}>
+                  {exercisesInGroup.map((ref) => {
+                    const points = exerciseHistories.get(ref.exerciseId) ?? [];
+                    const latest = points[points.length - 1];
+                    return (
+                      <View key={ref.exerciseId} style={styles.exerciseChart}>
+                        <View style={styles.exerciseChartHeader}>
+                          <Text style={styles.exerciseChartTitle}>
+                            {ref.exerciseName} —{" "}
+                            {latest?.unit === "reps"
+                              ? t("dashboard.progressions.unitReps")
+                              : t("dashboard.progressions.unitWeight")}
+                          </Text>
+                          {latest && (
+                            <Text style={styles.exerciseChartLatest}>
+                              {latest.unit === "kg"
+                                ? `${latest.value}kg`
+                                : `${latest.value} ${t("dashboard.repsShort")}`}
+                            </Text>
+                          )}
+                        </View>
+                        <MiniLineChart
+                          points={points.map((p) => ({
+                            id: p.sessionId,
+                            date: p.performedAt,
+                            value: p.value,
+                          }))}
+                          unit={latest?.unit ?? "kg"}
+                          emptyMessage={t("dashboard.progressions.chartEmpty")}
+                        />
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+          );
+        })
+      )}
+    </View>
+  );
+}
+
+interface MeasureTileData {
+  field: (typeof MEASUREMENT_FIELDS)[number];
+  values: number[];
+  current: number;
+  delta: number | null;
+}
+
+/** Tile compatte per le misure (valore attuale + delta + sparkline), non
+ *  mostrate se l'utente non ha ancora registrato nessuna misura. Stessa
+ *  logica di apps/web/src/pages/DashboardPage.tsx (MisureCard). */
+function MisureCard({
+  measurements,
+  onViewAll,
+}: {
+  measurements: MeasurementEntry[];
+  onViewAll: () => void;
+}) {
+  const { t } = useTranslation();
+  const tiles: MeasureTileData[] = MEASUREMENT_FIELDS.map((field) => {
+    const nonNull = measurements.filter((m) => m[field.key] !== null);
+    if (nonNull.length === 0) {
+      return null;
+    }
+    const chronological = [...nonNull].reverse();
+    const values = chronological.map((m) => m[field.key] as number);
+    const current = values[values.length - 1];
+    if (current === undefined) {
+      return null;
+    }
+    const previous = values.length > 1 ? (values[values.length - 2] ?? null) : null;
+    return { field, values, current, delta: computeDelta(previous, current) };
+  }).filter((tile): tile is MeasureTileData => tile !== null);
+
+  if (tiles.length === 0) {
+    return null;
+  }
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>{t("dashboard.measurements.title")}</Text>
+        <TouchableOpacity onPress={onViewAll} accessibilityRole="button">
+          <Text style={styles.link}>{t("dashboard.measurements.viewAll")}</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.measureTiles}>
+        {tiles.map(({ field, values, current, delta }) => (
+          <View style={styles.measureTile} key={field.key}>
+            <Text style={styles.measureTileLabel}>{t(`history.measurements.${field.key}`)}</Text>
+            <View style={styles.measureTileRow}>
+              <Text style={styles.measureTileValue}>
+                {current}
+                <Text style={styles.measureTileUnit}> {field.unit}</Text>
+              </Text>
+              {delta !== null && (
+                <Text style={[styles.delta, delta > 0 ? styles.deltaUp : styles.deltaDown]}>
+                  {delta > 0 ? "▲" : "▼"} {Math.abs(delta)}
+                </Text>
+              )}
+            </View>
+            <Sparkline values={values} />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function CostanzaCard({ streakCalendar }: { streakCalendar: string[] }) {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>{t("dashboard.streak.title")}</Text>
+      <StreakCalendar trainedDates={streakCalendar} />
+      <View style={styles.streakLegend}>
+        <View style={styles.legendRow}>
+          <View style={[styles.legendSwatch, styles.legendSwatchOn]} />
+          <Text style={styles.legendText}>{t("dashboard.streak.trainedLegend")}</Text>
+        </View>
+        <View style={styles.legendRow}>
+          <View style={styles.legendSwatch} />
+          <Text style={styles.legendText}>{t("dashboard.streak.restLegend")}</Text>
+        </View>
+      </View>
+      <Text style={styles.sectionNote}>{t("dashboard.streak.note")}</Text>
+    </View>
+  );
+}
+
+function ProssimaSessioneCard({
+  workout,
+  onStart,
+}: {
+  workout: WorkoutDetail;
+  onStart: () => void;
+}) {
+  const { t } = useTranslation();
+  const pageSize = 3;
+  const pager = usePager(workout.exercises, pageSize);
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>{t("dashboard.nextSession.title")}</Text>
+        {workout.exercises.length > pageSize && (
+          <PagerControls
+            start={pager.start}
+            pageSize={pageSize}
+            total={pager.total}
+            canPrev={pager.canPrev}
+            canNext={pager.canNext}
+            onPrev={pager.prev}
+            onNext={pager.next}
+            orientation="vertical"
+            prevLabel={t("dashboard.exercisesPagerPrev")}
+            nextLabel={t("dashboard.exercisesPagerNext")}
+            indicatorLabel={formatPagerIndicator(t, pager.start, pageSize, pager.total)}
+          />
+        )}
+      </View>
+      <Text style={styles.cardSubtitleTight}>{workout.name}</Text>
+      <View style={styles.exerciseList}>
+        {pager.visible.map((exercise) => (
+          <View style={styles.exerciseListRow} key={exercise.id}>
+            <Text style={styles.exerciseListName}>{exercise.exerciseName}</Text>
+            <Text style={styles.exerciseListDetail}>{formatWorkoutPrescription(exercise, t)}</Text>
+          </View>
+        ))}
+      </View>
+      <TouchableOpacity style={styles.startButton} onPress={onStart} accessibilityRole="button">
+        <Text style={styles.startButtonText}>{t("dashboard.nextSession.start")}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function UltimaSessioneCard({ session, locale }: { session: SessionDetail; locale: string }) {
+  const { t } = useTranslation();
+  const pageSize = 3;
+  const pager = usePager(session.exercises, pageSize);
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>{t("dashboard.lastSession.title")}</Text>
+        {session.exercises.length > pageSize && (
+          <PagerControls
+            start={pager.start}
+            pageSize={pageSize}
+            total={pager.total}
+            canPrev={pager.canPrev}
+            canNext={pager.canNext}
+            onPrev={pager.prev}
+            onNext={pager.next}
+            orientation="vertical"
+            prevLabel={t("dashboard.exercisesPagerPrev")}
+            nextLabel={t("dashboard.exercisesPagerNext")}
+            indicatorLabel={formatPagerIndicator(t, pager.start, pageSize, pager.total)}
+          />
+        )}
+      </View>
+      <Text style={styles.cardSubtitleTight}>
+        {session.workoutName} · {new Date(session.performedAt).toLocaleDateString(locale)}
+      </Text>
+      <View style={styles.exerciseList}>
+        {pager.visible.map((exercise) => (
+          <View style={styles.exerciseListRow} key={exercise.exerciseId}>
+            <Text style={styles.exerciseListName}>{exercise.exerciseName}</Text>
+            <Text style={styles.exerciseListDetail}>
+              {formatSessionExerciseSummary(exercise, t)}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function StalloCard({ stalled }: { stalled: StalledExercise }) {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>{t("dashboard.stalled.title")}</Text>
+      <View style={styles.stallCallout}>
+        <Text style={styles.stallIcon}>⏸</Text>
+        <View style={styles.stallText}>
+          <Text style={styles.stallExercise}>{stalled.exerciseName}</Text>
+          <Text style={styles.stallDetail}>
+            {t("dashboard.stalled.text", {
+              weeks: Math.floor(stalled.daysSinceLastProgression / 7),
+            })}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.bg,
+  },
+  content: {
+    padding: spacing.lg,
+    paddingBottom: spacing.xxl,
+    gap: spacing.md,
+  },
+  centered: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: spacing.lg,
+  },
+  error: {
+    color: colors.danger,
+    backgroundColor: colors.dangerBg,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    textAlign: "center",
+  },
+  subtitle: {
+    color: colors.textMuted,
+    fontSize: 14,
+    marginBottom: spacing.xs,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  cardHeaderControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  cardTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  cardSubtitle: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  cardSubtitleTight: {
+    color: colors.textMuted,
+    fontSize: 13,
+    marginTop: -spacing.xs,
+  },
+  link: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  infoText: {
+    color: colors.textMuted,
+    fontSize: 13,
+  },
+  sectionNote: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  statTiles: {
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+  statTile: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  statTileLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+  },
+  statTileValue: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  statTileUnit: {
+    fontSize: 12,
+    fontWeight: "400",
+    color: colors.textMuted,
+  },
+  muscleBlock: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  muscleBlockHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  muscleGroupsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  muscleGroupTile: {
+    flexBasis: "47%",
+    flexGrow: 1,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    gap: spacing.xs,
+  },
+  muscleGroupName: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  muscleGroupRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  muscleGroupRowLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  muscleGroupRowValue: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  suggestionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+  },
+  suggestionText: {
+    gap: 2,
+  },
+  suggestionName: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  suggestionDelta: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  suggestionAccepted: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  acceptButton: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
+  acceptButtonText: {
+    color: colors.accentContrast,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  accordion: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+  },
+  accordionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: spacing.xs,
+  },
+  accordionTitle: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  accordionGlyph: {
+    color: colors.accent,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  accordionBody: {
+    gap: spacing.md,
+    paddingTop: spacing.xs,
+  },
+  exerciseChart: {
+    gap: spacing.xs,
+  },
+  exerciseChartHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+  },
+  exerciseChartTitle: {
+    color: colors.text,
+    fontSize: 12,
+    flexShrink: 1,
+  },
+  exerciseChartLatest: {
+    color: colors.accent,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  measureTiles: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  measureTile: {
+    flexBasis: "47%",
+    flexGrow: 1,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    gap: spacing.xs,
+  },
+  measureTileLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+  },
+  measureTileRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+  },
+  measureTileValue: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  measureTileUnit: {
+    fontSize: 11,
+    fontWeight: "400",
+    color: colors.textMuted,
+  },
+  delta: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  deltaUp: {
+    color: colors.accent,
+  },
+  deltaDown: {
+    color: colors.danger,
+  },
+  streakLegend: {
+    flexDirection: "row",
+    gap: spacing.lg,
+  },
+  legendRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  legendSwatch: {
+    width: 12,
+    height: 12,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  legendSwatchOn: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  legendText: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  exerciseList: {
+    gap: spacing.sm,
+  },
+  exerciseListRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+  },
+  exerciseListName: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: "600",
+    flexShrink: 1,
+  },
+  exerciseListDetail: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  startButton: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.sm,
+    alignItems: "center",
+  },
+  startButtonText: {
+    color: colors.accentContrast,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  stallCallout: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    alignItems: "flex-start",
+  },
+  stallIcon: {
+    fontSize: 20,
+  },
+  stallText: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  stallExercise: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  stallDetail: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+});

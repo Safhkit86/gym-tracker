@@ -1,14 +1,19 @@
 import { Text } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import type { NavigatorScreenParams } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { colors } from "../theme/theme";
 import { PlaceholderScreen } from "../screens/PlaceholderScreen";
+import { DashboardNavigator } from "./DashboardNavigator";
 import { HistoryNavigator } from "./HistoryNavigator";
-import { WorkoutsNavigator } from "./WorkoutsNavigator";
+import { WorkoutsNavigator, type WorkoutsStackParamList } from "./WorkoutsNavigator";
 
 export type MainTabParamList = {
   Dashboard: undefined;
-  Workouts: undefined;
+  // NavigatorScreenParams invece di undefined: la Dashboard naviga dentro lo
+  // stack Workouts (es. "Avvia sessione" -> LogSession) da un'altra tab,
+  // serve per tipizzare correttamente la navigazione cross-tab annidata.
+  Workouts: NavigatorScreenParams<WorkoutsStackParamList> | undefined;
   History: undefined;
   Statistics: undefined;
   Notifications: undefined;
@@ -50,7 +55,7 @@ export function MainTabNavigator() {
       <Tab.Screen
         name="Dashboard"
         options={{ title: t("nav.dashboard") }}
-        children={() => <PlaceholderScreen title={t("nav.dashboard")} />}
+        component={DashboardNavigator}
       />
       <Tab.Screen
         name="Workouts"
