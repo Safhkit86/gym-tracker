@@ -214,6 +214,40 @@
     "acceptError": "Unable to accept the progression.",
     "acceptAllError": "Unable to accept the progressions."
   },
+  "profile": {
+    "title": "Profile",
+    "measurementsTab": "Measurements",
+    "preferencesTab": "Preferences",
+    "measurements": {
+      "loadError": "Unable to load your measurements.",
+      "historicizeLabel": "Track measurements over time",
+      "historicizeHint": "Keep a history of weight, chest, arm, waist and leg measurements. You can choose which date to record them for below.",
+      "date": "Date of this measurement",
+      "dateHint": "Leave today to log today's measurement, or pick a past date to add it to the history. If you pick a date already in the history, the existing entry will be updated.",
+      "height": "Height (cm)",
+      "weight": "Weight (kg)",
+      "chest": "Chest (cm)",
+      "arm": "Arm (cm)",
+      "waist": "Waist (cm)",
+      "leg": "Leg (cm)",
+      "save": "Save measurements",
+      "saving": "Saving…",
+      "savedWithDate": "Measurements saved for {{date}}.",
+      "saved": "Measurements saved."
+    },
+    "preferences": {
+      "loadError": "Unable to load your preferences.",
+      "requiredSessionsLabel": "Suggest a progression once you hit the max reps on all sets for this number of consecutive sessions",
+      "groupingScopeLabel": "Suggest progression considering",
+      "prefillScopeLabel": "Prefill last actual reps by default from",
+      "scopeWorkout": "Workout + exercise",
+      "scopeExercise": "Exercise",
+      "timerSoundLabel": "Alarm sound at the end of rest (timer in Log session)",
+      "save": "Save preferences",
+      "saving": "Saving…",
+      "saved": "Preferences saved."
+    }
+  },
   "errors": {
     "INVALID_CREDENTIALS": "Invalid email or password.",
     "EMAIL_ALREADY_IN_USE": "A user with this email already exists.",

@@ -279,7 +279,7 @@ non un bug: il resto dell'app funziona normalmente.
 Fase 8 della roadmap: un client mobile che copra tutte le funzionalità della
 webapp, parlando solo con l'API Gateway (stessa regola di `apps/web`, mai
 un servizio contattato direttamente). Piano dettagliato e mockup validati
-il 2026-08-02. Sotto-fasi 1-9/10 implementate (`apps/mobile`): setup del
+il 2026-08-02. Tutte e 10 le sotto-fasi implementate (`apps/mobile`): setup del
 progetto Expo, tema "Night Track", navigazione a tab, autenticazione
 funzionante (login/registrazione) contro il backend reale, elenco/dettaglio
 schede (nome, note, esercizi con
@@ -304,10 +304,17 @@ vedi nota sotto), statistiche (stessa card riepilogo di Statistiche/
 Dashboard più grafici a linea completi — non collassati in un accordion
 come sulla Dashboard, c'è spazio dedicato — per ogni esercizio delle
 schede attuali raggruppati per gruppo muscolare, e per ognuna delle 5
-misure corporee) e notifiche (elenco completo — lette e non —, badge non
+misure corporee), notifiche (elenco completo — lette e non —, badge non
 lette condiviso tra la tab bar e la Dashboard tramite un context React,
 segna come letta/tutte lette, accetta/accetta tutte le progressioni
-pendenti). L'ultima sotto-fase (profilo) resta da fare.
+pendenti) e profilo (tab Misure — stesso toggle "storicizza le misure" e
+gli stessi 6 campi corpo della webapp — e tab Preferenze — sessioni
+consecutive richieste, ambito di raggruppamento della progressione,
+ambito di precompilazione ultime ripetizioni, suono sveglia a fine
+recupero; niente tab Account/cambio password, fuori scope per questa
+sotto-fase — accessibile da un'icona condivisa nell'header di tutte e 5
+le tab, non da un'unica barra di navigazione globale come nella webapp,
+che sul mobile non esiste).
 
 Decisioni prese:
 
@@ -403,7 +410,7 @@ entrambi.
   - ✅ Rifinitura webapp
 - ✅ **Fase 6** — osservabilità leggera (log strutturati + correlation ID)
 - ⬜ **Fase 7** — Kubernetes (opzionale)
-- ⬜ **Fase 8** — app mobile (React Native, Android + iOS)
+- ✅ **Fase 8** — app mobile (React Native, Android + iOS)
 
 L'API Gateway in versione minima (solo reverse-proxy, vedi `services/api-gateway`)
 è stato anticipato rispetto alla Fase 5 originale: serviva da subito per non
@@ -413,9 +420,8 @@ la rifinitura webapp (restyling "Night Track" completo su tutte le pagine,
 standard responsive unico per le tabelle a larghezza fissa, storico misure)
 sono entrambi arrivati in Fase 5. La Fase 8 è stata ripianificata il
 2026-08-02: non più un'app Android nativa (Kotlin) ma un client React
-Native che copre Android e iOS con un solo codebase — vedi "App mobile
-(pianificazione)" più sopra per le decisioni prese; pianificazione
-completa, implementazione non ancora iniziata.
+Native che copre Android e iOS con un solo codebase — vedi "App mobile"
+più sopra per le decisioni prese; tutte le 10 sotto-fasi implementate.
 
 Vedi `CLAUDE.md` per le convenzioni di codice usate da Claude Code in questo
 repo.

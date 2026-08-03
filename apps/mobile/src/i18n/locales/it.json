@@ -214,6 +214,40 @@
     "acceptError": "Impossibile accettare la progressione.",
     "acceptAllError": "Impossibile accettare le progressioni."
   },
+  "profile": {
+    "title": "Profilo",
+    "measurementsTab": "Misure",
+    "preferencesTab": "Preferenze",
+    "measurements": {
+      "loadError": "Impossibile caricare le misure.",
+      "historicizeLabel": "Storicizza le misure",
+      "historicizeHint": "Tieni traccia di peso, petto, braccia, vita e gamba nel tempo. Puoi scegliere per quale data registrarle qui sotto.",
+      "date": "Data di questa misurazione",
+      "dateHint": "Lascia oggi per registrare la misurazione di oggi, oppure scegli una data passata per aggiungerla allo storico. Se scegli una data già presente nello storico, la voce esistente verrà aggiornata.",
+      "height": "Altezza (cm)",
+      "weight": "Peso (kg)",
+      "chest": "Petto (cm)",
+      "arm": "Braccia (cm)",
+      "waist": "Vita (cm)",
+      "leg": "Gamba (cm)",
+      "save": "Salva misure",
+      "saving": "Salvataggio…",
+      "savedWithDate": "Misure salvate per il {{date}}.",
+      "saved": "Misure salvate."
+    },
+    "preferences": {
+      "loadError": "Impossibile caricare le preferenze.",
+      "requiredSessionsLabel": "Suggerisci progressione quando raggiungi il massimo delle ripetizioni in tutti i set per questo numero di sessioni consecutive",
+      "groupingScopeLabel": "Suggerisci progressione considerando",
+      "prefillScopeLabel": "Riporta ultime ripetizioni effettive di default da",
+      "scopeWorkout": "Scheda + esercizio",
+      "scopeExercise": "Esercizio",
+      "timerSoundLabel": "Suono sveglia a fine recupero (timer in Registra sessione)",
+      "save": "Salva preferenze",
+      "saving": "Salvataggio…",
+      "saved": "Preferenze salvate."
+    }
+  },
   "errors": {
     "INVALID_CREDENTIALS": "Email o password non validi.",
     "EMAIL_ALREADY_IN_USE": "Esiste già un utente con questa email.",

@@ -2,14 +2,18 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
 import { colors } from "../theme/theme";
 import { StatisticsScreen } from "../screens/statistics/StatisticsScreen";
+import { ProfileScreen } from "../screens/profile/ProfileScreen";
+import { ProfileHeaderButton } from "../components/ProfileHeaderButton";
 
 export type StatisticsStackParamList = {
   StatisticsHome: undefined;
+  Profile: undefined;
 };
 
 const Stack = createNativeStackNavigator<StatisticsStackParamList>();
 
-/** Stack a una sola schermata: stesso motivo di WorkoutsNavigator/
+/** Stack a una sola schermata "vera" (Profilo e' condiviso, pushato da
+ *  qui e dagli altri 4 *Navigator): stesso motivo di WorkoutsNavigator/
  *  HistoryNavigator/DashboardNavigator, ottenere l'header nativo (titolo,
  *  safe area) gratis invece di reinventarlo a mano nella tab bar principale
  *  (dove headerShown e' false globalmente). Nome schermata diverso da quello
@@ -30,7 +34,17 @@ export function StatisticsNavigator() {
       <Stack.Screen
         name="StatisticsHome"
         component={StatisticsScreen}
-        options={{ title: t("nav.statistics") }}
+        options={({ navigation }) => ({
+          title: t("nav.statistics"),
+          headerRight: () => (
+            <ProfileHeaderButton onPress={() => navigation.navigate("Profile")} />
+          ),
+        })}
+      />
+      <Stack.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: t("profile.title") }}
       />
     </Stack.Navigator>
   );
