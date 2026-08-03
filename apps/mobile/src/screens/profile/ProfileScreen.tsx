@@ -242,9 +242,7 @@ export function ProfileScreen() {
                   <Text style={styles.toggleTitle}>
                     {t("profile.measurements.historicizeLabel")}
                   </Text>
-                  <Text style={styles.toggleHint}>
-                    {t("profile.measurements.historicizeHint")}
-                  </Text>
+                  <Text style={styles.toggleHint}>{t("profile.measurements.historicizeHint")}</Text>
                 </View>
               </View>
 

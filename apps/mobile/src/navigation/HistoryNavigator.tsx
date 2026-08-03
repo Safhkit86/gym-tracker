@@ -36,9 +36,7 @@ export function HistoryNavigator() {
         component={HistoryScreen}
         options={({ navigation }) => ({
           title: t("nav.history"),
-          headerRight: () => (
-            <ProfileHeaderButton onPress={() => navigation.navigate("Profile")} />
-          ),
+          headerRight: () => <ProfileHeaderButton onPress={() => navigation.navigate("Profile")} />,
         })}
       />
       <Stack.Screen

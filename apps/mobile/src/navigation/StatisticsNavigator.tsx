@@ -36,9 +36,7 @@ export function StatisticsNavigator() {
         component={StatisticsScreen}
         options={({ navigation }) => ({
           title: t("nav.statistics"),
-          headerRight: () => (
-            <ProfileHeaderButton onPress={() => navigation.navigate("Profile")} />
-          ),
+          headerRight: () => <ProfileHeaderButton onPress={() => navigation.navigate("Profile")} />,
         })}
       />
       <Stack.Screen

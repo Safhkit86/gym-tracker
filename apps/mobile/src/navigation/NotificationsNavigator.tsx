@@ -37,9 +37,7 @@ export function NotificationsNavigator() {
         component={NotificationsScreen}
         options={({ navigation }) => ({
           title: t("nav.notifications"),
-          headerRight: () => (
-            <ProfileHeaderButton onPress={() => navigation.navigate("Profile")} />
-          ),
+          headerRight: () => <ProfileHeaderButton onPress={() => navigation.navigate("Profile")} />,
         })}
       />
       <Stack.Screen

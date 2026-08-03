@@ -36,9 +36,7 @@ export function DashboardNavigator() {
         component={DashboardScreen}
         options={({ navigation }) => ({
           title: t("nav.dashboard"),
-          headerRight: () => (
-            <ProfileHeaderButton onPress={() => navigation.navigate("Profile")} />
-          ),
+          headerRight: () => <ProfileHeaderButton onPress={() => navigation.navigate("Profile")} />,
         })}
       />
       <Stack.Screen
