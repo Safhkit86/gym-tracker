@@ -140,6 +140,68 @@
       "legCm": "Gamba"
     }
   },
+  "dashboard": {
+    "subtitle": "Bentornato — ecco un riepilogo veloce del tuo allenamento.",
+    "loadError": "Impossibile caricare la dashboard.",
+    "setsCount_one": "{{count}} serie",
+    "setsCount_other": "{{count}} serie",
+    "repsShort": "rip.",
+    "weightTarget": "{{weight}}kg (target)",
+    "pagerIndicator": "{{start}}–{{end}} di {{total}}",
+    "pagerIndicatorEmpty": "0 di 0",
+    "stats": {
+      "title": "Statistiche",
+      "sessionCount": "Sessioni registrate",
+      "consecutiveWeeks": "Settimane consecutive",
+      "totalKgLifted": "Kg totali sollevati",
+      "muscleGroupsTitle": "Per gruppo muscolare · questa settimana",
+      "sets": "Serie",
+      "reps": "Ripetizioni",
+      "prevGroups": "Gruppi precedenti",
+      "nextGroups": "Gruppi successivi"
+    },
+    "suggestions": {
+      "title": "Suggerimenti di progressione",
+      "empty": "Nessun suggerimento in sospeso.",
+      "accept": "Accetta",
+      "accepted": "✓ Accettato",
+      "viewAll": "Vedi tutte →",
+      "prev": "Suggerimenti precedenti",
+      "next": "Suggerimenti successivi",
+      "repsUnit": "rip.",
+      "error": "Impossibile accettare la progressione."
+    },
+    "progressions": {
+      "title": "Progressioni per esercizio",
+      "empty": "Non ci sono ancora abbastanza dati.",
+      "unitReps": "ripetizioni",
+      "unitWeight": "peso (kg)",
+      "chartEmpty": "Nessuno storico disponibile per questo esercizio."
+    },
+    "measurements": {
+      "title": "Misure",
+      "viewAll": "Vedi tutte →"
+    },
+    "streak": {
+      "title": "Costanza recente",
+      "trainedLegend": "Sessione registrata",
+      "restLegend": "Giorno di riposo",
+      "note": "Ultime 5 settimane, un riquadro per giorno."
+    },
+    "nextSession": {
+      "title": "Prossima sessione",
+      "start": "Avvia sessione"
+    },
+    "lastSession": {
+      "title": "Ultima sessione"
+    },
+    "exercisesPagerPrev": "Esercizi precedenti",
+    "exercisesPagerNext": "Esercizi successivi",
+    "stalled": {
+      "title": "Esercizio in stallo",
+      "text": "Nessuna progressione da {{weeks}} settimane — potrebbe essere il momento di alzare l'asticella manualmente."
+    }
+  },
   "errors": {
     "INVALID_CREDENTIALS": "Email o password non validi.",
     "EMAIL_ALREADY_IN_USE": "Esiste già un utente con questa email.",
