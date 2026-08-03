@@ -37,8 +37,8 @@ import { listMeasurements } from "../../api/measurements";
 import { listNotifications, markNotificationRead } from "../../api/notifications";
 import { acceptProgressionDefaults } from "../../api/profile";
 import { ApiRequestError } from "../../api/client";
-import { usePager } from "../../hooks/usePager";
-import { PagerControls } from "../../components/PagerControls";
+import { HorizontalPeekCarousel } from "../../components/HorizontalPeekCarousel";
+import { VerticalPeekList } from "../../components/VerticalPeekList";
 import { MiniLineChart } from "../../components/MiniLineChart";
 import { Sparkline } from "../../components/Sparkline";
 import { StreakCalendar } from "../../components/StreakCalendar";
@@ -63,20 +63,8 @@ export type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList>
 >;
 
-function formatPagerIndicator(
-  t: TFunction,
-  start: number,
-  pageSize: number,
-  total: number
-): string {
-  if (total === 0) {
-    return t("dashboard.pagerIndicatorEmpty");
-  }
-  return t("dashboard.pagerIndicator", {
-    start: start + 1,
-    end: Math.min(start + pageSize, total),
-    total,
-  });
+function formatItemIndicator(t: TFunction, index: number, total: number): string {
+  return t("dashboard.itemIndicator", { index: index + 1, total });
 }
 
 function formatWorkoutPrescription(exercise: WorkoutExercise, t: TFunction): string {
@@ -346,6 +334,22 @@ export function DashboardScreen({ navigation }: Props) {
   );
 }
 
+function MuscleGroupTile({ mg, t }: { mg: MuscleGroupSummary; t: TFunction }) {
+  return (
+    <View style={styles.muscleGroupTile}>
+      <Text style={styles.muscleGroupName}>{mg.muscleGroup}</Text>
+      <View style={styles.muscleGroupRow}>
+        <Text style={styles.muscleGroupRowLabel}>{t("dashboard.stats.sets")}</Text>
+        <Text style={styles.muscleGroupRowValue}>{mg.setCount}</Text>
+      </View>
+      <View style={styles.muscleGroupRow}>
+        <Text style={styles.muscleGroupRowLabel}>{t("dashboard.stats.reps")}</Text>
+        <Text style={styles.muscleGroupRowValue}>{mg.repCount}</Text>
+      </View>
+    </View>
+  );
+}
+
 function StatisticheCard({
   stats,
   muscleGroupVolume,
@@ -354,8 +358,8 @@ function StatisticheCard({
   muscleGroupVolume: MuscleGroupSummary[];
 }) {
   const { t } = useTranslation();
-  const pageSize = 2;
-  const pager = usePager(muscleGroupVolume, pageSize);
+  const [muscleIndex, setMuscleIndex] = useState(0);
+  const firstGroup = muscleGroupVolume[0];
 
   return (
     <View style={styles.card}>
@@ -377,42 +381,61 @@ function StatisticheCard({
         </View>
       </View>
 
-      {muscleGroupVolume.length > 0 && (
+      {firstGroup && (
         <View style={styles.muscleBlock}>
           <View style={styles.muscleBlockHeader}>
             <Text style={styles.cardSubtitle}>{t("dashboard.stats.muscleGroupsTitle")}</Text>
-            {muscleGroupVolume.length > pageSize && (
-              <PagerControls
-                start={pager.start}
-                pageSize={pageSize}
-                total={pager.total}
-                canPrev={pager.canPrev}
-                canNext={pager.canNext}
-                onPrev={pager.prev}
-                onNext={pager.next}
-                orientation="horizontal"
-                prevLabel={t("dashboard.stats.prevGroups")}
-                nextLabel={t("dashboard.stats.nextGroups")}
-                indicatorLabel={formatPagerIndicator(t, pager.start, pageSize, pager.total)}
-              />
+            {muscleGroupVolume.length > 1 && (
+              <Text style={styles.indicator}>
+                {formatItemIndicator(t, muscleIndex, muscleGroupVolume.length)}
+              </Text>
             )}
           </View>
-          <View style={styles.muscleGroupsRow}>
-            {pager.visible.map((mg) => (
-              <View style={styles.muscleGroupTile} key={mg.muscleGroup}>
-                <Text style={styles.muscleGroupName}>{mg.muscleGroup}</Text>
-                <View style={styles.muscleGroupRow}>
-                  <Text style={styles.muscleGroupRowLabel}>{t("dashboard.stats.sets")}</Text>
-                  <Text style={styles.muscleGroupRowValue}>{mg.setCount}</Text>
-                </View>
-                <View style={styles.muscleGroupRow}>
-                  <Text style={styles.muscleGroupRowLabel}>{t("dashboard.stats.reps")}</Text>
-                  <Text style={styles.muscleGroupRowValue}>{mg.repCount}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
+          {muscleGroupVolume.length > 1 ? (
+            <HorizontalPeekCarousel
+              items={muscleGroupVolume}
+              keyExtractor={(mg) => mg.muscleGroup}
+              onIndexChange={setMuscleIndex}
+              renderItem={(mg) => <MuscleGroupTile mg={mg} t={t} />}
+            />
+          ) : (
+            <MuscleGroupTile mg={firstGroup} t={t} />
+          )}
         </View>
+      )}
+    </View>
+  );
+}
+
+function SuggestionRow({
+  notification,
+  confirmingIds,
+  onAccept,
+  t,
+}: {
+  notification: Notification;
+  confirmingIds: Set<string>;
+  onAccept: (notification: Notification) => void;
+  t: TFunction;
+}) {
+  return (
+    <View style={styles.suggestionRow}>
+      <View style={styles.suggestionText}>
+        <Text style={styles.suggestionName}>{notification.exerciseName}</Text>
+        <Text style={styles.suggestionDelta}>
+          {formatSuggestionDelta(notification, t("dashboard.suggestions.repsUnit"))}
+        </Text>
+      </View>
+      {confirmingIds.has(notification.id) ? (
+        <Text style={styles.suggestionAccepted}>{t("dashboard.suggestions.accepted")}</Text>
+      ) : (
+        <TouchableOpacity
+          style={styles.acceptButton}
+          onPress={() => onAccept(notification)}
+          accessibilityRole="button"
+        >
+          <Text style={styles.acceptButtonText}>{t("dashboard.suggestions.accept")}</Text>
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -430,28 +453,18 @@ function SuggerimentiCard({
   onViewAll: () => void;
 }) {
   const { t } = useTranslation();
-  const pageSize = 2;
-  const pager = usePager(notifications, pageSize);
+  const [index, setIndex] = useState(0);
+  const onlyNotification = notifications[0];
 
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>{t("dashboard.suggestions.title")}</Text>
         <View style={styles.cardHeaderControls}>
-          {notifications.length > pageSize && (
-            <PagerControls
-              start={pager.start}
-              pageSize={pageSize}
-              total={pager.total}
-              canPrev={pager.canPrev}
-              canNext={pager.canNext}
-              onPrev={pager.prev}
-              onNext={pager.next}
-              orientation="vertical"
-              prevLabel={t("dashboard.suggestions.prev")}
-              nextLabel={t("dashboard.suggestions.next")}
-              indicatorLabel={formatPagerIndicator(t, pager.start, pageSize, pager.total)}
-            />
+          {notifications.length > 1 && (
+            <Text style={styles.indicator}>
+              {formatItemIndicator(t, index, notifications.length)}
+            </Text>
           )}
           <TouchableOpacity onPress={onViewAll} accessibilityRole="button">
             <Text style={styles.link}>{t("dashboard.suggestions.viewAll")}</Text>
@@ -460,28 +473,29 @@ function SuggerimentiCard({
       </View>
       {notifications.length === 0 ? (
         <Text style={styles.infoText}>{t("dashboard.suggestions.empty")}</Text>
+      ) : notifications.length > 1 ? (
+        <VerticalPeekList
+          items={notifications}
+          keyExtractor={(n) => n.id}
+          onIndexChange={setIndex}
+          renderItem={(n) => (
+            <SuggestionRow
+              notification={n}
+              confirmingIds={confirmingIds}
+              onAccept={onAccept}
+              t={t}
+            />
+          )}
+        />
       ) : (
-        pager.visible.map((notification) => (
-          <View style={styles.suggestionRow} key={notification.id}>
-            <View style={styles.suggestionText}>
-              <Text style={styles.suggestionName}>{notification.exerciseName}</Text>
-              <Text style={styles.suggestionDelta}>
-                {formatSuggestionDelta(notification, t("dashboard.suggestions.repsUnit"))}
-              </Text>
-            </View>
-            {confirmingIds.has(notification.id) ? (
-              <Text style={styles.suggestionAccepted}>{t("dashboard.suggestions.accepted")}</Text>
-            ) : (
-              <TouchableOpacity
-                style={styles.acceptButton}
-                onPress={() => onAccept(notification)}
-                accessibilityRole="button"
-              >
-                <Text style={styles.acceptButtonText}>{t("dashboard.suggestions.accept")}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ))
+        onlyNotification && (
+          <SuggestionRow
+            notification={onlyNotification}
+            confirmingIds={confirmingIds}
+            onAccept={onAccept}
+            t={t}
+          />
+        )
       )}
     </View>
   );
@@ -653,6 +667,15 @@ function CostanzaCard({ streakCalendar }: { streakCalendar: string[] }) {
   );
 }
 
+function WorkoutExerciseRow({ exercise, t }: { exercise: WorkoutExercise; t: TFunction }) {
+  return (
+    <View style={styles.exerciseListRow}>
+      <Text style={styles.exerciseListName}>{exercise.exerciseName}</Text>
+      <Text style={styles.exerciseListDetail}>{formatWorkoutPrescription(exercise, t)}</Text>
+    </View>
+  );
+}
+
 function ProssimaSessioneCard({
   workout,
   onStart,
@@ -661,37 +684,30 @@ function ProssimaSessioneCard({
   onStart: () => void;
 }) {
   const { t } = useTranslation();
-  const pageSize = 3;
-  const pager = usePager(workout.exercises, pageSize);
+  const [index, setIndex] = useState(0);
+  const onlyExercise = workout.exercises[0];
+
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>{t("dashboard.nextSession.title")}</Text>
-        {workout.exercises.length > pageSize && (
-          <PagerControls
-            start={pager.start}
-            pageSize={pageSize}
-            total={pager.total}
-            canPrev={pager.canPrev}
-            canNext={pager.canNext}
-            onPrev={pager.prev}
-            onNext={pager.next}
-            orientation="vertical"
-            prevLabel={t("dashboard.exercisesPagerPrev")}
-            nextLabel={t("dashboard.exercisesPagerNext")}
-            indicatorLabel={formatPagerIndicator(t, pager.start, pageSize, pager.total)}
-          />
+        {workout.exercises.length > 1 && (
+          <Text style={styles.indicator}>
+            {formatItemIndicator(t, index, workout.exercises.length)}
+          </Text>
         )}
       </View>
       <Text style={styles.cardSubtitleTight}>{workout.name}</Text>
-      <View style={styles.exerciseList}>
-        {pager.visible.map((exercise) => (
-          <View style={styles.exerciseListRow} key={exercise.id}>
-            <Text style={styles.exerciseListName}>{exercise.exerciseName}</Text>
-            <Text style={styles.exerciseListDetail}>{formatWorkoutPrescription(exercise, t)}</Text>
-          </View>
-        ))}
-      </View>
+      {workout.exercises.length > 1 ? (
+        <VerticalPeekList
+          items={workout.exercises}
+          keyExtractor={(exercise) => exercise.id}
+          onIndexChange={setIndex}
+          renderItem={(exercise) => <WorkoutExerciseRow exercise={exercise} t={t} />}
+        />
+      ) : (
+        onlyExercise && <WorkoutExerciseRow exercise={onlyExercise} t={t} />
+      )}
       <TouchableOpacity style={styles.startButton} onPress={onStart} accessibilityRole="button">
         <Text style={styles.startButtonText}>{t("dashboard.nextSession.start")}</Text>
       </TouchableOpacity>
@@ -699,43 +715,43 @@ function ProssimaSessioneCard({
   );
 }
 
+function SessionExerciseRow({ exercise, t }: { exercise: SessionExercise; t: TFunction }) {
+  return (
+    <View style={styles.exerciseListRow}>
+      <Text style={styles.exerciseListName}>{exercise.exerciseName}</Text>
+      <Text style={styles.exerciseListDetail}>{formatSessionExerciseSummary(exercise, t)}</Text>
+    </View>
+  );
+}
+
 function UltimaSessioneCard({ session, locale }: { session: SessionDetail; locale: string }) {
   const { t } = useTranslation();
-  const pageSize = 3;
-  const pager = usePager(session.exercises, pageSize);
+  const [index, setIndex] = useState(0);
+  const onlyExercise = session.exercises[0];
+
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>{t("dashboard.lastSession.title")}</Text>
-        {session.exercises.length > pageSize && (
-          <PagerControls
-            start={pager.start}
-            pageSize={pageSize}
-            total={pager.total}
-            canPrev={pager.canPrev}
-            canNext={pager.canNext}
-            onPrev={pager.prev}
-            onNext={pager.next}
-            orientation="vertical"
-            prevLabel={t("dashboard.exercisesPagerPrev")}
-            nextLabel={t("dashboard.exercisesPagerNext")}
-            indicatorLabel={formatPagerIndicator(t, pager.start, pageSize, pager.total)}
-          />
+        {session.exercises.length > 1 && (
+          <Text style={styles.indicator}>
+            {formatItemIndicator(t, index, session.exercises.length)}
+          </Text>
         )}
       </View>
       <Text style={styles.cardSubtitleTight}>
         {session.workoutName} · {new Date(session.performedAt).toLocaleDateString(locale)}
       </Text>
-      <View style={styles.exerciseList}>
-        {pager.visible.map((exercise) => (
-          <View style={styles.exerciseListRow} key={exercise.exerciseId}>
-            <Text style={styles.exerciseListName}>{exercise.exerciseName}</Text>
-            <Text style={styles.exerciseListDetail}>
-              {formatSessionExerciseSummary(exercise, t)}
-            </Text>
-          </View>
-        ))}
-      </View>
+      {session.exercises.length > 1 ? (
+        <VerticalPeekList
+          items={session.exercises}
+          keyExtractor={(exercise) => exercise.exerciseId}
+          onIndexChange={setIndex}
+          renderItem={(exercise) => <SessionExerciseRow exercise={exercise} t={t} />}
+        />
+      ) : (
+        onlyExercise && <SessionExerciseRow exercise={onlyExercise} t={t} />
+      )}
     </View>
   );
 }
@@ -827,6 +843,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
+  indicator: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontVariant: ["tabular-nums"],
+  },
   infoText: {
     color: colors.textMuted,
     fontSize: 13,
@@ -868,14 +889,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  muscleGroupsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
   muscleGroupTile: {
-    flexBasis: "47%",
-    flexGrow: 1,
     backgroundColor: colors.surface2,
     borderRadius: radius.sm,
     padding: spacing.sm,
@@ -1044,9 +1058,6 @@ const styles = StyleSheet.create({
   legendText: {
     color: colors.textMuted,
     fontSize: 12,
-  },
-  exerciseList: {
-    gap: spacing.sm,
   },
   exerciseListRow: {
     flexDirection: "row",
