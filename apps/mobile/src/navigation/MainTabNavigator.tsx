@@ -3,9 +3,10 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import type { NavigatorScreenParams } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { colors } from "../theme/theme";
-import { PlaceholderScreen } from "../screens/PlaceholderScreen";
+import { useUnreadCount } from "../notifications/useUnreadCount";
 import { DashboardNavigator } from "./DashboardNavigator";
 import { HistoryNavigator } from "./HistoryNavigator";
+import { NotificationsNavigator } from "./NotificationsNavigator";
 import { StatisticsNavigator } from "./StatisticsNavigator";
 import { WorkoutsNavigator, type WorkoutsStackParamList } from "./WorkoutsNavigator";
 
@@ -44,6 +45,7 @@ function TabIcon({ route, color }: { route: keyof MainTabParamList; color: strin
 
 export function MainTabNavigator() {
   const { t } = useTranslation();
+  const { unreadCount } = useUnreadCount();
 
   return (
     <Tab.Navigator
@@ -79,8 +81,11 @@ export function MainTabNavigator() {
       />
       <Tab.Screen
         name="Notifications"
-        options={{ title: t("nav.notifications") }}
-        children={() => <PlaceholderScreen title={t("nav.notifications")} />}
+        options={{
+          title: t("nav.notifications"),
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+        }}
+        component={NotificationsNavigator}
       />
     </Tab.Navigator>
   );

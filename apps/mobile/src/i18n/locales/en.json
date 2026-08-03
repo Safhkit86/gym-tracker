@@ -204,6 +204,16 @@
     "noMeasurements": "You haven't recorded any measurement yet.",
     "noMeasurementFor": "No {{label}} measurement recorded."
   },
+  "notifications": {
+    "empty": "No notifications.",
+    "acceptAll": "Accept all progressions",
+    "markRead": "Mark as read",
+    "markAllRead": "Mark all as read",
+    "markReadError": "Unable to mark the notification as read.",
+    "markAllReadError": "Unable to mark the notifications as read.",
+    "acceptError": "Unable to accept the progression.",
+    "acceptAllError": "Unable to accept the progressions."
+  },
   "errors": {
     "INVALID_CREDENTIALS": "Invalid email or password.",
     "EMAIL_ALREADY_IN_USE": "A user with this email already exists.",

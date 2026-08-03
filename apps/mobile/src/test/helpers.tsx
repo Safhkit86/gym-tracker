@@ -1,17 +1,24 @@
 import type { ReactElement } from "react";
 import { render, waitFor } from "@testing-library/react-native";
 import { AuthProvider } from "../auth/AuthProvider";
+import { NotificationsProvider } from "../notifications/NotificationsProvider";
 import "../i18n";
 
-/** Renderizza un componente dentro AuthProvider, come nell'app reale, e
+/** Renderizza un componente dentro AuthProvider + NotificationsProvider,
+ *  stessa gerarchia di App.tsx/RootNavigator nell'app reale (il badge non
+ *  letto e' disponibile a qualunque schermata tramite useUnreadCount), e
  *  aspetta che l'idratazione async del token (SecureStore, vedi
  *  AuthProvider) si stabilizzi prima di restituire il controllo al test —
  *  altrimenti React si lamenta di aggiornamenti di stato fuori da act()
  *  quando quella promise si risolve dopo la fine del test. Equivalente
  *  mobile di apps/web/src/test/helpers.tsx (li' non serve: localStorage e'
- *  sincrono). */
+ *  sincrona). */
 export async function renderWithProviders(ui: ReactElement) {
-  const result = render(<AuthProvider>{ui}</AuthProvider>);
+  const result = render(
+    <AuthProvider>
+      <NotificationsProvider>{ui}</NotificationsProvider>
+    </AuthProvider>
+  );
   await waitFor(() => {});
   return result;
 }

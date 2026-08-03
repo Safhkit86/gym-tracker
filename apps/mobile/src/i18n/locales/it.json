@@ -204,6 +204,16 @@
     "noMeasurements": "Non hai ancora registrato nessuna misurazione.",
     "noMeasurementFor": "Nessuna misurazione di {{label}} registrata."
   },
+  "notifications": {
+    "empty": "Nessuna notifica.",
+    "acceptAll": "Accetta tutte le progressioni",
+    "markRead": "Segna come letta",
+    "markAllRead": "Segna tutte come lette",
+    "markReadError": "Impossibile segnare la notifica come letta.",
+    "markAllReadError": "Impossibile segnare le notifiche come lette.",
+    "acceptError": "Impossibile accettare la progressione.",
+    "acceptAllError": "Impossibile accettare le progressioni."
+  },
   "errors": {
     "INVALID_CREDENTIALS": "Email o password non validi.",
     "EMAIL_ALREADY_IN_USE": "Esiste già un utente con questa email.",
