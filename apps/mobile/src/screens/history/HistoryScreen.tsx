@@ -7,6 +7,7 @@ import { deleteSession, listSessions } from "../../api/sessions";
 import { deleteMeasurement, listMeasurements } from "../../api/measurements";
 import { ApiRequestError } from "../../api/client";
 import { colors, radius, spacing } from "../../theme/theme";
+import { centeredContentStyle } from "../../theme/layout";
 import { computeWeekNumbers } from "../../utils/session-history-utils";
 import { SessionHistoryCard } from "./SessionHistoryCard";
 import { MeasurementEntryCard } from "./MeasurementEntryCard";
@@ -253,6 +254,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.lg,
     paddingBottom: 0,
+    ...centeredContentStyle,
   },
   tabButton: {
     flex: 1,
@@ -277,6 +279,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: spacing.xxl,
+    ...centeredContentStyle,
   },
   headerContainer: {
     padding: spacing.lg,

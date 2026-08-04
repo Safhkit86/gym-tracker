@@ -16,6 +16,7 @@ import { useAuth } from "../../auth/useAuth";
 import { createWorkout, deleteWorkout, getWorkout } from "../../api/workouts";
 import { ApiRequestError } from "../../api/client";
 import { colors, radius, spacing } from "../../theme/theme";
+import { centeredContentStyle } from "../../theme/layout";
 import type { WorkoutsStackParamList } from "../../navigation/WorkoutsNavigator";
 import { PromptModal } from "../../components/PromptModal";
 import { duplicateWorkoutInput } from "../../utils/workout-form-utils";
@@ -229,6 +230,7 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
     gap: spacing.lg,
+    ...centeredContentStyle,
   },
   center: {
     flex: 1,

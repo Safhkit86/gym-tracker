@@ -13,6 +13,7 @@ import { acceptProgressionDefaults } from "../../api/profile";
 import { ApiRequestError } from "../../api/client";
 import { formatSuggestionDelta, toOverride } from "../../utils/suggestion-format";
 import { colors, radius, spacing } from "../../theme/theme";
+import { centeredContentStyle } from "../../theme/layout";
 
 export function NotificationsScreen() {
   const { t, i18n } = useTranslation();
@@ -186,6 +187,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.xxl,
     gap: spacing.md,
+    ...centeredContentStyle,
   },
   error: {
     color: colors.danger,
