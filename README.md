@@ -366,11 +366,15 @@ Decisioni prese:
   di implementare. Un solo elemento alla volta invece della finestra di
   2-3 della versione a frecce: indicatore "N di M" testuale, niente
   frecce da mantenere/tradurre.
-- **Tablet: fuori scope, esplicitamente in coda** (non nella Fase 8
-  sopra). Oggi già escluso di fatto da `app.json`
-  (`"orientation": "portrait"` globale, `ios.supportsTablet: false`): un
-  eventuale supporto va valutato come iniziativa a sé quando/se richiesta,
-  non implicito in nessuna sotto-fase attuale.
+- **Supporto tablet**: iniziativa a sé conclusa dopo la Fase 8 (non
+  implicita in nessuna sotto-fase sopra) — telefono resta bloccato in
+  portrait, tablet libero di ruotare (`expo-screen-orientation`,
+  `app.json` con `"orientation": "default"` e `ios.supportsTablet: true`);
+  layout responsive per ogni schermata (griglie multi-colonna dove le
+  card sono indipendenti, colonna singola centrata dove conta l'ordine),
+  sidebar di navigazione a sinistra al posto della tab bar in basso su
+  tablet in landscape, tabella dedicata (invece dello stack di card) per
+  Registra sessione in landscape, allineata al layout della webapp.
 
 Verifica: sviluppo e test avvengono su un telefono reale via app **Expo
 Go** (scan di un QR code), senza installare alcun SDK nativo sulla
@@ -421,6 +425,9 @@ entrambi.
 - ✅ **Fase 6** — osservabilità leggera (log strutturati + correlation ID)
 - ⬜ **Fase 7** — Kubernetes (opzionale)
 - ✅ **Fase 8** — app mobile (React Native, Android + iOS)
+- ✅ **Supporto tablet app mobile** — layout responsive, sidebar in
+  landscape, rotazione libera su tablet (telefono resta bloccato in
+  portrait)
 
 L'API Gateway in versione minima (solo reverse-proxy, vedi `services/api-gateway`)
 è stato anticipato rispetto alla Fase 5 originale: serviva da subito per non

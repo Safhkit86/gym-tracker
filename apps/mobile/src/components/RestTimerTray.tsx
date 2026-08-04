@@ -1,5 +1,6 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, radius, spacing } from "../theme/theme";
 import type { RestTimer } from "../hooks/useRestTimers";
 
@@ -20,13 +21,17 @@ interface RestTimerTrayProps {
  *  ruolo di apps/web/src/components/RestTimerTray.tsx. */
 export function RestTimerTray({ timers, onCancel, onSnooze }: RestTimerTrayProps) {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   if (timers.length === 0) {
     return null;
   }
 
   return (
-    <View style={styles.tray} pointerEvents="box-none">
+    <View
+      style={[styles.tray, { bottom: spacing.md + insets.bottom }]}
+      pointerEvents="box-none"
+    >
       {timers.map((timer) => (
         <View
           key={timer.id}
@@ -72,7 +77,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: spacing.md,
     right: spacing.md,
-    bottom: spacing.md,
+    // "bottom" combina spacing.md con l'inset di sicurezza inferiore,
+    // applicato dinamicamente sopra via style array — non un valore fisso
+    // qui, altrimenti su un tablet con taskbar di sistema persistente
+    // (verificato sull'AVD Pixel_Tablet: navigationBars inset reale, non
+    // solo un notch) il tray finirebbe mezzo nascosto sotto la taskbar.
     gap: spacing.sm,
     // position:"absolute" con left+right ancorerebbe il tray a sinistra
     // anche dando maxWidth al singolo timer (Yoga risolve il box usando
