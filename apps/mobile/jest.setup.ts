@@ -20,23 +20,15 @@ Dimensions.set({
 // expo-screen-orientation e' un modulo nativo: App.tsx lo chiama al mount
 // (vedi useOrientationLock) e verrebbe importato da ogni test che monta
 // App.tsx o RootNavigator — mock minimo, stesso trattamento riservato sotto
-// a expo-secure-store/expo-audio. { virtual: true } perché questo mock
-// viene aggiunto prima di installare il pacchetto vero (vedi
-// TABLET_SUPPORT.md, passo "sblocco rotazione" — l'ultimo): senza,
-// jest.mock cerca comunque di risolvere il modulo reale e fallisce con
-// "Cannot find module" anche se la factory non lo richiede mai davvero.
-jest.mock(
-  "expo-screen-orientation",
-  () => ({
-    lockAsync: jest.fn(async () => {}),
-    unlockAsync: jest.fn(async () => {}),
-    OrientationLock: {
-      PORTRAIT_UP: "PORTRAIT_UP",
-      ALL: "ALL",
-    },
-  }),
-  { virtual: true }
-);
+// a expo-secure-store/expo-audio.
+jest.mock("expo-screen-orientation", () => ({
+  lockAsync: jest.fn(async () => {}),
+  unlockAsync: jest.fn(async () => {}),
+  OrientationLock: {
+    PORTRAIT_UP: "PORTRAIT_UP",
+    ALL: "ALL",
+  },
+}));
 
 // expo-secure-store usa il Keychain/Keystore nativo: non esiste in ambiente
 // Jest, quindi lo sostituiamo con un'implementazione in-memory per i test

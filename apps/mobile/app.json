@@ -3,12 +3,13 @@
     "name": "gym-tracker",
     "slug": "gym-tracker",
     "version": "0.1.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "scheme": "gymtracker",
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
+      "requireFullScreen": true,
       "bundleIdentifier": "com.gymtracker.app"
     },
     "android": {
