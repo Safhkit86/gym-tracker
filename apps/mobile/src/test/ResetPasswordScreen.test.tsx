@@ -50,9 +50,7 @@ describe("ResetPasswordScreen", () => {
     fireEvent.changeText(screen.getByLabelText("Conferma nuova password"), "diversa2");
     fireEvent.press(screen.getByRole("button", { name: "Reimposta password" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Le due password non coincidono."
-    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("Le due password non coincidono.");
   });
 
   it("invia il reset e torna a Login con il messaggio di successo", async () => {
