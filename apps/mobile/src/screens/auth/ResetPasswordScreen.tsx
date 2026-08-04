@@ -1,6 +1,9 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -12,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { resetPassword } from "../../api/auth";
 import { translateError } from "../../api/translate-error";
 import { colors, radius, spacing } from "../../theme/theme";
+import { CenteredContent } from "../../components/CenteredContent";
 import type { AuthStackParamList } from "../../navigation/AuthNavigator";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "ResetPassword">;
@@ -51,78 +55,91 @@ export function ResetPasswordScreen({ navigation, route }: Props) {
 
   if (!token) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.error} accessibilityRole="alert">
-          {t("auth.resetPassword.invalidLink")}
-        </Text>
-        <View style={styles.footer}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("ForgotPassword")}
-            accessibilityRole="button"
-            accessibilityLabel={t("auth.resetPassword.requestNewLink")}
-          >
-            <Text style={styles.link}>{t("auth.resetPassword.requestNewLink")}</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={styles.flex}>
+        <CenteredContent style={styles.content}>
+          <Text style={styles.error} accessibilityRole="alert">
+            {t("auth.resetPassword.invalidLink")}
+          </Text>
+          <View style={styles.footer}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("ForgotPassword")}
+              accessibilityRole="button"
+              accessibilityLabel={t("auth.resetPassword.requestNewLink")}
+            >
+              <Text style={styles.link}>{t("auth.resetPassword.requestNewLink")}</Text>
+            </TouchableOpacity>
+          </View>
+        </CenteredContent>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{t("auth.resetPassword.title")}</Text>
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <CenteredContent style={styles.content}>
+          <Text style={styles.title}>{t("auth.resetPassword.title")}</Text>
 
-      <Text style={styles.label}>{t("auth.resetPassword.newPassword")}</Text>
-      <TextInput
-        style={styles.input}
-        value={newPassword}
-        onChangeText={setNewPassword}
-        secureTextEntry
-        autoComplete="new-password"
-        placeholderTextColor={colors.textMuted}
-        accessibilityLabel={t("auth.resetPassword.newPassword")}
-      />
+          <Text style={styles.label}>{t("auth.resetPassword.newPassword")}</Text>
+          <TextInput
+            style={styles.input}
+            value={newPassword}
+            onChangeText={setNewPassword}
+            secureTextEntry
+            autoComplete="new-password"
+            placeholderTextColor={colors.textMuted}
+            accessibilityLabel={t("auth.resetPassword.newPassword")}
+          />
 
-      <Text style={styles.label}>{t("auth.resetPassword.confirmPassword")}</Text>
-      <TextInput
-        style={styles.input}
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        secureTextEntry
-        autoComplete="new-password"
-        placeholderTextColor={colors.textMuted}
-        accessibilityLabel={t("auth.resetPassword.confirmPassword")}
-      />
+          <Text style={styles.label}>{t("auth.resetPassword.confirmPassword")}</Text>
+          <TextInput
+            style={styles.input}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
+            autoComplete="new-password"
+            placeholderTextColor={colors.textMuted}
+            accessibilityLabel={t("auth.resetPassword.confirmPassword")}
+          />
 
-      {error && (
-        <Text style={styles.error} accessibilityRole="alert">
-          {error}
-        </Text>
-      )}
+          {error && (
+            <Text style={styles.error} accessibilityRole="alert">
+              {error}
+            </Text>
+          )}
 
-      <TouchableOpacity
-        style={[styles.button, isSubmitting && styles.buttonDisabled]}
-        onPress={handleSubmit}
-        disabled={isSubmitting}
-        accessibilityRole="button"
-        accessibilityLabel={t("auth.resetPassword.submit")}
-      >
-        {isSubmitting ? (
-          <ActivityIndicator color={colors.accentContrast} />
-        ) : (
-          <Text style={styles.buttonText}>{t("auth.resetPassword.submit")}</Text>
-        )}
-      </TouchableOpacity>
-    </View>
+          <TouchableOpacity
+            style={[styles.button, isSubmitting && styles.buttonDisabled]}
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+            accessibilityRole="button"
+            accessibilityLabel={t("auth.resetPassword.submit")}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color={colors.accentContrast} />
+            ) : (
+              <Text style={styles.buttonText}>{t("auth.resetPassword.submit")}</Text>
+            )}
+          </TouchableOpacity>
+        </CenteredContent>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  flex: {
     flex: 1,
     backgroundColor: colors.bg,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
     padding: spacing.xl,
-    justifyContent: "center",
   },
   title: {
     color: colors.text,

@@ -1,6 +1,9 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -12,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { forgotPassword } from "../../api/auth";
 import { translateError } from "../../api/translate-error";
 import { colors, radius, spacing } from "../../theme/theme";
+import { CenteredContent } from "../../components/CenteredContent";
 import type { AuthStackParamList } from "../../navigation/AuthNavigator";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "ForgotPassword">;
@@ -37,70 +41,81 @@ export function ForgotPasswordScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{t("auth.forgotPassword.title")}</Text>
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <CenteredContent style={styles.content}>
+          <Text style={styles.title}>{t("auth.forgotPassword.title")}</Text>
 
-      {message ? (
-        <Text style={styles.status} accessibilityRole="alert">
-          {message}
-        </Text>
-      ) : (
-        <>
-          <Text style={styles.subtitle}>{t("auth.forgotPassword.subtitle")}</Text>
-
-          <Text style={styles.label}>{t("auth.forgotPassword.email")}</Text>
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            placeholderTextColor={colors.textMuted}
-            accessibilityLabel={t("auth.forgotPassword.email")}
-          />
-
-          {error && (
-            <Text style={styles.error} accessibilityRole="alert">
-              {error}
+          {message ? (
+            <Text style={styles.status} accessibilityRole="alert">
+              {message}
             </Text>
+          ) : (
+            <>
+              <Text style={styles.subtitle}>{t("auth.forgotPassword.subtitle")}</Text>
+
+              <Text style={styles.label}>{t("auth.forgotPassword.email")}</Text>
+              <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                placeholderTextColor={colors.textMuted}
+                accessibilityLabel={t("auth.forgotPassword.email")}
+              />
+
+              {error && (
+                <Text style={styles.error} accessibilityRole="alert">
+                  {error}
+                </Text>
+              )}
+
+              <TouchableOpacity
+                style={[styles.button, isSubmitting && styles.buttonDisabled]}
+                onPress={handleSubmit}
+                disabled={isSubmitting}
+                accessibilityRole="button"
+                accessibilityLabel={t("auth.forgotPassword.submit")}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color={colors.accentContrast} />
+                ) : (
+                  <Text style={styles.buttonText}>{t("auth.forgotPassword.submit")}</Text>
+                )}
+              </TouchableOpacity>
+            </>
           )}
 
-          <TouchableOpacity
-            style={[styles.button, isSubmitting && styles.buttonDisabled]}
-            onPress={handleSubmit}
-            disabled={isSubmitting}
-            accessibilityRole="button"
-            accessibilityLabel={t("auth.forgotPassword.submit")}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color={colors.accentContrast} />
-            ) : (
-              <Text style={styles.buttonText}>{t("auth.forgotPassword.submit")}</Text>
-            )}
-          </TouchableOpacity>
-        </>
-      )}
-
-      <View style={styles.footer}>
-        <TouchableOpacity
-          onPress={() => navigation.navigate("Login")}
-          accessibilityRole="button"
-          accessibilityLabel={t("auth.forgotPassword.backToLogin")}
-        >
-          <Text style={styles.link}>{t("auth.forgotPassword.backToLogin")}</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+          <View style={styles.footer}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Login")}
+              accessibilityRole="button"
+              accessibilityLabel={t("auth.forgotPassword.backToLogin")}
+            >
+              <Text style={styles.link}>{t("auth.forgotPassword.backToLogin")}</Text>
+            </TouchableOpacity>
+          </View>
+        </CenteredContent>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  flex: {
     flex: 1,
     backgroundColor: colors.bg,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
     padding: spacing.xl,
-    justifyContent: "center",
   },
   title: {
     color: colors.text,

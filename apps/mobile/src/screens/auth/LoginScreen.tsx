@@ -1,6 +1,9 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -12,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../../auth/useAuth";
 import { translateError } from "../../api/translate-error";
 import { colors, radius, spacing } from "../../theme/theme";
+import { CenteredContent } from "../../components/CenteredContent";
 import type { AuthStackParamList } from "../../navigation/AuthNavigator";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
@@ -41,89 +45,100 @@ export function LoginScreen({ navigation, route }: Props) {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{t("auth.login.title")}</Text>
-      <Text style={styles.subtitle}>{t("auth.login.subtitle")}</Text>
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <CenteredContent style={styles.content}>
+          <Text style={styles.title}>{t("auth.login.title")}</Text>
+          <Text style={styles.subtitle}>{t("auth.login.subtitle")}</Text>
 
-      {message && (
-        <Text style={styles.status} accessibilityRole="alert">
-          {message}
-        </Text>
-      )}
+          {message && (
+            <Text style={styles.status} accessibilityRole="alert">
+              {message}
+            </Text>
+          )}
 
-      <Text style={styles.label}>{t("auth.login.email")}</Text>
-      <TextInput
-        style={styles.input}
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        autoComplete="email"
-        keyboardType="email-address"
-        placeholderTextColor={colors.textMuted}
-        accessibilityLabel={t("auth.login.email")}
-      />
+          <Text style={styles.label}>{t("auth.login.email")}</Text>
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            autoComplete="email"
+            keyboardType="email-address"
+            placeholderTextColor={colors.textMuted}
+            accessibilityLabel={t("auth.login.email")}
+          />
 
-      <Text style={styles.label}>{t("auth.login.password")}</Text>
-      <TextInput
-        style={styles.input}
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        autoComplete="current-password"
-        placeholderTextColor={colors.textMuted}
-        accessibilityLabel={t("auth.login.password")}
-      />
+          <Text style={styles.label}>{t("auth.login.password")}</Text>
+          <TextInput
+            style={styles.input}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoComplete="current-password"
+            placeholderTextColor={colors.textMuted}
+            accessibilityLabel={t("auth.login.password")}
+          />
 
-      {error && (
-        <Text style={styles.error} accessibilityRole="alert">
-          {error}
-        </Text>
-      )}
+          {error && (
+            <Text style={styles.error} accessibilityRole="alert">
+              {error}
+            </Text>
+          )}
 
-      <TouchableOpacity
-        style={[styles.button, isSubmitting && styles.buttonDisabled]}
-        onPress={handleSubmit}
-        disabled={isSubmitting}
-        accessibilityRole="button"
-        accessibilityLabel={t("auth.login.submit")}
-      >
-        {isSubmitting ? (
-          <ActivityIndicator color={colors.accentContrast} />
-        ) : (
-          <Text style={styles.buttonText}>{t("auth.login.submit")}</Text>
-        )}
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, isSubmitting && styles.buttonDisabled]}
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+            accessibilityRole="button"
+            accessibilityLabel={t("auth.login.submit")}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color={colors.accentContrast} />
+            ) : (
+              <Text style={styles.buttonText}>{t("auth.login.submit")}</Text>
+            )}
+          </TouchableOpacity>
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          onPress={() => navigation.navigate("ForgotPassword")}
-          accessibilityRole="button"
-          accessibilityLabel={t("auth.login.forgotPasswordLink")}
-        >
-          <Text style={styles.link}>{t("auth.login.forgotPasswordLink")}</Text>
-        </TouchableOpacity>
-      </View>
+          <View style={styles.footer}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("ForgotPassword")}
+              accessibilityRole="button"
+              accessibilityLabel={t("auth.login.forgotPasswordLink")}
+            >
+              <Text style={styles.link}>{t("auth.login.forgotPasswordLink")}</Text>
+            </TouchableOpacity>
+          </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>{t("auth.login.noAccount")} </Text>
-        <TouchableOpacity
-          onPress={() => navigation.navigate("Register")}
-          accessibilityRole="button"
-          accessibilityLabel={t("auth.login.registerLink")}
-        >
-          <Text style={styles.link}>{t("auth.login.registerLink")}</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>{t("auth.login.noAccount")} </Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Register")}
+              accessibilityRole="button"
+              accessibilityLabel={t("auth.login.registerLink")}
+            >
+              <Text style={styles.link}>{t("auth.login.registerLink")}</Text>
+            </TouchableOpacity>
+          </View>
+        </CenteredContent>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  flex: {
     flex: 1,
     backgroundColor: colors.bg,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
     padding: spacing.xl,
-    justifyContent: "center",
   },
   title: {
     color: colors.text,
