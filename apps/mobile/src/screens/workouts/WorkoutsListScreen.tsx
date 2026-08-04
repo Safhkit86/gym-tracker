@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,6 +14,8 @@ import { useAuth } from "../../auth/useAuth";
 import { listWorkouts } from "../../api/workouts";
 import { ApiRequestError } from "../../api/client";
 import { colors, radius, spacing } from "../../theme/theme";
+import { ResponsiveCardColumns } from "../../components/ResponsiveCardColumns";
+import { useResponsiveColumns } from "../../hooks/useResponsiveLayout";
 import type { WorkoutsStackParamList } from "../../navigation/WorkoutsNavigator";
 
 type Props = NativeStackScreenProps<WorkoutsStackParamList, "WorkoutsList">;
@@ -21,6 +23,7 @@ type Props = NativeStackScreenProps<WorkoutsStackParamList, "WorkoutsList">;
 export function WorkoutsListScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { token } = useAuth();
+  const columns = useResponsiveColumns(3);
   const [workouts, setWorkouts] = useState<WorkoutSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,30 +75,29 @@ export function WorkoutsListScreen({ navigation }: Props) {
   }
 
   return (
-    <FlatList
-      style={styles.list}
-      contentContainerStyle={styles.listContent}
-      data={workouts}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate("WorkoutDetail", { id: item.id })}
-          accessibilityRole="button"
-          accessibilityLabel={item.name}
-        >
-          <Text style={styles.cardTitle}>{item.name}</Text>
-          {item.notes && (
-            <Text style={styles.cardNotes} numberOfLines={1}>
-              {item.notes}
+    <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+      <ResponsiveCardColumns columns={columns}>
+        {workouts.map((item) => (
+          <TouchableOpacity
+            key={item.id}
+            style={styles.card}
+            onPress={() => navigation.navigate("WorkoutDetail", { id: item.id })}
+            accessibilityRole="button"
+            accessibilityLabel={item.name}
+          >
+            <Text style={styles.cardTitle}>{item.name}</Text>
+            {item.notes && (
+              <Text style={styles.cardNotes} numberOfLines={1}>
+                {item.notes}
+              </Text>
+            )}
+            <Text style={styles.cardMeta}>
+              {t("workouts.list.exerciseCount", { count: item.exerciseCount })}
             </Text>
-          )}
-          <Text style={styles.cardMeta}>
-            {t("workouts.list.exerciseCount", { count: item.exerciseCount })}
-          </Text>
-        </TouchableOpacity>
-      )}
-    />
+          </TouchableOpacity>
+        ))}
+      </ResponsiveCardColumns>
+    </ScrollView>
   );
 }
 

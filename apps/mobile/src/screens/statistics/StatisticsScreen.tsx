@@ -22,6 +22,8 @@ import { listMeasurements } from "../../api/measurements";
 import { ApiRequestError } from "../../api/client";
 import { StatisticheCard } from "../../components/StatisticheCard";
 import { MiniLineChart } from "../../components/MiniLineChart";
+import { ResponsiveCardColumns } from "../../components/ResponsiveCardColumns";
+import { useResponsiveColumns } from "../../hooks/useResponsiveLayout";
 import {
   UNSPECIFIED_MUSCLE_GROUP,
   normalizeMuscleGroup,
@@ -38,6 +40,7 @@ export function StatisticsScreen() {
   const { t } = useTranslation();
   const { token } = useAuth();
   const [tab, setTab] = useState<StatisticsTab>("sessions");
+  const columns = useResponsiveColumns(3);
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -241,47 +244,49 @@ export function StatisticsScreen() {
           {sortedGroups.length === 0 ? (
             <Text style={styles.infoText}>{t("statistics.noData")}</Text>
           ) : (
-            sortedGroups.map(([muscleGroup, exercisesInGroup]) => (
-              <View style={styles.card} key={muscleGroup}>
-                <Text style={styles.cardTitle}>{muscleGroup}</Text>
-                {exercisesInGroup.map((ref, index) => {
-                  const points = exerciseHistories.get(ref.exerciseId) ?? [];
-                  const latest = points[points.length - 1];
-                  const unitLabel =
-                    latest?.unit === "reps"
-                      ? t("dashboard.progressions.unitReps")
-                      : t("dashboard.progressions.unitWeight");
-                  return (
-                    <View
-                      key={ref.exerciseId}
-                      style={[styles.chartBlock, index > 0 && styles.chartBlockDivider]}
-                    >
-                      <View style={styles.chartHeader}>
-                        <Text
-                          style={styles.chartTitle}
-                        >{`${ref.exerciseName} — ${unitLabel}`}</Text>
-                        {latest && (
-                          <Text style={styles.chartLatest}>
-                            {latest.unit === "kg"
-                              ? `${latest.value}kg`
-                              : `${latest.value} ${t("dashboard.repsShort")}`}
-                          </Text>
-                        )}
+            <ResponsiveCardColumns columns={columns}>
+              {sortedGroups.map(([muscleGroup, exercisesInGroup]) => (
+                <View style={styles.card} key={muscleGroup}>
+                  <Text style={styles.cardTitle}>{muscleGroup}</Text>
+                  {exercisesInGroup.map((ref, index) => {
+                    const points = exerciseHistories.get(ref.exerciseId) ?? [];
+                    const latest = points[points.length - 1];
+                    const unitLabel =
+                      latest?.unit === "reps"
+                        ? t("dashboard.progressions.unitReps")
+                        : t("dashboard.progressions.unitWeight");
+                    return (
+                      <View
+                        key={ref.exerciseId}
+                        style={[styles.chartBlock, index > 0 && styles.chartBlockDivider]}
+                      >
+                        <View style={styles.chartHeader}>
+                          <Text
+                            style={styles.chartTitle}
+                          >{`${ref.exerciseName} — ${unitLabel}`}</Text>
+                          {latest && (
+                            <Text style={styles.chartLatest}>
+                              {latest.unit === "kg"
+                                ? `${latest.value}kg`
+                                : `${latest.value} ${t("dashboard.repsShort")}`}
+                            </Text>
+                          )}
+                        </View>
+                        <MiniLineChart
+                          points={points.map((p) => ({
+                            id: p.sessionId,
+                            date: p.performedAt,
+                            value: p.value,
+                          }))}
+                          unit={latest?.unit ?? "kg"}
+                          emptyMessage={t("dashboard.progressions.chartEmpty")}
+                        />
                       </View>
-                      <MiniLineChart
-                        points={points.map((p) => ({
-                          id: p.sessionId,
-                          date: p.performedAt,
-                          value: p.value,
-                        }))}
-                        unit={latest?.unit ?? "kg"}
-                        emptyMessage={t("dashboard.progressions.chartEmpty")}
-                      />
-                    </View>
-                  );
-                })}
-              </View>
-            ))
+                    );
+                  })}
+                </View>
+              ))}
+            </ResponsiveCardColumns>
           )}
         </>
       ) : (
