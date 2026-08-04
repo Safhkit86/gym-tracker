@@ -310,14 +310,15 @@ schede attuali raggruppati per gruppo muscolare, e per ognuna delle 5
 misure corporee), notifiche (elenco completo — lette e non —, badge non
 lette condiviso tra la tab bar e la Dashboard tramite un context React,
 segna come letta/tutte lette, accetta/accetta tutte le progressioni
-pendenti) e profilo (tab Misure — stesso toggle "storicizza le misure" e
-gli stessi 6 campi corpo della webapp — e tab Preferenze — sessioni
-consecutive richieste, ambito di raggruppamento della progressione,
-ambito di precompilazione ultime ripetizioni, suono sveglia a fine
-recupero; niente tab Account/cambio password, fuori scope per questa
-sotto-fase — accessibile da un'icona condivisa nell'header di tutte e 5
-le tab, non da un'unica barra di navigazione globale come nella webapp,
-che sul mobile non esiste).
+pendenti) e profilo (tab Account — email/data iscrizione di sola
+lettura, cambio password in due passaggi con conferma OTP via email,
+stesso flusso della webapp —, tab Misure — stesso toggle "storicizza le
+misure" e gli stessi 6 campi corpo della webapp — e tab Preferenze —
+sessioni consecutive richieste, ambito di raggruppamento della
+progressione, ambito di precompilazione ultime ripetizioni, suono
+sveglia a fine recupero; accessibile da un'icona condivisa nell'header
+di tutte e 5 le tab, non da un'unica barra di navigazione globale come
+nella webapp, che sul mobile non esiste).
 
 Decisioni prese:
 

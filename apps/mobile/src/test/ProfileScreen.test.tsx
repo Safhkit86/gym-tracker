@@ -131,4 +131,66 @@ describe("ProfileScreen", () => {
     });
     expect(await screen.findByText("Preferenze salvate.")).toBeTruthy();
   });
+
+  it("nella tab Account richiede il cambio password e lo conferma con l'OTP", async () => {
+    const fetchMock = mockFetchResponses([
+      ...baseHandlers(),
+      {
+        match: (u: string, m: string) => u.endsWith("/me/password/change-request") && m === "POST",
+        body: { message: "Codice di conferma inviato via email." },
+      },
+      {
+        match: (u: string, m: string) => u.endsWith("/me/password/change-confirm") && m === "POST",
+        body: { message: "Password aggiornata correttamente." },
+      },
+    ]);
+
+    const screen = await renderWithProviders(<ProfileScreen />);
+    await screen.findByDisplayValue("80");
+
+    fireEvent.press(screen.getByRole("button", { name: "Account" }));
+
+    fireEvent.changeText(screen.getByLabelText("Password attuale"), "vecchia123");
+    fireEvent.changeText(screen.getByLabelText("Nuova password"), "nuovaPassword1");
+    fireEvent.changeText(screen.getByLabelText("Conferma nuova password"), "nuovaPassword1");
+    fireEvent.press(screen.getByRole("button", { name: "Invia codice di conferma" }));
+
+    expect(await screen.findByText("Codice di conferma inviato via email.")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/me/password/change-request"),
+      expect.objectContaining({ method: "POST" })
+    );
+
+    fireEvent.changeText(screen.getByLabelText("Codice ricevuto via email"), "123456");
+    fireEvent.press(screen.getByRole("button", { name: "Conferma cambio password" }));
+
+    expect(await screen.findByText("Password aggiornata correttamente.")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/me/password/change-confirm"),
+      expect.objectContaining({ method: "POST" })
+    );
+  });
+
+  it("nella tab Account mostra un errore se la password attuale è sbagliata", async () => {
+    mockFetchResponses([
+      ...baseHandlers(),
+      {
+        match: (u: string, m: string) => u.endsWith("/me/password/change-request") && m === "POST",
+        status: 400,
+        body: { code: "INVALID_CURRENT_PASSWORD", message: "Password attuale non corretta." },
+      },
+    ]);
+
+    const screen = await renderWithProviders(<ProfileScreen />);
+    await screen.findByDisplayValue("80");
+
+    fireEvent.press(screen.getByRole("button", { name: "Account" }));
+
+    fireEvent.changeText(screen.getByLabelText("Password attuale"), "sbagliata");
+    fireEvent.changeText(screen.getByLabelText("Nuova password"), "nuovaPassword1");
+    fireEvent.changeText(screen.getByLabelText("Conferma nuova password"), "nuovaPassword1");
+    fireEvent.press(screen.getByRole("button", { name: "Invia codice di conferma" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Password attuale non corretta.");
+  });
 });

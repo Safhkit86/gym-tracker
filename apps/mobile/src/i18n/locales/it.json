@@ -218,6 +218,22 @@
     "title": "Profilo",
     "measurementsTab": "Misure",
     "preferencesTab": "Preferenze",
+    "account": {
+      "tab": "Account",
+      "emailLabel": "Email",
+      "memberSince": "Membro dal",
+      "securityIntro": "Per cambiare password confermiamo la tua identità in due passaggi.",
+      "currentPassword": "Password attuale",
+      "newPassword": "Nuova password",
+      "confirmNewPassword": "Conferma nuova password",
+      "passwordMismatch": "Le due password non coincidono.",
+      "requestSubmit": "Invia codice di conferma",
+      "requestSubmitting": "Invio in corso…",
+      "otpLabel": "Codice ricevuto via email",
+      "otpSubmit": "Conferma cambio password",
+      "otpSubmitting": "Conferma in corso…",
+      "cancel": "Annulla"
+    },
     "measurements": {
       "loadError": "Impossibile caricare le misure.",
       "historicizeLabel": "Storicizza le misure",
@@ -252,6 +268,9 @@
     "INVALID_CREDENTIALS": "Email o password non validi.",
     "EMAIL_ALREADY_IN_USE": "Esiste già un utente con questa email.",
     "VALIDATION_ERROR": "Dati non validi. Controlla i campi e riprova.",
-    "UNKNOWN_ERROR": "Errore imprevisto. Riprova."
+    "UNKNOWN_ERROR": "Errore imprevisto. Riprova.",
+    "INVALID_CURRENT_PASSWORD": "Password attuale non corretta.",
+    "INVALID_OTP": "Codice non valido o scaduto.",
+    "NO_PENDING_PASSWORD_CHANGE": "Nessuna richiesta di cambio password in corso."
   }
 }
