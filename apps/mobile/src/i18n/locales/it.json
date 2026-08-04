@@ -136,7 +136,10 @@
     "checkingSuggestions": "Verifica suggerimenti di progressione…",
     "noSuggestion": "Nessun suggerimento di progressione questa volta.",
     "suggestionsTimeout": "Sessione registrata. Verifica in corso — se disponibile, lo vedrai tra le notifiche.",
-    "backToWorkout": "Torna alla scheda"
+    "backToWorkout": "Torna alla scheda",
+    "table": {
+      "exercise": "Esercizio"
+    }
   },
   "history": {
     "sessionsTab": "Sessioni di allenamento",

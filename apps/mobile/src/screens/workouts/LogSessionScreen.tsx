@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -24,8 +25,11 @@ import { ApiRequestError } from "../../api/client";
 import { useRestTimers } from "../../hooks/useRestTimers";
 import { RestTimerTray } from "../../components/RestTimerTray";
 import { colors, radius, spacing } from "../../theme/theme";
+import { centeredContentStyle } from "../../theme/layout";
+import { useIsTabletLandscape } from "../../hooks/useResponsiveLayout";
 import type { WorkoutsStackParamList } from "../../navigation/WorkoutsNavigator";
 import { SessionExerciseCard } from "./SessionExerciseCard";
+import { SessionExerciseTable } from "./SessionExerciseTable";
 import {
   buildInitialExercises,
   toSessionInput,
@@ -54,6 +58,7 @@ export function LogSessionScreen({ navigation, route }: Props) {
   const { t, i18n } = useTranslation();
   const { token } = useAuth();
   const { id } = route.params;
+  const isTabletLandscape = useIsTabletLandscape();
 
   const [workout, setWorkout] = useState<WorkoutDetail | null>(null);
   const [exercises, setExercises] = useState<SessionExerciseForm[]>([]);
@@ -219,75 +224,95 @@ export function LogSessionScreen({ navigation, route }: Props) {
     );
   }
 
+  const header = (
+    <View style={styles.headerContainer}>
+      <View style={styles.toolbar}>
+        <TouchableOpacity
+          style={[styles.submitButton, isSubmitting && styles.buttonDisabled]}
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+          accessibilityRole="button"
+          accessibilityLabel={t("session.submit")}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator color={colors.accentContrast} />
+          ) : (
+            <Text style={styles.submitButtonText}>{t("session.submit")}</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {error && (
+        <Text style={styles.error} accessibilityRole="alert">
+          {error}
+        </Text>
+      )}
+
+      {workout.notes && <Text style={styles.workoutNotes}>{workout.notes}</Text>}
+
+      <Text style={styles.label}>{t("session.date")}</Text>
+      <TouchableOpacity
+        style={styles.dateButton}
+        onPress={() => setShowDatePicker(true)}
+        accessibilityRole="button"
+        accessibilityLabel={t("session.date")}
+      >
+        <Text style={styles.dateButtonText}>
+          {new Date(performedAt).toLocaleDateString(i18n.language)}
+        </Text>
+      </TouchableOpacity>
+      {showDatePicker && (
+        <DateTimePicker
+          value={new Date(performedAt)}
+          mode="date"
+          maximumDate={new Date()}
+          onChange={(_event, date) => {
+            setShowDatePicker(false);
+            if (date) {
+              setPerformedAt(date.toISOString().slice(0, 10));
+            }
+          }}
+        />
+      )}
+    </View>
+  );
+
+  // In verticale (telefono, o tablet in portrait) resta identico allo
+  // smartphone: stack di SessionExerciseCard in una FlatList. Solo su
+  // tablet in landscape si passa alla tabella in stile webapp — vedi
+  // SessionExerciseTable, che legge/scrive lo stesso stato sollevato qui
+  // (updateExercise/updateSet), nessuna duplicazione: ruotare a metà
+  // compilazione non perde dati.
   return (
     <View style={styles.container}>
-      <FlatList
-        data={exercises}
-        keyExtractor={(item) => item.workoutExerciseId}
-        ListHeaderComponent={
-          <View style={styles.headerContainer}>
-            <View style={styles.toolbar}>
-              <TouchableOpacity
-                style={[styles.submitButton, isSubmitting && styles.buttonDisabled]}
-                onPress={handleSubmit}
-                disabled={isSubmitting}
-                accessibilityRole="button"
-                accessibilityLabel={t("session.submit")}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator color={colors.accentContrast} />
-                ) : (
-                  <Text style={styles.submitButtonText}>{t("session.submit")}</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {error && (
-              <Text style={styles.error} accessibilityRole="alert">
-                {error}
-              </Text>
-            )}
-
-            {workout.notes && <Text style={styles.workoutNotes}>{workout.notes}</Text>}
-
-            <Text style={styles.label}>{t("session.date")}</Text>
-            <TouchableOpacity
-              style={styles.dateButton}
-              onPress={() => setShowDatePicker(true)}
-              accessibilityRole="button"
-              accessibilityLabel={t("session.date")}
-            >
-              <Text style={styles.dateButtonText}>
-                {new Date(performedAt).toLocaleDateString(i18n.language)}
-              </Text>
-            </TouchableOpacity>
-            {showDatePicker && (
-              <DateTimePicker
-                value={new Date(performedAt)}
-                mode="date"
-                maximumDate={new Date()}
-                onChange={(_event, date) => {
-                  setShowDatePicker(false);
-                  if (date) {
-                    setPerformedAt(date.toISOString().slice(0, 10));
-                  }
-                }}
-              />
-            )}
-          </View>
-        }
-        renderItem={({ item, index }) => (
-          <SessionExerciseCard
-            exercise={item}
-            isLast={index === exercises.length - 1}
-            nextExerciseName={exercises[index + 1]?.exerciseName}
-            onUpdateExercise={(patch) => updateExercise(index, patch)}
-            onUpdateSet={(setIndex, patch) => updateSet(index, setIndex, patch)}
+      {isTabletLandscape ? (
+        <ScrollView contentContainerStyle={styles.landscapeContent}>
+          {header}
+          <SessionExerciseTable
+            exercises={exercises}
+            onUpdateExercise={updateExercise}
+            onUpdateSet={updateSet}
             onStartTimer={startTimer}
           />
-        )}
-        contentContainerStyle={styles.listContent}
-      />
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={exercises}
+          keyExtractor={(item) => item.workoutExerciseId}
+          ListHeaderComponent={header}
+          renderItem={({ item, index }) => (
+            <SessionExerciseCard
+              exercise={item}
+              isLast={index === exercises.length - 1}
+              nextExerciseName={exercises[index + 1]?.exerciseName}
+              onUpdateExercise={(patch) => updateExercise(index, patch)}
+              onUpdateSet={(setIndex, patch) => updateSet(index, setIndex, patch)}
+              onStartTimer={startTimer}
+            />
+          )}
+          contentContainerStyle={styles.listContent}
+        />
+      )}
       <RestTimerTray timers={timers} onCancel={cancelTimer} onSnooze={snoozeTimer} />
     </View>
   );
@@ -299,6 +324,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   listContent: {
+    paddingBottom: spacing.xxl,
+    ...centeredContentStyle,
+  },
+  // Niente cap+centra qui a differenza di listContent: la tabella deve
+  // poter usare tutta la larghezza del tablet in landscape, non i ~640dp
+  // di un form a colonna singola.
+  landscapeContent: {
     paddingBottom: spacing.xxl,
   },
   center: {

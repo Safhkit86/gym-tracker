@@ -136,7 +136,10 @@
     "checkingSuggestions": "Checking for progression suggestions…",
     "noSuggestion": "No progression suggestion this time.",
     "suggestionsTimeout": "Session logged. Still checking — if available, you'll see it in your notifications.",
-    "backToWorkout": "Back to workout"
+    "backToWorkout": "Back to workout",
+    "table": {
+      "exercise": "Exercise"
+    }
   },
   "history": {
     "sessionsTab": "Workout sessions",

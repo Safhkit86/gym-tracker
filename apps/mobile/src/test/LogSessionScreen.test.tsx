@@ -1,7 +1,7 @@
 import * as SecureStore from "expo-secure-store";
 import { fireEvent } from "@testing-library/react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { renderWithProviders, mockFetchResponses } from "./helpers";
+import { renderWithProviders, mockFetchResponses, setDeviceDimensions } from "./helpers";
 import { LogSessionScreen } from "../screens/workouts/LogSessionScreen";
 import type { WorkoutsStackParamList } from "../navigation/WorkoutsNavigator";
 
@@ -61,6 +61,7 @@ beforeEach(async () => {
 describe("LogSessionScreen", () => {
   afterEach(() => {
     jest.restoreAllMocks();
+    setDeviceDimensions("phone");
   });
 
   it("precompila dal target scheda e registra la sessione", async () => {
@@ -106,6 +107,31 @@ describe("LogSessionScreen", () => {
     expect(
       await screen.findByText("Nessun suggerimento di progressione questa volta.")
     ).toBeTruthy();
+  });
+
+  it("su tablet in landscape mostra la tabella invece dello stack di card", async () => {
+    setDeviceDimensions("tabletLandscape");
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: workout },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      {
+        match: (u, m) => u.endsWith("/me/account-preferences") && m === "GET",
+        body: accountPreferences,
+      },
+      { match: (u, m) => u.endsWith("/me/progression-defaults") && m === "GET", body: [] },
+    ]);
+
+    const screen = await renderWithProviders(
+      <LogSessionScreen navigation={mockNavigation()} route={mockRoute("w1")} />
+    );
+
+    // "Esercizio" e' l'intestazione di colonna della tabella (session.
+    // table.exercise), non presente nella vista a card dello smartphone —
+    // la sua presenza distingue in modo affidabile le due viste, dato che
+    // gli accessibilityLabel degli input sono condivisi tra le due.
+    expect(await screen.findByText("Esercizio")).toBeTruthy();
+    expect(screen.getByLabelText("Panca piana set 1 rep effettive").props.value).toBe("8");
   });
 
   it("mostra un errore se il caricamento fallisce", async () => {
