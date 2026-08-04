@@ -12,7 +12,8 @@
       "submit": "Accedi",
       "submitting": "Accesso in corso…",
       "noAccount": "Non hai un account?",
-      "registerLink": "Registrati"
+      "registerLink": "Registrati",
+      "forgotPasswordLink": "Password dimenticata?"
     },
     "register": {
       "title": "Crea account",
@@ -23,6 +24,25 @@
       "submitting": "Registrazione in corso…",
       "haveAccount": "Hai già un account?",
       "loginLink": "Accedi"
+    },
+    "forgotPassword": {
+      "title": "Password dimenticata",
+      "subtitle": "Ti invieremo un'email con le istruzioni per reimpostare la password.",
+      "email": "Email",
+      "submit": "Invia istruzioni",
+      "submitting": "Invio in corso…",
+      "backToLogin": "Torna al login"
+    },
+    "resetPassword": {
+      "title": "Reimposta password",
+      "newPassword": "Nuova password",
+      "confirmPassword": "Conferma nuova password",
+      "passwordMismatch": "Le due password non coincidono.",
+      "submit": "Reimposta password",
+      "submitting": "Salvataggio…",
+      "success": "Password reimpostata: accedi con la nuova password.",
+      "invalidLink": "Link di reset non valido: manca il token.",
+      "requestNewLink": "Richiedi un nuovo link"
     }
   },
   "nav": {
@@ -271,6 +291,7 @@
     "UNKNOWN_ERROR": "Errore imprevisto. Riprova.",
     "INVALID_CURRENT_PASSWORD": "Password attuale non corretta.",
     "INVALID_OTP": "Codice non valido o scaduto.",
-    "NO_PENDING_PASSWORD_CHANGE": "Nessuna richiesta di cambio password in corso."
+    "NO_PENDING_PASSWORD_CHANGE": "Nessuna richiesta di cambio password in corso.",
+    "INVALID_RESET_TOKEN": "Link di reset non valido o scaduto."
   }
 }

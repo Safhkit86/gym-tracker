@@ -9,69 +9,89 @@ import {
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
-import { useAuth } from "../../auth/useAuth";
+import { resetPassword } from "../../api/auth";
 import { translateError } from "../../api/translate-error";
 import { colors, radius, spacing } from "../../theme/theme";
 import type { AuthStackParamList } from "../../navigation/AuthNavigator";
 
-type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
+type Props = NativeStackScreenProps<AuthStackParamList, "ResetPassword">;
 
-export function LoginScreen({ navigation, route }: Props) {
+/** Il token arriva come parametro di rotta, popolato dal deep link aperto
+ *  dal link nell'email (vedi RootNavigator, config di linking) — non c'e'
+ *  nessun altro modo per raggiungere questa schermata con un token valido.
+ *  Se manca (rotta aperta senza deep link) si mostra un errore invece del
+ *  form, stessa guardia della pagina web (apps/web/src/pages/
+ *  ResetPasswordPage.tsx). */
+export function ResetPasswordScreen({ navigation, route }: Props) {
   const { t } = useTranslation();
-  const { login } = useAuth();
-  const [message] = useState(route.params?.message ?? null);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const token = route.params?.token ?? "";
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(): Promise<void> {
     setError(null);
+    if (newPassword !== confirmPassword) {
+      setError(t("auth.resetPassword.passwordMismatch"));
+      return;
+    }
     setIsSubmitting(true);
     try {
-      await login(email, password);
-      // Nessuna navigazione esplicita da fare: RootNavigator osserva il
-      // token e sostituisce l'intero stack di autenticazione con le tab
-      // principali non appena login() imposta un token valido.
+      await resetPassword({ token, newPassword });
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login", params: { message: t("auth.resetPassword.success") } }],
+      });
     } catch (err) {
       setError(translateError(err, t));
-    } finally {
       setIsSubmitting(false);
     }
   }
 
+  if (!token) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.error} accessibilityRole="alert">
+          {t("auth.resetPassword.invalidLink")}
+        </Text>
+        <View style={styles.footer}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("ForgotPassword")}
+            accessibilityRole="button"
+            accessibilityLabel={t("auth.resetPassword.requestNewLink")}
+          >
+            <Text style={styles.link}>{t("auth.resetPassword.requestNewLink")}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{t("auth.login.title")}</Text>
-      <Text style={styles.subtitle}>{t("auth.login.subtitle")}</Text>
+      <Text style={styles.title}>{t("auth.resetPassword.title")}</Text>
 
-      {message && (
-        <Text style={styles.status} accessibilityRole="alert">
-          {message}
-        </Text>
-      )}
-
-      <Text style={styles.label}>{t("auth.login.email")}</Text>
+      <Text style={styles.label}>{t("auth.resetPassword.newPassword")}</Text>
       <TextInput
         style={styles.input}
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        autoComplete="email"
-        keyboardType="email-address"
+        value={newPassword}
+        onChangeText={setNewPassword}
+        secureTextEntry
+        autoComplete="new-password"
         placeholderTextColor={colors.textMuted}
-        accessibilityLabel={t("auth.login.email")}
+        accessibilityLabel={t("auth.resetPassword.newPassword")}
       />
 
-      <Text style={styles.label}>{t("auth.login.password")}</Text>
+      <Text style={styles.label}>{t("auth.resetPassword.confirmPassword")}</Text>
       <TextInput
         style={styles.input}
-        value={password}
-        onChangeText={setPassword}
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
         secureTextEntry
-        autoComplete="current-password"
+        autoComplete="new-password"
         placeholderTextColor={colors.textMuted}
-        accessibilityLabel={t("auth.login.password")}
+        accessibilityLabel={t("auth.resetPassword.confirmPassword")}
       />
 
       {error && (
@@ -85,35 +105,14 @@ export function LoginScreen({ navigation, route }: Props) {
         onPress={handleSubmit}
         disabled={isSubmitting}
         accessibilityRole="button"
-        accessibilityLabel={t("auth.login.submit")}
+        accessibilityLabel={t("auth.resetPassword.submit")}
       >
         {isSubmitting ? (
           <ActivityIndicator color={colors.accentContrast} />
         ) : (
-          <Text style={styles.buttonText}>{t("auth.login.submit")}</Text>
+          <Text style={styles.buttonText}>{t("auth.resetPassword.submit")}</Text>
         )}
       </TouchableOpacity>
-
-      <View style={styles.footer}>
-        <TouchableOpacity
-          onPress={() => navigation.navigate("ForgotPassword")}
-          accessibilityRole="button"
-          accessibilityLabel={t("auth.login.forgotPasswordLink")}
-        >
-          <Text style={styles.link}>{t("auth.login.forgotPasswordLink")}</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>{t("auth.login.noAccount")} </Text>
-        <TouchableOpacity
-          onPress={() => navigation.navigate("Register")}
-          accessibilityRole="button"
-          accessibilityLabel={t("auth.login.registerLink")}
-        >
-          <Text style={styles.link}>{t("auth.login.registerLink")}</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -129,11 +128,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 28,
     fontWeight: "700",
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    color: colors.textMuted,
-    fontSize: 14,
     marginBottom: spacing.xl,
   },
   label: {
@@ -148,11 +142,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     padding: spacing.md,
     color: colors.text,
-    marginBottom: spacing.lg,
-  },
-  status: {
-    color: colors.accent,
-    fontSize: 14,
     marginBottom: spacing.lg,
   },
   error: {
@@ -180,9 +169,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     marginTop: spacing.xl,
-  },
-  footerText: {
-    color: colors.textMuted,
   },
   link: {
     color: colors.accent,

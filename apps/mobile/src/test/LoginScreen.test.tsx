@@ -50,6 +50,31 @@ describe("LoginScreen", () => {
     expect(navigation.navigate).toHaveBeenCalledWith("Register");
   });
 
+  it("naviga a ForgotPassword quando si tocca 'Password dimenticata?'", async () => {
+    const navigation = mockNavigation();
+    const screen = await renderWithProviders(
+      <LoginScreen navigation={navigation} route={emptyRoute} />
+    );
+
+    fireEvent.press(screen.getByRole("button", { name: "Password dimenticata?" }));
+
+    expect(navigation.navigate).toHaveBeenCalledWith("ForgotPassword");
+  });
+
+  it("mostra il messaggio ricevuto da ResetPasswordScreen dopo un reset riuscito", async () => {
+    const routeWithMessage = {
+      params: { message: "Password reimpostata: accedi con la nuova password." },
+    } as LoginProps["route"];
+
+    const screen = await renderWithProviders(
+      <LoginScreen navigation={mockNavigation()} route={routeWithMessage} />
+    );
+
+    expect(
+      await screen.findByText("Password reimpostata: accedi con la nuova password.")
+    ).toBeTruthy();
+  });
+
   it("chiama /auth/login e non mostra errori quando le credenziali sono corrette", async () => {
     mockFetchResponses([
       {

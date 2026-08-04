@@ -318,7 +318,13 @@ sessioni consecutive richieste, ambito di raggruppamento della
 progressione, ambito di precompilazione ultime ripetizioni, suono
 sveglia a fine recupero; accessibile da un'icona condivisa nell'header
 di tutte e 5 le tab, non da un'unica barra di navigazione globale come
-nella webapp, che sul mobile non esiste).
+nella webapp, che sul mobile non esiste). Password dimenticata da
+disconnessi (link "Password dimenticata?" nel login → email con le
+istruzioni → nuova password), con il link di reset che apre l'app
+mobile direttamente via deep link con scheme personalizzato
+(`gymtracker://reset-password?token=...`, oltre al link web esistente
+— la stessa email contiene entrambi) invece di richiedere un incolla
+manuale del token.
 
 Decisioni prese:
 

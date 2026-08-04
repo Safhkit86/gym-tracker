@@ -11,6 +11,14 @@ import type { UserRepository } from "../repositories/user-repository.js";
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minuti
 const RESET_COOLDOWN_MS = 60 * 1000; // 1 minuto tra due richieste per la stessa email
 
+// Scheme di deep link dell'app mobile (vedi apps/mobile/app.json,
+// "scheme": "gymtracker", e apps/mobile/src/navigation/RootNavigator.tsx
+// per la configurazione di linking che lo consuma). Valore hardcoded, non
+// una env var come webAppUrl: a differenza dell'URL della webapp (che
+// cambia davvero tra dev e produzione), lo scheme e' un valore intrinseco
+// al build mobile, non qualcosa che cambia per ambiente.
+const MOBILE_RESET_URL = "gymtracker://reset-password";
+
 const GENERIC_MESSAGE = {
   message: "Se l'account esiste, riceverai un'email con le istruzioni per reimpostare la password.",
 };
@@ -56,12 +64,14 @@ export class PasswordResetService {
     await this.passwordActionTokens.create(newToken);
 
     const resetUrl = `${this.webAppUrl}/reset-password?token=${rawToken}`;
+    const mobileResetUrl = `${MOBILE_RESET_URL}?token=${rawToken}`;
     await this.mailer.send({
       to: user.email,
       subject: "Reimposta la tua password - gym-tracker",
       text:
         `Hai richiesto di reimpostare la password del tuo account gym-tracker.\n\n` +
         `Apri questo link per scegliere una nuova password (valido 30 minuti):\n${resetUrl}\n\n` +
+        `Se sei sul telefono con l'app installata, puoi anche aprire questo link nell'app:\n${mobileResetUrl}\n\n` +
         `Se non hai richiesto tu questo reset, ignora questa email: la tua password resta invariata.`,
     });
 

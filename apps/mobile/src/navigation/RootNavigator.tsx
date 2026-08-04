@@ -1,10 +1,35 @@
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-import { DarkTheme, NavigationContainer, type Theme } from "@react-navigation/native";
+import {
+  DarkTheme,
+  NavigationContainer,
+  type LinkingOptions,
+  type Theme,
+} from "@react-navigation/native";
+import * as Linking from "expo-linking";
 import { useAuth } from "../auth/useAuth";
 import { NotificationsProvider } from "../notifications/NotificationsProvider";
 import { colors } from "../theme/theme";
-import { AuthNavigator } from "./AuthNavigator";
+import { AuthNavigator, type AuthStackParamList } from "./AuthNavigator";
 import { MainTabNavigator } from "./MainTabNavigator";
+
+// Deep link per il link di reset password ricevuto via email
+// (gymtracker://reset-password?token=...). In Expo Go lo scheme
+// personalizzato non funziona direttamente: Linking.createURL() genera
+// invece un URL exp://<ip-dev-server>:8081/--/... valido durante lo
+// sviluppo (documentazione ufficiale Expo) — entrambi i prefissi sono
+// necessari perché la build finale (EAS) userà solo lo scheme vero.
+// Se il link arriva mentre l'utente è già loggato, è montato
+// MainTabNavigator invece di AuthNavigator e la rotta ResetPassword non
+// si risolve: limite accettato, nell'uso reale si reimposta la password
+// da disconnessi.
+const linking: LinkingOptions<AuthStackParamList> = {
+  prefixes: [Linking.createURL("/"), "gymtracker://"],
+  config: {
+    screens: {
+      ResetPassword: "reset-password",
+    },
+  },
+};
 
 // Tema di navigazione basato su Night Track invece del default Material/
 // Cupertino di React Navigation, per coerenza con il resto dell'app.
@@ -35,7 +60,7 @@ export function RootNavigator() {
 
   return (
     <NotificationsProvider>
-      <NavigationContainer theme={navigationTheme}>
+      <NavigationContainer theme={navigationTheme} linking={linking}>
         {token ? <MainTabNavigator /> : <AuthNavigator />}
       </NavigationContainer>
     </NotificationsProvider>
