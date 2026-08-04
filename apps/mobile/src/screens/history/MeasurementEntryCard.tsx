@@ -2,7 +2,10 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { MeasurementEntry } from "@gym-tracker/shared";
 import { colors, radius, spacing } from "../../theme/theme";
+import { fieldGridItemStyle, fieldGridStyle } from "../../theme/layout";
 import { computeDelta, MEASUREMENT_FIELDS } from "../../utils/measurements";
+
+const fieldStyle = fieldGridItemStyle(2);
 
 interface MeasurementEntryCardProps {
   entry: MeasurementEntry;
@@ -36,12 +39,12 @@ export function MeasurementEntryCard({
         </TouchableOpacity>
       </View>
 
-      <View style={styles.grid}>
+      <View style={fieldGridStyle}>
         {MEASUREMENT_FIELDS.map(({ key, unit }) => {
           const value = entry[key];
           const delta = computeDelta(previous?.[key] ?? null, value);
           return (
-            <View key={key} style={styles.field}>
+            <View key={key} style={fieldStyle}>
               <Text style={styles.fieldLabel}>{t(`history.measurements.${key}`)}</Text>
               <View style={styles.fieldValueRow}>
                 <Text style={styles.fieldValue}>{value !== null ? `${value} ${unit}` : "—"}</Text>
@@ -92,15 +95,6 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: 12,
     fontWeight: "700",
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.md,
-  },
-  field: {
-    minWidth: "40%",
-    flexGrow: 1,
   },
   fieldLabel: {
     color: colors.textMuted,

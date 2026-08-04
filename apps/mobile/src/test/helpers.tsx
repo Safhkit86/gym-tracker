@@ -1,8 +1,29 @@
 import type { ReactElement } from "react";
+import { Dimensions } from "react-native";
 import { render, waitFor } from "@testing-library/react-native";
 import { AuthProvider } from "../auth/AuthProvider";
 import { NotificationsProvider } from "../notifications/NotificationsProvider";
 import "../i18n";
+
+/** Preset di dimensioni per i test che devono verificare il layout
+ *  responsive (griglie, cap+centra, sidebar). "phone" è il default già
+ *  impostato una volta da jest.setup.ts — richiamarlo qui serve solo per
+ *  ripristinarlo esplicitamente a fine test se un test precedente ha
+ *  cambiato dimensioni. Stessi dp del AVD Pixel_Tablet usato per la
+ *  verifica manuale (2560x1600 @ 320dpi → 1280x800 landscape, 800x1280
+ *  portrait), così i test e la verifica sull'emulatore esercitano
+ *  esattamente lo stesso breakpoint. */
+const DEVICE_DIMENSIONS_DP = {
+  phone: { width: 390, height: 844 },
+  tabletPortrait: { width: 800, height: 1280 },
+  tabletLandscape: { width: 1280, height: 800 },
+} as const;
+
+export function setDeviceDimensions(preset: keyof typeof DEVICE_DIMENSIONS_DP): void {
+  const { width, height } = DEVICE_DIMENSIONS_DP[preset];
+  const size = { width, height, scale: 2, fontScale: 1 };
+  Dimensions.set({ window: size, screen: size });
+}
 
 /** Renderizza un componente dentro AuthProvider + NotificationsProvider,
  *  stessa gerarchia di App.tsx/RootNavigator nell'app reale (il badge non
