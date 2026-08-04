@@ -1,11 +1,13 @@
 import type {
   AuthResponse,
   ConfirmPasswordChangeRequest,
+  ForgotPasswordRequest,
   LoginRequest,
   MessageResponse,
   PublicUser,
   RegisterRequest,
   RequestPasswordChangeRequest,
+  ResetPasswordRequest,
 } from "@gym-tracker/shared";
 import { apiRequest } from "./client";
 
@@ -15,6 +17,14 @@ export function register(body: RegisterRequest): Promise<AuthResponse> {
 
 export function login(body: LoginRequest): Promise<AuthResponse> {
   return apiRequest<AuthResponse>("/auth/login", { method: "POST", body });
+}
+
+export function forgotPassword(body: ForgotPasswordRequest): Promise<MessageResponse> {
+  return apiRequest<MessageResponse>("/auth/forgot-password", { method: "POST", body });
+}
+
+export function resetPassword(body: ResetPasswordRequest): Promise<MessageResponse> {
+  return apiRequest<MessageResponse>("/auth/reset-password", { method: "POST", body });
 }
 
 export function me(token: string): Promise<PublicUser> {

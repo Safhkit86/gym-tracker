@@ -12,7 +12,8 @@
       "submit": "Sign in",
       "submitting": "Signing in…",
       "noAccount": "Don't have an account?",
-      "registerLink": "Sign up"
+      "registerLink": "Sign up",
+      "forgotPasswordLink": "Forgot password?"
     },
     "register": {
       "title": "Create account",
@@ -23,6 +24,25 @@
       "submitting": "Creating account…",
       "haveAccount": "Already have an account?",
       "loginLink": "Sign in"
+    },
+    "forgotPassword": {
+      "title": "Forgot password",
+      "subtitle": "We'll send you an email with instructions to reset your password.",
+      "email": "Email",
+      "submit": "Send instructions",
+      "submitting": "Sending…",
+      "backToLogin": "Back to login"
+    },
+    "resetPassword": {
+      "title": "Reset password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "passwordMismatch": "The two passwords don't match.",
+      "submit": "Reset password",
+      "submitting": "Saving…",
+      "success": "Password reset: sign in with your new password.",
+      "invalidLink": "Invalid reset link: missing token.",
+      "requestNewLink": "Request a new link"
     }
   },
   "nav": {
@@ -271,6 +291,7 @@
     "UNKNOWN_ERROR": "Unexpected error. Please try again.",
     "INVALID_CURRENT_PASSWORD": "Current password is incorrect.",
     "INVALID_OTP": "Invalid or expired code.",
-    "NO_PENDING_PASSWORD_CHANGE": "No password change request in progress."
+    "NO_PENDING_PASSWORD_CHANGE": "No password change request in progress.",
+    "INVALID_RESET_TOKEN": "Invalid or expired reset link."
   }
 }
