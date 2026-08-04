@@ -4,6 +4,7 @@ import type { NavigatorScreenParams } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { colors } from "../theme/theme";
 import { useUnreadCount } from "../notifications/useUnreadCount";
+import { useIsTabletLandscape } from "../hooks/useResponsiveLayout";
 import { DashboardNavigator } from "./DashboardNavigator";
 import { HistoryNavigator } from "./HistoryNavigator";
 import { NotificationsNavigator } from "./NotificationsNavigator";
@@ -46,6 +47,13 @@ function TabIcon({ route, color }: { route: keyof MainTabParamList; color: strin
 export function MainTabNavigator() {
   const { t } = useTranslation();
   const { unreadCount } = useUnreadCount();
+  // Sidebar a sinistra su tablet in landscape (dove una bottom bar a piena
+  // larghezza con 5 icone molto distanziate è l'archetipo dell'app-telefono-
+  // stirata), barra in basso invariata altrove (telefono, tablet in
+  // portrait). "material" è richiesto da React Navigation quando
+  // tabBarPosition è "left"/"right" — con "uikit" (il default) emette un
+  // warning esplicito in quella combinazione.
+  const isTabletLandscape = useIsTabletLandscape();
 
   return (
     <Tab.Navigator
@@ -53,7 +61,11 @@ export function MainTabNavigator() {
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
+        tabBarPosition: isTabletLandscape ? "left" : "bottom",
+        tabBarVariant: isTabletLandscape ? "material" : "uikit",
+        tabBarStyle: isTabletLandscape
+          ? { backgroundColor: colors.surface, borderRightColor: colors.border }
+          : { backgroundColor: colors.surface, borderTopColor: colors.border },
         tabBarIcon: ({ color }) => (
           <TabIcon route={route.name as keyof MainTabParamList} color={color} />
         ),
