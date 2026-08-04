@@ -26,7 +26,10 @@ import { ApiRequestError } from "../../api/client";
 import { translateError } from "../../api/translate-error";
 import { colors, radius, spacing } from "../../theme/theme";
 import { centeredContentStyle, fieldGridItemStyle, fieldGridStyle } from "../../theme/layout";
-import { useResponsiveColumns } from "../../hooks/useResponsiveLayout";
+import {
+  useResponsiveColumns,
+  useSafeAreaHorizontalPadding,
+} from "../../hooks/useResponsiveLayout";
 
 type ProfileTab = "account" | "measurements" | "preferences";
 
@@ -53,6 +56,7 @@ export function ProfileScreen() {
   const [tab, setTab] = useState<ProfileTab>("measurements");
   const measurementColumns = useResponsiveColumns(2);
   const measurementFieldStyle = fieldGridItemStyle(measurementColumns);
+  const safeAreaPadding = useSafeAreaHorizontalPadding();
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -252,7 +256,7 @@ export function ProfileScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, safeAreaPadding]} contentContainerStyle={styles.content}>
       <View style={styles.tabRow}>
         <TouchableOpacity
           style={[styles.tabButton, tab === "account" && styles.tabButtonActive]}

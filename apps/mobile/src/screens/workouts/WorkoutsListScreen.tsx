@@ -15,7 +15,10 @@ import { listWorkouts } from "../../api/workouts";
 import { ApiRequestError } from "../../api/client";
 import { colors, radius, spacing } from "../../theme/theme";
 import { ResponsiveCardColumns } from "../../components/ResponsiveCardColumns";
-import { useResponsiveColumns } from "../../hooks/useResponsiveLayout";
+import {
+  useResponsiveColumns,
+  useSafeAreaHorizontalPadding,
+} from "../../hooks/useResponsiveLayout";
 import type { WorkoutsStackParamList } from "../../navigation/WorkoutsNavigator";
 
 type Props = NativeStackScreenProps<WorkoutsStackParamList, "WorkoutsList">;
@@ -24,6 +27,7 @@ export function WorkoutsListScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { token } = useAuth();
   const columns = useResponsiveColumns(3);
+  const safeAreaPadding = useSafeAreaHorizontalPadding();
   const [workouts, setWorkouts] = useState<WorkoutSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,7 +79,7 @@ export function WorkoutsListScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+    <ScrollView style={[styles.list, safeAreaPadding]} contentContainerStyle={styles.listContent}>
       <ResponsiveCardColumns columns={columns}>
         {workouts.map((item) => (
           <TouchableOpacity

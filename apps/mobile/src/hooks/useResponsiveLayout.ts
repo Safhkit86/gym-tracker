@@ -1,4 +1,5 @@
 import { Dimensions, useWindowDimensions } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /** Soglia device-class (tablet vs telefono), convenzione Android
  *  `sw600dp` — un dispositivo il cui lato corto è >= 600dp è un tablet. */
@@ -52,4 +53,16 @@ export function useResponsiveColumns(maxColumns: 2 | 3): number {
 export function useIsTabletLandscape(): boolean {
   const { width, height } = useWindowDimensions();
   return width > height && width >= EXTRA_WIDE_LAYOUT_MIN_WIDTH_DP;
+}
+
+/** Padding orizzontale da applicare ai container di primo livello delle
+ *  schermate principali, per rispettare gli inset dei lati in landscape su
+ *  dispositivi con notch/isola dinamica (nessuna schermata oggi consuma
+ *  useSafeAreaInsets, anche se SafeAreaProvider è già montato in App.tsx).
+ *  Non verificabile su questo emulatore Android (il Pixel Tablet non ha
+ *  cutout) né su iOS (nessun Mac disponibile in questo ambiente) — difesa
+ *  a basso costo, non testata visivamente. */
+export function useSafeAreaHorizontalPadding(): { paddingLeft: number; paddingRight: number } {
+  const insets = useSafeAreaInsets();
+  return { paddingLeft: insets.left, paddingRight: insets.right };
 }

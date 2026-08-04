@@ -44,7 +44,10 @@ import { Sparkline } from "../../components/Sparkline";
 import { StreakCalendar } from "../../components/StreakCalendar";
 import { StatisticheCard } from "../../components/StatisticheCard";
 import { ResponsiveCardColumns } from "../../components/ResponsiveCardColumns";
-import { useResponsiveColumns } from "../../hooks/useResponsiveLayout";
+import {
+  useResponsiveColumns,
+  useSafeAreaHorizontalPadding,
+} from "../../hooks/useResponsiveLayout";
 import {
   UNSPECIFIED_MUSCLE_GROUP,
   normalizeMuscleGroup,
@@ -98,6 +101,7 @@ export function DashboardScreen({ navigation }: Props) {
   const { token } = useAuth();
   const { refreshUnreadCount } = useUnreadCount();
   const columns = useResponsiveColumns(3);
+  const safeAreaPadding = useSafeAreaHorizontalPadding();
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -302,7 +306,7 @@ export function DashboardScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, safeAreaPadding]} contentContainerStyle={styles.content}>
       <Text style={styles.subtitle}>{t("dashboard.subtitle")}</Text>
 
       <ResponsiveCardColumns columns={columns}>

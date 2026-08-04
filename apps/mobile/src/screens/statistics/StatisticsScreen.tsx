@@ -23,7 +23,10 @@ import { ApiRequestError } from "../../api/client";
 import { StatisticheCard } from "../../components/StatisticheCard";
 import { MiniLineChart } from "../../components/MiniLineChart";
 import { ResponsiveCardColumns } from "../../components/ResponsiveCardColumns";
-import { useResponsiveColumns } from "../../hooks/useResponsiveLayout";
+import {
+  useResponsiveColumns,
+  useSafeAreaHorizontalPadding,
+} from "../../hooks/useResponsiveLayout";
 import {
   UNSPECIFIED_MUSCLE_GROUP,
   normalizeMuscleGroup,
@@ -41,6 +44,7 @@ export function StatisticsScreen() {
   const { token } = useAuth();
   const [tab, setTab] = useState<StatisticsTab>("sessions");
   const columns = useResponsiveColumns(3);
+  const safeAreaPadding = useSafeAreaHorizontalPadding();
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -210,7 +214,7 @@ export function StatisticsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, safeAreaPadding]} contentContainerStyle={styles.content}>
       <Text style={styles.subtitle}>{t("statistics.subtitle")}</Text>
 
       <View style={styles.tabRow}>

@@ -14,11 +14,13 @@ import { ApiRequestError } from "../../api/client";
 import { formatSuggestionDelta, toOverride } from "../../utils/suggestion-format";
 import { colors, radius, spacing } from "../../theme/theme";
 import { centeredContentStyle } from "../../theme/layout";
+import { useSafeAreaHorizontalPadding } from "../../hooks/useResponsiveLayout";
 
 export function NotificationsScreen() {
   const { t, i18n } = useTranslation();
   const { token } = useAuth();
   const { refreshUnreadCount } = useUnreadCount();
+  const safeAreaPadding = useSafeAreaHorizontalPadding();
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,7 +108,7 @@ export function NotificationsScreen() {
   const hasUnread = notifications?.some((n) => n.readAt === null) ?? false;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, safeAreaPadding]} contentContainerStyle={styles.content}>
       {error && (
         <Text style={styles.error} accessibilityRole="alert">
           {error}
