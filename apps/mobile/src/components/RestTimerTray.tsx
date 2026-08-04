@@ -28,10 +28,7 @@ export function RestTimerTray({ timers, onCancel, onSnooze }: RestTimerTrayProps
   }
 
   return (
-    <View
-      style={[styles.tray, { bottom: spacing.md + insets.bottom }]}
-      pointerEvents="box-none"
-    >
+    <View style={[styles.tray, { bottom: spacing.md + insets.bottom }]} pointerEvents="box-none">
       {timers.map((timer) => (
         <View
           key={timer.id}
