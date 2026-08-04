@@ -7,6 +7,8 @@ import { deleteSession, listSessions } from "../../api/sessions";
 import { deleteMeasurement, listMeasurements } from "../../api/measurements";
 import { ApiRequestError } from "../../api/client";
 import { colors, radius, spacing } from "../../theme/theme";
+import { centeredContentStyle } from "../../theme/layout";
+import { useSafeAreaHorizontalPadding } from "../../hooks/useResponsiveLayout";
 import { computeWeekNumbers } from "../../utils/session-history-utils";
 import { SessionHistoryCard } from "./SessionHistoryCard";
 import { MeasurementEntryCard } from "./MeasurementEntryCard";
@@ -18,6 +20,7 @@ export function HistoryScreen() {
   const { t } = useTranslation();
   const { token } = useAuth();
   const [tab, setTab] = useState<HistoryTab>("sessions");
+  const safeAreaPadding = useSafeAreaHorizontalPadding();
 
   const [sessions, setSessions] = useState<SessionDetail[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -128,7 +131,7 @@ export function HistoryScreen() {
   const weekBySessionId = sessions ? computeWeekNumbers(sessions) : null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, safeAreaPadding]}>
       <View style={styles.tabRow}>
         <TouchableOpacity
           style={[styles.tabButton, tab === "sessions" && styles.tabButtonActive]}
@@ -253,6 +256,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.lg,
     paddingBottom: 0,
+    ...centeredContentStyle,
   },
   tabButton: {
     flex: 1,
@@ -277,6 +281,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: spacing.xxl,
+    ...centeredContentStyle,
   },
   headerContainer: {
     padding: spacing.lg,

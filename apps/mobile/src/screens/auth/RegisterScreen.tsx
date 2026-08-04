@@ -1,6 +1,9 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -12,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../../auth/useAuth";
 import { translateError } from "../../api/translate-error";
 import { colors, radius, spacing } from "../../theme/theme";
+import { CenteredContent } from "../../components/CenteredContent";
 import type { AuthStackParamList } from "../../navigation/AuthNavigator";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Register">;
@@ -38,73 +42,84 @@ export function RegisterScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{t("auth.register.title")}</Text>
-      <Text style={styles.subtitle}>{t("auth.register.subtitle")}</Text>
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <CenteredContent style={styles.content}>
+          <Text style={styles.title}>{t("auth.register.title")}</Text>
+          <Text style={styles.subtitle}>{t("auth.register.subtitle")}</Text>
 
-      <Text style={styles.label}>{t("auth.register.email")}</Text>
-      <TextInput
-        style={styles.input}
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        autoComplete="email"
-        keyboardType="email-address"
-        placeholderTextColor={colors.textMuted}
-        accessibilityLabel={t("auth.register.email")}
-      />
+          <Text style={styles.label}>{t("auth.register.email")}</Text>
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            autoComplete="email"
+            keyboardType="email-address"
+            placeholderTextColor={colors.textMuted}
+            accessibilityLabel={t("auth.register.email")}
+          />
 
-      <Text style={styles.label}>{t("auth.register.password")}</Text>
-      <TextInput
-        style={styles.input}
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        autoComplete="new-password"
-        placeholderTextColor={colors.textMuted}
-        accessibilityLabel={t("auth.register.password")}
-      />
+          <Text style={styles.label}>{t("auth.register.password")}</Text>
+          <TextInput
+            style={styles.input}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoComplete="new-password"
+            placeholderTextColor={colors.textMuted}
+            accessibilityLabel={t("auth.register.password")}
+          />
 
-      {error && (
-        <Text style={styles.error} accessibilityRole="alert">
-          {error}
-        </Text>
-      )}
+          {error && (
+            <Text style={styles.error} accessibilityRole="alert">
+              {error}
+            </Text>
+          )}
 
-      <TouchableOpacity
-        style={[styles.button, isSubmitting && styles.buttonDisabled]}
-        onPress={handleSubmit}
-        disabled={isSubmitting}
-        accessibilityRole="button"
-        accessibilityLabel={t("auth.register.submit")}
-      >
-        {isSubmitting ? (
-          <ActivityIndicator color={colors.accentContrast} />
-        ) : (
-          <Text style={styles.buttonText}>{t("auth.register.submit")}</Text>
-        )}
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, isSubmitting && styles.buttonDisabled]}
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+            accessibilityRole="button"
+            accessibilityLabel={t("auth.register.submit")}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color={colors.accentContrast} />
+            ) : (
+              <Text style={styles.buttonText}>{t("auth.register.submit")}</Text>
+            )}
+          </TouchableOpacity>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>{t("auth.register.haveAccount")} </Text>
-        <TouchableOpacity
-          onPress={() => navigation.navigate("Login")}
-          accessibilityRole="button"
-          accessibilityLabel={t("auth.register.loginLink")}
-        >
-          <Text style={styles.link}>{t("auth.register.loginLink")}</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>{t("auth.register.haveAccount")} </Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Login")}
+              accessibilityRole="button"
+              accessibilityLabel={t("auth.register.loginLink")}
+            >
+              <Text style={styles.link}>{t("auth.register.loginLink")}</Text>
+            </TouchableOpacity>
+          </View>
+        </CenteredContent>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  flex: {
     flex: 1,
     backgroundColor: colors.bg,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
     padding: spacing.xl,
-    justifyContent: "center",
   },
   title: {
     color: colors.text,

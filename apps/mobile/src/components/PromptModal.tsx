@@ -82,6 +82,7 @@ const styles = StyleSheet.create({
   },
   dialog: {
     width: "100%",
+    maxWidth: 480,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,

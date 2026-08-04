@@ -43,6 +43,11 @@ import { MiniLineChart } from "../../components/MiniLineChart";
 import { Sparkline } from "../../components/Sparkline";
 import { StreakCalendar } from "../../components/StreakCalendar";
 import { StatisticheCard } from "../../components/StatisticheCard";
+import { ResponsiveCardColumns } from "../../components/ResponsiveCardColumns";
+import {
+  useResponsiveColumns,
+  useSafeAreaHorizontalPadding,
+} from "../../hooks/useResponsiveLayout";
 import {
   UNSPECIFIED_MUSCLE_GROUP,
   normalizeMuscleGroup,
@@ -95,6 +100,8 @@ export function DashboardScreen({ navigation }: Props) {
   const { t, i18n } = useTranslation();
   const { token } = useAuth();
   const { refreshUnreadCount } = useUnreadCount();
+  const columns = useResponsiveColumns(3);
+  const safeAreaPadding = useSafeAreaHorizontalPadding();
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -299,36 +306,41 @@ export function DashboardScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, safeAreaPadding]} contentContainerStyle={styles.content}>
       <Text style={styles.subtitle}>{t("dashboard.subtitle")}</Text>
 
-      <StatisticheCard stats={stats} muscleGroupVolume={muscleGroupVolume} />
-      <SuggerimentiCard
-        notifications={pendingSuggestions}
-        confirmingIds={confirmingIds}
-        onAccept={handleAccept}
-        onViewAll={() => navigation.navigate("Notifications")}
-      />
-      <ProgressioniCard
-        exercisesByMuscleGroup={exercisesByMuscleGroup}
-        exerciseHistories={exerciseHistories}
-      />
-      <MisureCard measurements={measurements} onViewAll={() => navigation.navigate("Statistics")} />
-      <CostanzaCard streakCalendar={stats.streakCalendar} />
-
-      {nextWorkout && (
-        <ProssimaSessioneCard
-          workout={nextWorkout}
-          onStart={() =>
-            navigation.navigate("Workouts", {
-              screen: "LogSession",
-              params: { id: nextWorkout.id },
-            })
-          }
+      <ResponsiveCardColumns columns={columns}>
+        <StatisticheCard stats={stats} muscleGroupVolume={muscleGroupVolume} />
+        <SuggerimentiCard
+          notifications={pendingSuggestions}
+          confirmingIds={confirmingIds}
+          onAccept={handleAccept}
+          onViewAll={() => navigation.navigate("Notifications")}
         />
-      )}
-      {lastSession && <UltimaSessioneCard session={lastSession} locale={i18n.language} />}
-      {stalledExercise && <StalloCard stalled={stalledExercise} />}
+        <ProgressioniCard
+          exercisesByMuscleGroup={exercisesByMuscleGroup}
+          exerciseHistories={exerciseHistories}
+        />
+        <MisureCard
+          measurements={measurements}
+          onViewAll={() => navigation.navigate("Statistics")}
+        />
+        <CostanzaCard streakCalendar={stats.streakCalendar} />
+
+        {nextWorkout && (
+          <ProssimaSessioneCard
+            workout={nextWorkout}
+            onStart={() =>
+              navigation.navigate("Workouts", {
+                screen: "LogSession",
+                params: { id: nextWorkout.id },
+              })
+            }
+          />
+        )}
+        {lastSession && <UltimaSessioneCard session={lastSession} locale={i18n.language} />}
+        {stalledExercise && <StalloCard stalled={stalledExercise} />}
+      </ResponsiveCardColumns>
     </ScrollView>
   );
 }

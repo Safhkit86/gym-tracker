@@ -25,6 +25,15 @@ interface HorizontalPeekCarouselProps<T> {
 
 const GAP = spacing.sm;
 
+/** Tetto assoluto alla larghezza di un elemento: `widthRatio` da solo va
+ *  bene su schermi da telefono, ma su un container largo quanto un
+ *  tablet produrrebbe un singolo riquadro enorme (es. 62% di 1200dp) con
+ *  moltissimo spazio vuoto interno — il "peek" (intravedere l'elemento
+ *  successivo) perde senso quando ce ne starebbero 3-4 affiancati.
+ *  Cappando la larghezza, su schermi larghi si vedono più elementi
+ *  contemporaneamente invece di uno solo sovradimensionato. */
+const MAX_ITEM_WIDTH_DP = 320;
+
 export function HorizontalPeekCarousel<T>({
   items,
   renderItem,
@@ -33,7 +42,7 @@ export function HorizontalPeekCarousel<T>({
   widthRatio = 0.62,
 }: HorizontalPeekCarouselProps<T>) {
   const [containerWidth, setContainerWidth] = useState(0);
-  const itemWidth = containerWidth * widthRatio;
+  const itemWidth = Math.min(containerWidth * widthRatio, MAX_ITEM_WIDTH_DP);
 
   function handleLayout(event: LayoutChangeEvent) {
     setContainerWidth(event.nativeEvent.layout.width);

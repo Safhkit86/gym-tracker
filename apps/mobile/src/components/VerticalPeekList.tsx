@@ -31,9 +31,17 @@ export function VerticalPeekList<T>({
 }: VerticalPeekListProps<T>) {
   const [itemHeight, setItemHeight] = useState(0);
 
+  // Nessun guard "solo se non ancora misurata": alla rotazione la
+  // larghezza del container cambia, il testo va a capo diversamente e
+  // l'altezza reale della riga cambia — se itemHeight restasse quello
+  // misurato la prima volta, maxHeight/snapToInterval userebbero un
+  // valore ormai sbagliato (righe tagliate a metà, snap che si ferma nel
+  // punto sbagliato). Bug latente pre-esistente, invisibile finché
+  // l'orientamento restava bloccato in portrait.
   function handleFirstItemLayout(event: LayoutChangeEvent) {
-    if (itemHeight === 0) {
-      setItemHeight(event.nativeEvent.layout.height);
+    const height = event.nativeEvent.layout.height;
+    if (height !== itemHeight) {
+      setItemHeight(height);
     }
   }
 

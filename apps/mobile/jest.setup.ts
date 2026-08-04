@@ -1,3 +1,35 @@
+import { Dimensions } from "react-native";
+
+// Il preset Jest di React Native mocka le dimensioni schermo a 750x1334dp
+// (vedi @react-native/jest-preset/jest/mocks/NativeModules.js) — una misura
+// da tablet secondo la soglia usata da useIsTabletDevice/useResponsiveColumns
+// (>= 600dp). Senza fissarla qui, ogni test esistente finirebbe per
+// esercitare silenziosamente il ramo "tablet a 2+ colonne" invece di quello
+// telefono, azzerando la copertura del layout telefono senza nessun errore
+// esplicito (stessa categoria di failure silenziosa già vista con
+// @testing-library/react-native v14, vedi CLAUDE.md). Dimensions.set()
+// aggiorna anche useWindowDimensions() (stessa sottoscrizione interna),
+// quindi basta chiamarlo una volta qui perché tutti i test partano da una
+// misura telefono realistica; i singoli test che devono simulare un tablet
+// usano l'helper setDeviceDimensions() di test/helpers.tsx.
+Dimensions.set({
+  window: { width: 390, height: 844, scale: 3, fontScale: 1 },
+  screen: { width: 390, height: 844, scale: 3, fontScale: 1 },
+});
+
+// expo-screen-orientation e' un modulo nativo: App.tsx lo chiama al mount
+// (vedi useOrientationLock) e verrebbe importato da ogni test che monta
+// App.tsx o RootNavigator — mock minimo, stesso trattamento riservato sotto
+// a expo-secure-store/expo-audio.
+jest.mock("expo-screen-orientation", () => ({
+  lockAsync: jest.fn(async () => {}),
+  unlockAsync: jest.fn(async () => {}),
+  OrientationLock: {
+    PORTRAIT_UP: "PORTRAIT_UP",
+    ALL: "ALL",
+  },
+}));
+
 // expo-secure-store usa il Keychain/Keystore nativo: non esiste in ambiente
 // Jest, quindi lo sostituiamo con un'implementazione in-memory per i test
 // (jest-expo mocka molti moduli expo-*, ma non questo). La Map deve vivere

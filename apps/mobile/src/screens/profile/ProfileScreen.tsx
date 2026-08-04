@@ -25,6 +25,11 @@ import {
 import { ApiRequestError } from "../../api/client";
 import { translateError } from "../../api/translate-error";
 import { colors, radius, spacing } from "../../theme/theme";
+import { centeredContentStyle, fieldGridItemStyle, fieldGridStyle } from "../../theme/layout";
+import {
+  useResponsiveColumns,
+  useSafeAreaHorizontalPadding,
+} from "../../hooks/useResponsiveLayout";
 
 type ProfileTab = "account" | "measurements" | "preferences";
 
@@ -49,6 +54,9 @@ export function ProfileScreen() {
   const { t, i18n } = useTranslation();
   const { token, user } = useAuth();
   const [tab, setTab] = useState<ProfileTab>("measurements");
+  const measurementColumns = useResponsiveColumns(2);
+  const measurementFieldStyle = fieldGridItemStyle(measurementColumns);
+  const safeAreaPadding = useSafeAreaHorizontalPadding();
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -248,7 +256,7 @@ export function ProfileScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, safeAreaPadding]} contentContainerStyle={styles.content}>
       <View style={styles.tabRow}>
         <TouchableOpacity
           style={[styles.tabButton, tab === "account" && styles.tabButtonActive]}
@@ -468,65 +476,67 @@ export function ProfileScreen() {
                 </View>
               )}
 
-              <View style={styles.field}>
-                <Text style={styles.label}>{t("profile.measurements.height")}</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="numeric"
-                  value={heightCm}
-                  onChangeText={setHeightCm}
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
-              <View style={styles.field}>
-                <Text style={styles.label}>{t("profile.measurements.weight")}</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="numeric"
-                  value={weightKg}
-                  onChangeText={setWeightKg}
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
-              <View style={styles.field}>
-                <Text style={styles.label}>{t("profile.measurements.chest")}</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="numeric"
-                  value={chestCm}
-                  onChangeText={setChestCm}
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
-              <View style={styles.field}>
-                <Text style={styles.label}>{t("profile.measurements.arm")}</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="numeric"
-                  value={armCm}
-                  onChangeText={setArmCm}
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
-              <View style={styles.field}>
-                <Text style={styles.label}>{t("profile.measurements.waist")}</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="numeric"
-                  value={waistCm}
-                  onChangeText={setWaistCm}
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
-              <View style={styles.field}>
-                <Text style={styles.label}>{t("profile.measurements.leg")}</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="numeric"
-                  value={legCm}
-                  onChangeText={setLegCm}
-                  placeholderTextColor={colors.textMuted}
-                />
+              <View style={fieldGridStyle}>
+                <View style={measurementFieldStyle}>
+                  <Text style={styles.label}>{t("profile.measurements.height")}</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    value={heightCm}
+                    onChangeText={setHeightCm}
+                    placeholderTextColor={colors.textMuted}
+                  />
+                </View>
+                <View style={measurementFieldStyle}>
+                  <Text style={styles.label}>{t("profile.measurements.weight")}</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    value={weightKg}
+                    onChangeText={setWeightKg}
+                    placeholderTextColor={colors.textMuted}
+                  />
+                </View>
+                <View style={measurementFieldStyle}>
+                  <Text style={styles.label}>{t("profile.measurements.chest")}</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    value={chestCm}
+                    onChangeText={setChestCm}
+                    placeholderTextColor={colors.textMuted}
+                  />
+                </View>
+                <View style={measurementFieldStyle}>
+                  <Text style={styles.label}>{t("profile.measurements.arm")}</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    value={armCm}
+                    onChangeText={setArmCm}
+                    placeholderTextColor={colors.textMuted}
+                  />
+                </View>
+                <View style={measurementFieldStyle}>
+                  <Text style={styles.label}>{t("profile.measurements.waist")}</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    value={waistCm}
+                    onChangeText={setWaistCm}
+                    placeholderTextColor={colors.textMuted}
+                  />
+                </View>
+                <View style={measurementFieldStyle}>
+                  <Text style={styles.label}>{t("profile.measurements.leg")}</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    value={legCm}
+                    onChangeText={setLegCm}
+                    placeholderTextColor={colors.textMuted}
+                  />
+                </View>
               </View>
 
               {measurementsMessage && (
@@ -653,6 +663,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.xxl,
     gap: spacing.md,
+    ...centeredContentStyle,
   },
   tabRow: {
     flexDirection: "row",
