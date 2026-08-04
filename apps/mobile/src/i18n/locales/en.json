@@ -218,6 +218,22 @@
     "title": "Profile",
     "measurementsTab": "Measurements",
     "preferencesTab": "Preferences",
+    "account": {
+      "tab": "Account",
+      "emailLabel": "Email",
+      "memberSince": "Member since",
+      "securityIntro": "To change your password we confirm your identity in two steps.",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmNewPassword": "Confirm new password",
+      "passwordMismatch": "The two passwords don't match.",
+      "requestSubmit": "Send confirmation code",
+      "requestSubmitting": "Sending…",
+      "otpLabel": "Code received by email",
+      "otpSubmit": "Confirm password change",
+      "otpSubmitting": "Confirming…",
+      "cancel": "Cancel"
+    },
     "measurements": {
       "loadError": "Unable to load your measurements.",
       "historicizeLabel": "Track measurements over time",
@@ -252,6 +268,9 @@
     "INVALID_CREDENTIALS": "Invalid email or password.",
     "EMAIL_ALREADY_IN_USE": "A user with this email already exists.",
     "VALIDATION_ERROR": "Invalid data. Please check the fields and try again.",
-    "UNKNOWN_ERROR": "Unexpected error. Please try again."
+    "UNKNOWN_ERROR": "Unexpected error. Please try again.",
+    "INVALID_CURRENT_PASSWORD": "Current password is incorrect.",
+    "INVALID_OTP": "Invalid or expired code.",
+    "NO_PENDING_PASSWORD_CHANGE": "No password change request in progress."
   }
 }

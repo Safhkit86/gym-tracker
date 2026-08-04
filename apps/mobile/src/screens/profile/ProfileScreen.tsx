@@ -13,6 +13,7 @@ import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import type { AccountPreferences, ProgressionPreferences } from "@gym-tracker/shared";
 import { useAuth } from "../../auth/useAuth";
+import { confirmPasswordChange, requestPasswordChange } from "../../api/auth";
 import {
   getAccountPreferences,
   getMeasurements,
@@ -22,9 +23,10 @@ import {
   updateProgressionPreferences,
 } from "../../api/profile";
 import { ApiRequestError } from "../../api/client";
+import { translateError } from "../../api/translate-error";
 import { colors, radius, spacing } from "../../theme/theme";
 
-type ProfileTab = "measurements" | "preferences";
+type ProfileTab = "account" | "measurements" | "preferences";
 
 /** Nullable o maggiore di zero: 0 (o un negativo, impedito gia' da
  *  keyboardType="numeric") non e' una misura valida, va trattato come "non
@@ -45,8 +47,17 @@ function today(): string {
 
 export function ProfileScreen() {
   const { t, i18n } = useTranslation();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [tab, setTab] = useState<ProfileTab>("measurements");
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [awaitingOtp, setAwaitingOtp] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const [accountMessage, setAccountMessage] = useState<string | null>(null);
+  const [isSavingAccount, setIsSavingAccount] = useState(false);
 
   const [heightCm, setHeightCm] = useState("");
   const [weightKg, setWeightKg] = useState("");
@@ -193,9 +204,62 @@ export function ProfileScreen() {
     }
   }
 
+  async function handleRequestPasswordChange(): Promise<void> {
+    setAccountError(null);
+    setAccountMessage(null);
+    if (newPassword !== confirmNewPassword) {
+      setAccountError(t("profile.account.passwordMismatch"));
+      return;
+    }
+    if (!token) {
+      return;
+    }
+    setIsSavingAccount(true);
+    try {
+      const result = await requestPasswordChange(token, { currentPassword, newPassword });
+      setAccountMessage(result.message);
+      setAwaitingOtp(true);
+    } catch (err) {
+      setAccountError(translateError(err, t));
+    } finally {
+      setIsSavingAccount(false);
+    }
+  }
+
+  async function handleConfirmPasswordChange(): Promise<void> {
+    setAccountError(null);
+    if (!token) {
+      return;
+    }
+    setIsSavingAccount(true);
+    try {
+      const result = await confirmPasswordChange(token, { otp });
+      setAccountMessage(result.message);
+      setAwaitingOtp(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setOtp("");
+    } catch (err) {
+      setAccountError(translateError(err, t));
+    } finally {
+      setIsSavingAccount(false);
+    }
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.tabRow}>
+        <TouchableOpacity
+          style={[styles.tabButton, tab === "account" && styles.tabButtonActive]}
+          onPress={() => setTab("account")}
+          accessibilityRole="button"
+          accessibilityLabel={t("profile.account.tab")}
+        >
+          <Text style={[styles.tabButtonText, tab === "account" && styles.tabButtonTextActive]}>
+            {t("profile.account.tab")}
+          </Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tabButton, tab === "measurements" && styles.tabButtonActive]}
           onPress={() => setTab("measurements")}
@@ -219,6 +283,134 @@ export function ProfileScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {tab === "account" && (
+        <View style={styles.card}>
+          {accountError && (
+            <Text style={styles.error} accessibilityRole="alert">
+              {accountError}
+            </Text>
+          )}
+
+          <View style={styles.field}>
+            <Text style={styles.label}>{t("profile.account.emailLabel")}</Text>
+            <Text style={styles.infoText}>{user?.email}</Text>
+          </View>
+          {user && (
+            <View style={styles.field}>
+              <Text style={styles.label}>{t("profile.account.memberSince")}</Text>
+              <Text style={styles.infoText}>
+                {new Date(user.createdAt).toLocaleDateString(i18n.language)}
+              </Text>
+            </View>
+          )}
+
+          <Text style={styles.toggleHint}>{t("profile.account.securityIntro")}</Text>
+
+          {!awaitingOtp && (
+            <>
+              <View style={styles.field}>
+                <Text style={styles.label}>{t("profile.account.currentPassword")}</Text>
+                <TextInput
+                  style={styles.input}
+                  secureTextEntry
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  placeholderTextColor={colors.textMuted}
+                  accessibilityLabel={t("profile.account.currentPassword")}
+                />
+              </View>
+              <View style={styles.field}>
+                <Text style={styles.label}>{t("profile.account.newPassword")}</Text>
+                <TextInput
+                  style={styles.input}
+                  secureTextEntry
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  placeholderTextColor={colors.textMuted}
+                  accessibilityLabel={t("profile.account.newPassword")}
+                />
+              </View>
+              <View style={styles.field}>
+                <Text style={styles.label}>{t("profile.account.confirmNewPassword")}</Text>
+                <TextInput
+                  style={styles.input}
+                  secureTextEntry
+                  value={confirmNewPassword}
+                  onChangeText={setConfirmNewPassword}
+                  placeholderTextColor={colors.textMuted}
+                  accessibilityLabel={t("profile.account.confirmNewPassword")}
+                />
+              </View>
+              {accountMessage && (
+                <Text style={styles.successText} accessibilityRole="alert">
+                  {accountMessage}
+                </Text>
+              )}
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleRequestPasswordChange}
+                disabled={isSavingAccount}
+                accessibilityRole="button"
+                accessibilityLabel={t("profile.account.requestSubmit")}
+              >
+                <Text style={styles.submitButtonText}>
+                  {isSavingAccount
+                    ? t("profile.account.requestSubmitting")
+                    : t("profile.account.requestSubmit")}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {awaitingOtp && (
+            <>
+              <View style={styles.field}>
+                <Text style={styles.label}>{t("profile.account.otpLabel")}</Text>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="numeric"
+                  value={otp}
+                  onChangeText={setOtp}
+                  placeholderTextColor={colors.textMuted}
+                  accessibilityLabel={t("profile.account.otpLabel")}
+                />
+              </View>
+              {accountMessage && (
+                <Text style={styles.successText} accessibilityRole="alert">
+                  {accountMessage}
+                </Text>
+              )}
+              <View style={styles.otpActions}>
+                <TouchableOpacity
+                  style={[styles.submitButton, styles.otpConfirmButton]}
+                  onPress={handleConfirmPasswordChange}
+                  disabled={isSavingAccount}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("profile.account.otpSubmit")}
+                >
+                  <Text style={styles.submitButtonText}>
+                    {isSavingAccount
+                      ? t("profile.account.otpSubmitting")
+                      : t("profile.account.otpSubmit")}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => {
+                    setAwaitingOtp(false);
+                    setAccountMessage(null);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("profile.account.cancel")}
+                >
+                  <Text style={styles.cancelButtonText}>{t("profile.account.cancel")}</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </View>
+      )}
 
       {tab === "measurements" && (
         <View style={styles.card}>
@@ -579,6 +771,28 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: colors.accentContrast,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  otpActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  otpConfirmButton: {
+    flex: 1,
+  },
+  cancelButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+  },
+  cancelButtonText: {
+    color: colors.text,
     fontSize: 14,
     fontWeight: "700",
   },
