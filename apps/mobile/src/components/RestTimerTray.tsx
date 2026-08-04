@@ -74,8 +74,16 @@ const styles = StyleSheet.create({
     right: spacing.md,
     bottom: spacing.md,
     gap: spacing.sm,
+    // position:"absolute" con left+right ancorerebbe il tray a sinistra
+    // anche dando maxWidth al singolo timer (Yoga risolve il box usando
+    // "left" come riferimento) — alignItems:"center" qui, insieme al
+    // maxWidth su .timer sotto, centra davvero il tray su schermi larghi
+    // invece di lasciarlo appiattito contro il bordo sinistro.
+    alignItems: "center",
   },
   timer: {
+    width: "100%",
+    maxWidth: 420,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",

@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import type { Exercise, WorkoutInput } from "@gym-tracker/shared";
 import { ApiRequestError } from "../../api/client";
 import { colors, radius, spacing } from "../../theme/theme";
+import { centeredContentStyle } from "../../theme/layout";
 import { ExerciseCard } from "./ExerciseCard";
 import {
   emptyExercise,
@@ -257,6 +258,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: spacing.xxl,
+    ...centeredContentStyle,
   },
   headerContainer: {
     padding: spacing.lg,
