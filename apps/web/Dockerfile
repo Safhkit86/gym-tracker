@@ -42,7 +42,11 @@ COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 
 EXPOSE 80
+# "localhost" risolve prima a ::1 (IPv6) dentro il container, ma nginx.conf
+# ha solo "listen 80;" (IPv4): il probe fallirebbe sempre con "Connection
+# refused" su IPv6 pur essendo il server perfettamente raggiungibile su
+# IPv4 -- 127.0.0.1 esplicito evita l'ambiguita' di risoluzione.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
