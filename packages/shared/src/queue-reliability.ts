@@ -1,9 +1,10 @@
-import amqplib, { type Channel, type ConsumeMessage } from "amqplib";
+import type { Channel, ConsumeMessage } from "amqplib";
+import { connectResilientAmqp } from "./amqp-connection.js";
 import type { Logger } from "./logger.js";
 
 /**
  * Ricetta di affidabilita' condivisa per ogni consumer RabbitMQ del progetto
- * (oggi solo notify-service, in futuro anche history-service/progress-service):
+ * (notify-service, history-service, account-service, progress-service):
  * retry immediato in-process, poi retry con backoff via una coda di attesa
  * dedicata, poi una coda di dead-letter finale + callback opzionale (es. email
  * a un contatto operativo). Nessun plugin RabbitMQ necessario: il backoff usa
@@ -54,13 +55,6 @@ export function nextBackoffDelayMs(
 
 export const DEFAULT_IMMEDIATE_RETRIES = 2;
 export const DEFAULT_BACKOFF_DELAYS_MS = [10_000, 30_000, 60_000, 300_000, 900_000] as const;
-
-const MAX_CONNECT_ATTEMPTS = 5;
-const BASE_CONNECT_RETRY_DELAY_MS = 500;
-
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export interface ReliableConsumer {
   close(): Promise<void>;
@@ -161,22 +155,24 @@ async function notifyDeadLetter<T>(
 }
 
 /**
- * Si connette a RabbitMQ (retry con backoff: `depends_on: rabbitmq: condition:
- * service_healthy` in docker-compose non e' una garanzia assoluta) e consuma
- * dalla coda `queueName` con ack manuale (`prefetch(1)`), applicando la
- * ricetta di affidabilita' sopra. Le code di retry/dead-letter vengono
- * dichiarate insieme a quella di lavoro.
+ * Si connette a RabbitMQ (retry con backoff all'avvio, poi riconnessione
+ * automatica se la connessione cade in seguito -- vedi amqp-connection.ts)
+ * e consuma dalla coda `queueName` con ack manuale (`prefetch(1)`),
+ * applicando la ricetta di affidabilita' sopra. Le code di retry/dead-letter
+ * vengono dichiarate insieme a quella di lavoro, e ridichiarate (no-op,
+ * `assertQueue` e' idempotente) ad ogni riconnessione insieme al consumer,
+ * che va sempre riregistrato sul nuovo canale.
  */
 export async function startReliableConsumer<T>(
   options: ReliableConsumerOptions<T>
 ): Promise<ReliableConsumer> {
   const names = queueNamesFor(options.queueName);
 
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= MAX_CONNECT_ATTEMPTS; attempt++) {
-    try {
-      const connection = await amqplib.connect(options.connectionUrl);
-      const channel = await connection.createChannel();
+  const resilient = await connectResilientAmqp({
+    url: options.connectionUrl,
+    logger: options.logger,
+    openChannel: (connection) => connection.createChannel(),
+    setup: async (channel) => {
       await channel.assertQueue(names.work, { durable: true });
       await channel.assertQueue(names.retry, {
         durable: true,
@@ -187,31 +183,16 @@ export async function startReliableConsumer<T>(
       });
       await channel.assertQueue(names.deadLetter, { durable: true });
       await channel.prefetch(1);
-      connection.on("error", (err) => {
-        options.logger.error({ err }, "connessione RabbitMQ interrotta");
-      });
-
       await channel.consume(names.work, (msg: ConsumeMessage | null) => {
         if (!msg) {
           return;
         }
         void handleDelivery(channel, msg, names, options);
       });
+    },
+  });
 
-      return {
-        close: async () => {
-          await channel.close();
-          await connection.close();
-        },
-      };
-    } catch (err) {
-      lastError = err;
-      if (attempt < MAX_CONNECT_ATTEMPTS) {
-        await wait(BASE_CONNECT_RETRY_DELAY_MS * 2 ** (attempt - 1));
-      }
-    }
-  }
-  throw new Error(
-    `Impossibile connettersi a RabbitMQ dopo ${MAX_CONNECT_ATTEMPTS} tentativi: ${String(lastError)}`
-  );
+  return {
+    close: () => resilient.close(),
+  };
 }
