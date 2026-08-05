@@ -1,10 +1,12 @@
-import amqplib, { type ChannelModel } from "amqplib";
+import type { Channel } from "amqplib";
 import {
   SESSION_LOGGED_QUEUE,
   SESSION_DELETED_QUEUE,
+  connectResilientAmqp,
   type Logger,
   type SessionLoggedEvent,
   type SessionDeletedEvent,
+  type ResilientAmqpConnection,
 } from "@gym-tracker/shared";
 
 /**
@@ -20,31 +22,16 @@ export interface SessionEventPublisher {
   close?(): Promise<void>;
 }
 
-const MAX_CONNECT_ATTEMPTS = 5;
-const BASE_RETRY_DELAY_MS = 500;
-
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 /**
  * Publisher reale via RabbitMQ (amqplib). Code durevoli, messaggi
  * persistenti. La pubblicazione e' best-effort rispetto a Postgres (niente
  * outbox pattern): un fallimento qui non deve mai far fallire la richiesta
  * HTTP, la sessione e' gia' salvata/cancellata con successo (stesso pattern
- * gia' in uso per "progression-events" in progress-service).
+ * gia' in uso per "progression-events" in progress-service). La connessione
+ * si riconnette da sola se cade dopo l'avvio (vedi amqp-connection.ts).
  */
 export class AmqpSessionEventPublisher implements SessionEventPublisher {
-  private connection: ChannelModel | null = null;
-  private channel: Awaited<ReturnType<ChannelModel["createChannel"]>> | null = null;
-
-  private constructor(
-    connection: ChannelModel,
-    channel: Awaited<ReturnType<ChannelModel["createChannel"]>>
-  ) {
-    this.connection = connection;
-    this.channel = channel;
-  }
+  private constructor(private readonly resilient: ResilientAmqpConnection<Channel>) {}
 
   /**
    * `depends_on: rabbitmq: condition: service_healthy` in docker-compose non
@@ -53,50 +40,40 @@ export class AmqpSessionEventPublisher implements SessionEventPublisher {
    * crash-loop al primo avvio.
    */
   static async connect(url: string, logger: Logger): Promise<AmqpSessionEventPublisher> {
-    let lastError: unknown;
-    for (let attempt = 1; attempt <= MAX_CONNECT_ATTEMPTS; attempt++) {
-      try {
-        const connection = await amqplib.connect(url);
-        const channel = await connection.createChannel();
+    const resilient = await connectResilientAmqp<Channel>({
+      url,
+      logger,
+      openChannel: (connection) => connection.createChannel(),
+      setup: async (channel) => {
         await channel.assertQueue(SESSION_LOGGED_QUEUE, { durable: true });
         await channel.assertQueue(SESSION_DELETED_QUEUE, { durable: true });
-        connection.on("error", (err) => {
-          logger.error({ err }, "connessione RabbitMQ interrotta");
-        });
-        return new AmqpSessionEventPublisher(connection, channel);
-      } catch (err) {
-        lastError = err;
-        if (attempt < MAX_CONNECT_ATTEMPTS) {
-          await wait(BASE_RETRY_DELAY_MS * 2 ** (attempt - 1));
-        }
-      }
-    }
-    throw new Error(
-      `Impossibile connettersi a RabbitMQ dopo ${MAX_CONNECT_ATTEMPTS} tentativi: ${String(lastError)}`
-    );
+      },
+    });
+    return new AmqpSessionEventPublisher(resilient);
   }
 
   async publishSessionLogged(event: SessionLoggedEvent): Promise<void> {
-    if (!this.channel) {
+    const channel = this.resilient.getChannel();
+    if (!channel) {
       throw new Error("Canale RabbitMQ non disponibile.");
     }
-    this.channel.sendToQueue(SESSION_LOGGED_QUEUE, Buffer.from(JSON.stringify(event)), {
+    channel.sendToQueue(SESSION_LOGGED_QUEUE, Buffer.from(JSON.stringify(event)), {
       persistent: true,
     });
   }
 
   async publishSessionDeleted(event: SessionDeletedEvent): Promise<void> {
-    if (!this.channel) {
+    const channel = this.resilient.getChannel();
+    if (!channel) {
       throw new Error("Canale RabbitMQ non disponibile.");
     }
-    this.channel.sendToQueue(SESSION_DELETED_QUEUE, Buffer.from(JSON.stringify(event)), {
+    channel.sendToQueue(SESSION_DELETED_QUEUE, Buffer.from(JSON.stringify(event)), {
       persistent: true,
     });
   }
 
   async close(): Promise<void> {
-    await this.channel?.close();
-    await this.connection?.close();
+    await this.resilient.close();
   }
 }
 

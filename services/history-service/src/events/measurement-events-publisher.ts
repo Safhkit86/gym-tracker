@@ -1,8 +1,10 @@
-import amqplib, { type ChannelModel } from "amqplib";
+import type { Channel } from "amqplib";
 import {
   MEASUREMENT_RECORDED_QUEUE,
+  connectResilientAmqp,
   type Logger,
   type MeasurementRecordedEvent,
+  type ResilientAmqpConnection,
 } from "@gym-tracker/shared";
 
 /**
@@ -19,60 +21,35 @@ export interface MeasurementEventPublisher {
   close?(): Promise<void>;
 }
 
-const MAX_CONNECT_ATTEMPTS = 5;
-const BASE_RETRY_DELAY_MS = 500;
-
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
+/** La connessione si riconnette da sola se cade dopo l'avvio (vedi
+ *  amqp-connection.ts). */
 export class AmqpMeasurementEventPublisher implements MeasurementEventPublisher {
-  private connection: ChannelModel | null = null;
-  private channel: Awaited<ReturnType<ChannelModel["createChannel"]>> | null = null;
-
-  private constructor(
-    connection: ChannelModel,
-    channel: Awaited<ReturnType<ChannelModel["createChannel"]>>
-  ) {
-    this.connection = connection;
-    this.channel = channel;
-  }
+  private constructor(private readonly resilient: ResilientAmqpConnection<Channel>) {}
 
   static async connect(url: string, logger: Logger): Promise<AmqpMeasurementEventPublisher> {
-    let lastError: unknown;
-    for (let attempt = 1; attempt <= MAX_CONNECT_ATTEMPTS; attempt++) {
-      try {
-        const connection = await amqplib.connect(url);
-        const channel = await connection.createChannel();
+    const resilient = await connectResilientAmqp<Channel>({
+      url,
+      logger,
+      openChannel: (connection) => connection.createChannel(),
+      setup: async (channel) => {
         await channel.assertQueue(MEASUREMENT_RECORDED_QUEUE, { durable: true });
-        connection.on("error", (err) => {
-          logger.error({ err }, "connessione RabbitMQ interrotta");
-        });
-        return new AmqpMeasurementEventPublisher(connection, channel);
-      } catch (err) {
-        lastError = err;
-        if (attempt < MAX_CONNECT_ATTEMPTS) {
-          await wait(BASE_RETRY_DELAY_MS * 2 ** (attempt - 1));
-        }
-      }
-    }
-    throw new Error(
-      `Impossibile connettersi a RabbitMQ dopo ${MAX_CONNECT_ATTEMPTS} tentativi: ${String(lastError)}`
-    );
+      },
+    });
+    return new AmqpMeasurementEventPublisher(resilient);
   }
 
   async publishMeasurementRecorded(event: MeasurementRecordedEvent): Promise<void> {
-    if (!this.channel) {
+    const channel = this.resilient.getChannel();
+    if (!channel) {
       throw new Error("Canale RabbitMQ non disponibile.");
     }
-    this.channel.sendToQueue(MEASUREMENT_RECORDED_QUEUE, Buffer.from(JSON.stringify(event)), {
+    channel.sendToQueue(MEASUREMENT_RECORDED_QUEUE, Buffer.from(JSON.stringify(event)), {
       persistent: true,
     });
   }
 
   async close(): Promise<void> {
-    await this.channel?.close();
-    await this.connection?.close();
+    await this.resilient.close();
   }
 }
 

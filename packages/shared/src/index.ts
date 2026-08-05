@@ -17,3 +17,4 @@ export * from "./logger.js";
 export * from "./http-logger.js";
 export * from "./mailer.js";
 export * from "./queue-reliability.js";
+export * from "./amqp-connection.js";
