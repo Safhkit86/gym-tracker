@@ -293,6 +293,7 @@ export function LogSessionScreen({ navigation, route }: Props) {
             onUpdateExercise={updateExercise}
             onUpdateSet={updateSet}
             onStartTimer={startTimer}
+            hasActiveTimer={timers.length > 0}
           />
         </ScrollView>
       ) : (
@@ -308,6 +309,7 @@ export function LogSessionScreen({ navigation, route }: Props) {
               onUpdateExercise={(patch) => updateExercise(index, patch)}
               onUpdateSet={(setIndex, patch) => updateSet(index, setIndex, patch)}
               onStartTimer={startTimer}
+              hasActiveTimer={timers.length > 0}
             />
           )}
           contentContainerStyle={styles.listContent}

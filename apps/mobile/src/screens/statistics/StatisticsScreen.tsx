@@ -8,12 +8,14 @@ import {
   View,
 } from "react-native";
 import { useTranslation } from "react-i18next";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type {
   DashboardStats,
   Exercise,
   ExerciseHistoryPoint,
   MeasurementEntry,
 } from "@gym-tracker/shared";
+import type { StatisticsStackParamList } from "../../navigation/StatisticsNavigator";
 import { useAuth } from "../../auth/useAuth";
 import { getDashboardStats, getExerciseHistory } from "../../api/stats";
 import { listExercises } from "../../api/exercises";
@@ -41,10 +43,15 @@ import { colors, radius, spacing } from "../../theme/theme";
 
 type StatisticsTab = "sessions" | "measurements";
 
-export function StatisticsScreen() {
+export type Props = NativeStackScreenProps<StatisticsStackParamList, "StatisticsHome">;
+
+export function StatisticsScreen({ route }: Props) {
   const { t } = useTranslation();
   const { token } = useAuth();
-  const [tab, setTab] = useState<StatisticsTab>("sessions");
+  // Tab iniziale da route.params (link "Vedi tutte" della card Misure in
+  // Dashboard), altrimenti "sessions" — stesso comportamento del query
+  // param ?tab=measurements della webapp.
+  const [tab, setTab] = useState<StatisticsTab>(route.params?.tab ?? "sessions");
   const columns = useResponsiveColumns(3);
   const safeAreaPadding = useSafeAreaHorizontalPadding();
   const isTablet = useIsTabletDevice();

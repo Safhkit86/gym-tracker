@@ -49,6 +49,12 @@ export function useRestTimers(soundEnabled: boolean): UseRestTimersResult {
   useAudioPlayerStatus(player);
   const soundEnabledRef = useRef(soundEnabled);
   soundEnabledRef.current = soundEnabled;
+  // Letto (non in dipendenza) dentro startTimer qui sotto, che deve restare
+  // una funzione stabile — stesso trucco di soundEnabledRef sopra, per
+  // avere sempre il valore più recente senza dover ricreare la callback ad
+  // ogni tick del countdown (timers cambia ogni secondo).
+  const hasActiveTimerRef = useRef(false);
+  hasActiveTimerRef.current = timers.length > 0;
 
   const triggerAlarmPulse = useCallback(() => {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -82,6 +88,17 @@ export function useRestTimers(soundEnabled: boolean): UseRestTimersResult {
   );
 
   const startTimer = useCallback((seconds: number, label: string) => {
+    // Un solo timer di recupero attivo alla volta, in tutta l'app: mentre
+    // uno conta (o suona, in attesa di essere fermato) nessun'altra icona
+    // timer deve poterne avviare un altro, stesso o diverso esercizio —
+    // richiesto esplicitamente dopo che due timer sovrapposti in
+    // RestTimerTray erano confusi da leggere. I pulsanti si disabilitano
+    // di conseguenza (vedi hasActiveTimer nel valore di ritorno), questo
+    // guard è la difesa di riserva se un pulsante restasse comunque
+    // cliccabile.
+    if (hasActiveTimerRef.current) {
+      return;
+    }
     const id = Crypto.randomUUID();
     endAtById.current.set(id, Date.now() + seconds * 1000);
     setTimers((current) => [

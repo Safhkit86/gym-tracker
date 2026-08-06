@@ -101,6 +101,96 @@ describe("PATCH /notifications/:id/read", () => {
   });
 });
 
+describe("PATCH /notifications/:id/accept", () => {
+  it("segna come letta la notifica accettata e le precedenti non lette dello stesso esercizio", async () => {
+    const { app, deps } = buildTestApp();
+    const older = await deps.notifications.create(
+      notificationInput({ progressionEventId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" })
+    );
+    // La notifica piu' recente per un esercizio diverso non deve essere
+    // toccata dalla cascata: solo lo stesso esercizio conta.
+    const otherExercise = await deps.notifications.create(
+      notificationInput({
+        exerciseId: "88888888-8888-8888-8888-888888888888",
+        progressionEventId: "cccccccc-cccc-cccc-cccc-cccccccccccc",
+      })
+    );
+    const newer = await deps.notifications.create(
+      notificationInput({ progressionEventId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" })
+    );
+    const token = await bearerFor(OWNER_A);
+
+    const response = await request(app)
+      .patch(`/notifications/${newer!.id}/accept`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(response.status).toBe(204);
+
+    const list = await request(app).get("/notifications").set("Authorization", `Bearer ${token}`);
+    const byId = new Map(
+      (list.body as { id: string; readAt: string | null }[]).map((n) => [n.id, n.readAt])
+    );
+    expect(byId.get(newer!.id)).not.toBeNull();
+    expect(byId.get(older!.id)).not.toBeNull();
+    expect(byId.get(otherExercise!.id)).toBeNull();
+  });
+
+  it("accettare una notifica piu' vecchia non tocca quelle piu' recenti dello stesso esercizio", async () => {
+    const { app, deps } = buildTestApp();
+    const older = await deps.notifications.create(
+      notificationInput({ progressionEventId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" })
+    );
+    const newer = await deps.notifications.create(
+      notificationInput({ progressionEventId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" })
+    );
+    const token = await bearerFor(OWNER_A);
+
+    await request(app)
+      .patch(`/notifications/${older!.id}/accept`)
+      .set("Authorization", `Bearer ${token}`);
+
+    const list = await request(app).get("/notifications").set("Authorization", `Bearer ${token}`);
+    const byId = new Map(
+      (list.body as { id: string; readAt: string | null }[]).map((n) => [n.id, n.readAt])
+    );
+    expect(byId.get(older!.id)).not.toBeNull();
+    expect(byId.get(newer!.id)).toBeNull();
+  });
+
+  it("segnare una notifica come 'solo letta' non tocca le altre dello stesso esercizio", async () => {
+    const { app, deps } = buildTestApp();
+    const older = await deps.notifications.create(
+      notificationInput({ progressionEventId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" })
+    );
+    const newer = await deps.notifications.create(
+      notificationInput({ progressionEventId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" })
+    );
+    const token = await bearerFor(OWNER_A);
+
+    await request(app)
+      .patch(`/notifications/${newer!.id}/read`)
+      .set("Authorization", `Bearer ${token}`);
+
+    const list = await request(app).get("/notifications").set("Authorization", `Bearer ${token}`);
+    const byId = new Map(
+      (list.body as { id: string; readAt: string | null }[]).map((n) => [n.id, n.readAt])
+    );
+    expect(byId.get(newer!.id)).not.toBeNull();
+    expect(byId.get(older!.id)).toBeNull();
+  });
+
+  it("risponde 404 (non 403) per la notifica di un altro utente", async () => {
+    const { app, deps } = buildTestApp();
+    const created = await deps.notifications.create(notificationInput());
+    const tokenB = await bearerFor(OWNER_B);
+
+    const response = await request(app)
+      .patch(`/notifications/${created!.id}/accept`)
+      .set("Authorization", `Bearer ${tokenB}`);
+    expect(response.status).toBe(404);
+    expect(response.body.code).toBe("NOT_FOUND");
+  });
+});
+
 describe("POST /notifications/read-all", () => {
   it("segna tutte le notifiche non lette dell'utente e ritorna il conteggio", async () => {
     const { app, deps } = buildTestApp();

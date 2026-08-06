@@ -539,7 +539,9 @@ export function LogSessionPage() {
                         <IconButton
                           icon={<TimerIcon />}
                           label="Avvia timer recupero"
-                          disabled={!isPositiveNumber(exercise.actualRestSeconds)}
+                          disabled={
+                            !isPositiveNumber(exercise.actualRestSeconds) || timers.length > 0
+                          }
                           onClick={() =>
                             startTimer(
                               Number(exercise.actualRestSeconds),
@@ -558,7 +560,9 @@ export function LogSessionPage() {
                       <IconButton
                         icon={<TimerIcon />}
                         label="Avvia timer recupero"
-                        disabled={!exercise.restSeconds || exercise.restSeconds <= 0}
+                        disabled={
+                          !exercise.restSeconds || exercise.restSeconds <= 0 || timers.length > 0
+                        }
                         onClick={() =>
                           startTimer(
                             exercise.restSeconds as number,
@@ -660,7 +664,9 @@ export function LogSessionPage() {
                               <IconButton
                                 icon={<TimerIcon />}
                                 label="Avvia timer recupero"
-                                disabled={!isPositiveNumber(exercise.actualRestSeconds)}
+                                disabled={
+                                  !isPositiveNumber(exercise.actualRestSeconds) || timers.length > 0
+                                }
                                 onClick={() =>
                                   startTimer(
                                     Number(exercise.actualRestSeconds),
@@ -682,7 +688,11 @@ export function LogSessionPage() {
                               <IconButton
                                 icon={<TimerIcon />}
                                 label="Avvia timer recupero"
-                                disabled={!exercise.restSeconds || exercise.restSeconds <= 0}
+                                disabled={
+                                  !exercise.restSeconds ||
+                                  exercise.restSeconds <= 0 ||
+                                  timers.length > 0
+                                }
                                 onClick={() =>
                                   startTimer(
                                     exercise.restSeconds as number,

@@ -35,7 +35,7 @@ import { listExercises } from "../../api/exercises";
 import { getWorkout, listWorkouts } from "../../api/workouts";
 import { listSessions } from "../../api/sessions";
 import { listMeasurements } from "../../api/measurements";
-import { listNotifications, markNotificationRead } from "../../api/notifications";
+import { acceptNotification, listNotifications } from "../../api/notifications";
 import { acceptProgressionDefaults } from "../../api/profile";
 import { ApiRequestError } from "../../api/client";
 import { VerticalPeekList } from "../../components/VerticalPeekList";
@@ -267,10 +267,21 @@ export function DashboardScreen({ navigation }: Props) {
     setConfirmingIds((prev) => new Set(prev).add(notification.id));
     try {
       await acceptProgressionDefaults(token, [override]);
-      await markNotificationRead(token, notification.id);
+      await acceptNotification(token, notification.id);
       refreshUnreadCount();
       setTimeout(() => {
-        setPendingSuggestions((prev) => prev.filter((n) => n.id !== notification.id));
+        // acceptNotification segna lato server anche le notifiche piu'
+        // vecchie non lette dello stesso esercizio (vedi
+        // notify-service/notification-service.ts): senza rimuoverle anche
+        // qui resterebbero visibili con un pulsante "Accetta" ancora
+        // attivo, mentre il server le considera gia' lette.
+        setPendingSuggestions((prev) =>
+          prev.filter(
+            (n) =>
+              n.id !== notification.id &&
+              !(n.exerciseId === notification.exerciseId && n.createdAt < notification.createdAt)
+          )
+        );
         setConfirmingIds((prev) => {
           const next = new Set(prev);
           next.delete(notification.id);
@@ -321,7 +332,15 @@ export function DashboardScreen({ navigation }: Props) {
     />
   );
   const misureCard = (
-    <MisureCard measurements={measurements} onViewAll={() => navigation.navigate("Statistics")} />
+    <MisureCard
+      measurements={measurements}
+      onViewAll={() =>
+        navigation.navigate("Statistics", {
+          screen: "StatisticsHome",
+          params: { tab: "measurements" },
+        })
+      }
+    />
   );
   const costanzaCard = <CostanzaCard streakCalendar={stats.streakCalendar} />;
   const prossimaSessioneCard = nextWorkout && (

@@ -134,6 +134,39 @@ describe("LogSessionScreen", () => {
     expect(screen.getByLabelText("Panca piana set 1 rep effettive").props.value).toBe("8");
   });
 
+  it("disabilita il pulsante timer mentre uno e' gia' attivo", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: workout },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      {
+        match: (u, m) => u.endsWith("/me/account-preferences") && m === "GET",
+        body: accountPreferences,
+      },
+      { match: (u, m) => u.endsWith("/me/progression-defaults") && m === "GET", body: [] },
+    ]);
+
+    const screen = await renderWithProviders(
+      <LogSessionScreen navigation={mockNavigation()} route={mockRoute("w1")} />
+    );
+
+    await screen.findByLabelText("Panca piana recupero effettivo");
+    const startButton = screen.getByRole("button", { name: "Avvia timer recupero" });
+    fireEvent.press(startButton);
+
+    expect(await screen.findByText("Panca piana — recupero tra le serie")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Avvia timer recupero" }).props.accessibilityState
+    ).toMatchObject({ disabled: true });
+
+    fireEvent.press(screen.getByRole("button", { name: "Elimina" }));
+
+    expect(
+      screen.getByRole("button", { name: "Avvia timer recupero" }).props.accessibilityState
+        ?.disabled
+    ).not.toBe(true);
+  });
+
   it("mostra un errore se il caricamento fallisce", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },

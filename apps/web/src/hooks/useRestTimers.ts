@@ -50,6 +50,12 @@ export function useRestTimers(soundEnabled: boolean): UseRestTimersResult {
   const alertedIds = useRef(new Set<string>());
   const soundEnabledRef = useRef(soundEnabled);
   soundEnabledRef.current = soundEnabled;
+  // Letto (non in dipendenza) dentro startTimer qui sotto, che deve restare
+  // una funzione stabile — stesso trucco di soundEnabledRef sopra, per avere
+  // sempre il valore più recente senza dover ricreare la callback ad ogni
+  // tick del countdown (timers cambia ogni secondo).
+  const hasActiveTimerRef = useRef(false);
+  hasActiveTimerRef.current = timers.length > 0;
 
   const stopRinging = useCallback((id: string) => {
     const interval = ringingIntervalById.current.get(id);
@@ -70,6 +76,14 @@ export function useRestTimers(soundEnabled: boolean): UseRestTimersResult {
   );
 
   const startTimer = useCallback((seconds: number, label: string) => {
+    // Un solo timer di recupero attivo alla volta: mentre uno conta (o
+    // suona, in attesa di essere fermato) nessun altro pulsante deve poterne
+    // avviare un altro, stesso o diverso esercizio — i pulsanti si
+    // disabilitano di conseguenza lato UI (vedi timers.length in
+    // LogSessionPage), questo guard è la difesa di riserva.
+    if (hasActiveTimerRef.current) {
+      return;
+    }
     // Chiamata durante un vero gesto utente (il click che avvia il timer):
     // sblocca l'AudioContext ora, cosi' il beep innescato piu' tardi da un
     // setInterval non viene bloccato dalle autoplay policy del browser.

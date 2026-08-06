@@ -12,22 +12,22 @@ interface VerticalPeekListProps<T> {
   renderItem: (item: T, index: number) => React.ReactNode;
   keyExtractor: (item: T, index: number) => string;
   onIndexChange: (index: number) => void;
+  /** Quante righe intere mostrare prima del "peek" (mezza riga) della
+   *  successiva. Default 2: con una sola riga visibile (il default
+   *  originale) bisognava scorrere troppo per leggere elenchi anche solo
+   *  di 3-4 elementi — l'utente ha chiesto di vederne "qualche elemento
+   *  in più". */
+  visibleItems?: number;
 }
 
-/** Quanto della riga successiva resta intravisto sotto al bordo del
- *  contenitore: indizio "si può scorrere" oltre al contatore testuale nella
- *  card. Sostituisce le frecce ↑↓ di PagerControls per gli elenchi di righe
- *  (suggerimenti, esercizi di prossima/ultima sessione) — verticale, stessa
- *  direzione delle frecce che sostituisce, ma la zona di trascinamento resta
- *  volutamente bassa (una riga + questo accenno) per non creare ambiguità
- *  col scroll verticale della Dashboard in cui la card è annidata. */
-const PEEK = 14;
+const DEFAULT_VISIBLE_ITEMS = 2;
 
 export function VerticalPeekList<T>({
   items,
   renderItem,
   keyExtractor,
   onIndexChange,
+  visibleItems = DEFAULT_VISIBLE_ITEMS,
 }: VerticalPeekListProps<T>) {
   const [itemHeight, setItemHeight] = useState(0);
 
@@ -53,9 +53,18 @@ export function VerticalPeekList<T>({
     onIndexChange(Math.max(0, Math.min(index, items.length - 1)));
   }
 
+  // `visibleItems` righe intere, più mezza riga della successiva come
+  // "peek" — ma solo se c'è davvero una riga in più da far intravedere:
+  // con `items.length <= visibleItems` niente scroll necessario, la mezza
+  // riga in fondo sarebbe solo spazio vuoto.
+  const fullRows = Math.min(visibleItems, items.length);
+  const hasMore = items.length > visibleItems;
+  const maxHeight =
+    itemHeight > 0 ? itemHeight * fullRows + (hasMore ? itemHeight / 2 : 0) : undefined;
+
   return (
     <ScrollView
-      style={itemHeight > 0 ? { maxHeight: itemHeight + PEEK } : undefined}
+      style={maxHeight !== undefined ? { maxHeight } : undefined}
       showsVerticalScrollIndicator={false}
       snapToInterval={itemHeight > 0 ? itemHeight : undefined}
       decelerationRate="fast"

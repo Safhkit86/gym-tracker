@@ -26,6 +26,16 @@ export interface NotificationRepository {
   listByOwner(userId: string, opts?: ListOptions): Promise<Notification[]>;
   /** true se la notifica esiste ed e' dell'owner (letta o meno). */
   markRead(userId: string, id: string): Promise<boolean>;
+  /**
+   * Come markRead, ma per un'accettazione: segna anche come lette (non
+   * accettate) le eventuali notifiche precedenti ancora non lette dello
+   * stesso esercizio — un suggerimento più recente per lo stesso esercizio
+   * accettato rende obsoleti quelli più vecchi non ancora gestiti, che
+   * altrimenti resterebbero "da accettare" all'infinito (vedi
+   * notification-service.ts per le regole complete). true se la notifica
+   * accettata esiste ed e' dell'owner.
+   */
+  acceptWithCascade(userId: string, id: string): Promise<boolean>;
   /** Numero di notifiche segnate come lette. */
   markAllRead(userId: string): Promise<number>;
 }
@@ -70,6 +80,28 @@ export class KyselyNotificationRepository implements NotificationRepository {
       .where("user_id", "=", userId)
       .executeTakeFirst();
     return (result.numUpdatedRows ?? 0n) > 0n;
+  }
+
+  async acceptWithCascade(userId: string, id: string): Promise<boolean> {
+    const accepted = await this.db
+      .updateTable("notifications")
+      .set({ read_at: sql`coalesce(read_at, now())` })
+      .where("id", "=", id)
+      .where("user_id", "=", userId)
+      .returning(["exercise_id", "created_at"])
+      .executeTakeFirst();
+    if (!accepted) {
+      return false;
+    }
+    await this.db
+      .updateTable("notifications")
+      .set({ read_at: sql`now()` })
+      .where("user_id", "=", userId)
+      .where("exercise_id", "=", accepted.exercise_id)
+      .where("read_at", "is", null)
+      .where("created_at", "<", accepted.created_at)
+      .execute();
+    return true;
   }
 
   async markAllRead(userId: string): Promise<number> {
@@ -128,6 +160,14 @@ interface StoredNotification {
 
 export class InMemoryNotificationRepository implements NotificationRepository {
   private readonly byId = new Map<string, StoredNotification>();
+  // Contatore monotono usato solo per createdAt: due create() ravvicinate
+  // nello stesso test (nessun vero delay tra loro) possono ricadere nello
+  // stesso millisecondo di Date.now(), rendendo il confronto "<" di
+  // acceptWithCascade inaffidabile (l'ordine di creazione andrebbe perso).
+  // Sommare un contatore garantisce un ordine strettamente crescente che
+  // rispecchia l'ordine di chiamata, come farebbe in pratica la risoluzione
+  // a microsecondi di Postgres tra due INSERT reali.
+  private createSequence = 0;
 
   async create(input: NewNotification): Promise<Notification | null> {
     const exists = [...this.byId.values()].some(
@@ -148,7 +188,7 @@ export class InMemoryNotificationRepository implements NotificationRepository {
       reason: input.reason,
       triggeringSessionId: input.triggeringSessionId,
       readAt: null,
-      createdAt: new Date(),
+      createdAt: new Date(Date.now() + this.createSequence++),
     };
     this.byId.set(stored.id, stored);
     return toStoredDto(stored);
@@ -168,6 +208,25 @@ export class InMemoryNotificationRepository implements NotificationRepository {
       return false;
     }
     stored.readAt ??= new Date();
+    return true;
+  }
+
+  async acceptWithCascade(userId: string, id: string): Promise<boolean> {
+    const accepted = this.byId.get(id);
+    if (!accepted || accepted.userId !== userId) {
+      return false;
+    }
+    accepted.readAt ??= new Date();
+    for (const stored of this.byId.values()) {
+      if (
+        stored.userId === userId &&
+        stored.exerciseId === accepted.exerciseId &&
+        stored.readAt === null &&
+        stored.createdAt.getTime() < accepted.createdAt.getTime()
+      ) {
+        stored.readAt = new Date();
+      }
+    }
     return true;
   }
 

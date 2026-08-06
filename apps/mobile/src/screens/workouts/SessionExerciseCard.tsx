@@ -16,6 +16,10 @@ interface SessionExerciseCardProps {
   onUpdateExercise: (patch: Partial<SessionExerciseForm>) => void;
   onUpdateSet: (setIndex: number, patch: Partial<SessionSetForm>) => void;
   onStartTimer: (seconds: number, label: string) => void;
+  /** Un timer di recupero è già attivo (in conto o in suoneria): tutte le
+   *  icone timer di questa card si disabilitano, non se ne può avviare un
+   *  secondo mentre uno è già in corso. */
+  hasActiveTimer: boolean;
 }
 
 export function SessionExerciseCard({
@@ -25,6 +29,7 @@ export function SessionExerciseCard({
   onUpdateExercise,
   onUpdateSet,
   onStartTimer,
+  hasActiveTimer,
 }: SessionExerciseCardProps) {
   const { t } = useTranslation();
 
@@ -85,9 +90,10 @@ export function SessionExerciseCard({
             <TouchableOpacity
               style={[
                 styles.timerButton,
-                !isPositiveNumber(exercise.actualRestSeconds) && styles.timerButtonDisabled,
+                (!isPositiveNumber(exercise.actualRestSeconds) || hasActiveTimer) &&
+                  styles.timerButtonDisabled,
               ]}
-              disabled={!isPositiveNumber(exercise.actualRestSeconds)}
+              disabled={!isPositiveNumber(exercise.actualRestSeconds) || hasActiveTimer}
               onPress={() =>
                 onStartTimer(
                   Number(exercise.actualRestSeconds),
@@ -109,7 +115,8 @@ export function SessionExerciseCard({
             {t("workouts.detail.restAfterExercise", { seconds: exercise.restSeconds })}
           </Text>
           <TouchableOpacity
-            style={styles.timerButton}
+            style={[styles.timerButton, hasActiveTimer && styles.timerButtonDisabled]}
+            disabled={hasActiveTimer}
             onPress={() =>
               onStartTimer(
                 exercise.restSeconds as number,

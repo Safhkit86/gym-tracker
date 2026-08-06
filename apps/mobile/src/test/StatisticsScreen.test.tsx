@@ -2,6 +2,11 @@ import * as SecureStore from "expo-secure-store";
 import { fireEvent } from "@testing-library/react-native";
 import { renderWithProviders, mockFetchResponses, setDeviceDimensions } from "./helpers";
 import { StatisticsScreen } from "../screens/statistics/StatisticsScreen";
+import type { Props as StatisticsScreenProps } from "../screens/statistics/StatisticsScreen";
+
+function mockRoute(tab?: "sessions" | "measurements"): StatisticsScreenProps["route"] {
+  return { params: { tab } } as StatisticsScreenProps["route"];
+}
 
 const fakeUser = { id: "u1", email: "a@b.com", createdAt: new Date().toISOString() };
 
@@ -112,12 +117,38 @@ describe("StatisticsScreen", () => {
   it("mostra le statistiche e i grafici per gruppo muscolare", async () => {
     mockFetchResponses(baseHandlers());
 
-    const screen = await renderWithProviders(<StatisticsScreen />);
+    const screen = await renderWithProviders(
+      <StatisticsScreen
+        route={mockRoute()}
+        navigation={{} as StatisticsScreenProps["navigation"]}
+      />
+    );
 
     expect(await screen.findByText("5")).toBeTruthy();
     expect(screen.getAllByText("Petto").length).toBeGreaterThan(0);
     expect(screen.getByText("Panca piana — peso (kg)")).toBeTruthy();
     expect(await screen.findByText("60kg")).toBeTruthy();
+  });
+
+  it("con route.params.tab='measurements' si apre direttamente sul tab Misure", async () => {
+    mockFetchResponses([
+      ...baseHandlers(),
+      {
+        match: (u: string, m: string) => u.endsWith("/measurements") && m === "GET",
+        body: [measurementNew],
+      },
+    ]);
+
+    const screen = await renderWithProviders(
+      <StatisticsScreen
+        route={mockRoute("measurements")}
+        navigation={{} as StatisticsScreenProps["navigation"]}
+      />
+    );
+
+    // Nessun tocco sul tab "Misure": deve essere già quello attivo.
+    expect(await screen.findByText("79kg")).toBeTruthy();
+    expect(screen.queryByText("Panca piana — peso (kg)")).toBeNull();
   });
 
   it("mostra un errore se il caricamento fallisce", async () => {
@@ -132,7 +163,12 @@ describe("StatisticsScreen", () => {
       },
     ]);
 
-    const screen = await renderWithProviders(<StatisticsScreen />);
+    const screen = await renderWithProviders(
+      <StatisticsScreen
+        route={mockRoute()}
+        navigation={{} as StatisticsScreenProps["navigation"]}
+      />
+    );
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Errore imprevisto. Riprova.");
   });
@@ -146,7 +182,12 @@ describe("StatisticsScreen", () => {
       },
     ]);
 
-    const screen = await renderWithProviders(<StatisticsScreen />);
+    const screen = await renderWithProviders(
+      <StatisticsScreen
+        route={mockRoute()}
+        navigation={{} as StatisticsScreenProps["navigation"]}
+      />
+    );
 
     await screen.findByText("Panca piana — peso (kg)");
     fireEvent.press(screen.getByRole("button", { name: "Misure" }));
@@ -165,7 +206,12 @@ describe("StatisticsScreen", () => {
     ]);
 
     setDeviceDimensions("tabletLandscape");
-    const screen = await renderWithProviders(<StatisticsScreen />);
+    const screen = await renderWithProviders(
+      <StatisticsScreen
+        route={mockRoute()}
+        navigation={{} as StatisticsScreenProps["navigation"]}
+      />
+    );
 
     await screen.findByText("Panca piana — peso (kg)");
     fireEvent.press(screen.getByRole("button", { name: "Misure" }));
