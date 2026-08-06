@@ -197,9 +197,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
+  // Pillola: stesso trattamento di .rest-divider in apps/web/src/index.css
+  // (testo e bordo colore accento, angoli arrotondati) invece del testo
+  // grigio muto usato altrove — questa etichetta segnala un recupero tra
+  // esercizi diversi, non un valore qualsiasi, e la webapp la distingue
+  // visivamente per questo. flexShrink invece di flex:1: una pillola si
+  // dimensiona sul proprio contenuto, non si allarga a riempire la riga.
   dividerText: {
-    flex: 1,
-    color: colors.textMuted,
+    flexShrink: 1,
+    color: colors.accent,
     fontSize: 12,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
   },
 });

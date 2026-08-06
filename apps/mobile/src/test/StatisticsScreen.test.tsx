@@ -1,6 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 import { fireEvent } from "@testing-library/react-native";
-import { renderWithProviders, mockFetchResponses } from "./helpers";
+import { renderWithProviders, mockFetchResponses, setDeviceDimensions } from "./helpers";
 import { StatisticsScreen } from "../screens/statistics/StatisticsScreen";
 
 const fakeUser = { id: "u1", email: "a@b.com", createdAt: new Date().toISOString() };
@@ -106,6 +106,7 @@ describe("StatisticsScreen", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+    setDeviceDimensions("phone");
   });
 
   it("mostra le statistiche e i grafici per gruppo muscolare", async () => {
@@ -152,5 +153,24 @@ describe("StatisticsScreen", () => {
 
     expect(await screen.findByText("Peso — kg")).toBeTruthy();
     expect(screen.getByText("79kg")).toBeTruthy();
+  });
+
+  it("su tablet mostra le misure in griglia di tile compatte invece del grafico a piena larghezza", async () => {
+    mockFetchResponses([
+      ...baseHandlers(),
+      {
+        match: (u: string, m: string) => u.endsWith("/measurements") && m === "GET",
+        body: [measurementNew],
+      },
+    ]);
+
+    setDeviceDimensions("tabletLandscape");
+    const screen = await renderWithProviders(<StatisticsScreen />);
+
+    await screen.findByText("Panca piana — peso (kg)");
+    fireEvent.press(screen.getByRole("button", { name: "Misure" }));
+
+    expect(await screen.findByText("Peso")).toBeTruthy();
+    expect(screen.queryByText("Peso — kg")).toBeNull();
   });
 });

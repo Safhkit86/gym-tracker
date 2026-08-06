@@ -1,7 +1,7 @@
 import * as SecureStore from "expo-secure-store";
 import { Alert } from "react-native";
 import { fireEvent, waitFor } from "@testing-library/react-native";
-import { renderWithProviders, mockFetchResponses } from "./helpers";
+import { renderWithProviders, mockFetchResponses, setDeviceDimensions } from "./helpers";
 import { HistoryScreen } from "../screens/history/HistoryScreen";
 
 const fakeUser = { id: "u1", email: "a@b.com", createdAt: new Date().toISOString() };
@@ -70,6 +70,23 @@ beforeEach(async () => {
 describe("HistoryScreen", () => {
   afterEach(() => {
     jest.restoreAllMocks();
+    setDeviceDimensions("phone");
+  });
+
+  it("su tablet mostra la sessione in tabella (Esercizio · Set · Kg · Recupero)", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [session] },
+    ]);
+
+    setDeviceDimensions("tabletLandscape");
+    const screen = await renderWithProviders(<HistoryScreen />);
+
+    expect(await screen.findByText("Spinta")).toBeTruthy();
+    expect(screen.getByText("Esercizio")).toBeTruthy();
+    expect(screen.getByText("Panca piana")).toBeTruthy();
+    expect(screen.getByText("60 kg")).toBeTruthy();
+    expect(screen.getByText("90s")).toBeTruthy();
   });
 
   it("mostra le sessioni ed elimina dopo conferma", async () => {

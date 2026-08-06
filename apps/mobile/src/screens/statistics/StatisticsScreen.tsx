@@ -23,7 +23,9 @@ import { ApiRequestError } from "../../api/client";
 import { StatisticheCard } from "../../components/StatisticheCard";
 import { MiniLineChart } from "../../components/MiniLineChart";
 import { ResponsiveCardColumns } from "../../components/ResponsiveCardColumns";
+import { MeasureTilesGrid } from "../../components/MeasureTilesGrid";
 import {
+  useIsTabletDevice,
   useResponsiveColumns,
   useSafeAreaHorizontalPadding,
 } from "../../hooks/useResponsiveLayout";
@@ -34,7 +36,7 @@ import {
   sortExerciseGroups,
   type ExerciseRef,
 } from "../../utils/muscle-groups";
-import { MEASUREMENT_FIELDS } from "../../utils/measurements";
+import { MEASUREMENT_FIELDS, computeMeasureTiles } from "../../utils/measurements";
 import { colors, radius, spacing } from "../../theme/theme";
 
 type StatisticsTab = "sessions" | "measurements";
@@ -45,6 +47,7 @@ export function StatisticsScreen() {
   const [tab, setTab] = useState<StatisticsTab>("sessions");
   const columns = useResponsiveColumns(3);
   const safeAreaPadding = useSafeAreaHorizontalPadding();
+  const isTablet = useIsTabletDevice();
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -248,7 +251,10 @@ export function StatisticsScreen() {
           {sortedGroups.length === 0 ? (
             <Text style={styles.infoText}>{t("statistics.noData")}</Text>
           ) : (
-            <ResponsiveCardColumns columns={columns}>
+            <ResponsiveCardColumns
+              columns={columns}
+              weights={sortedGroups.map(([, exercisesInGroup]) => exercisesInGroup.length)}
+            >
               {sortedGroups.map(([muscleGroup, exercisesInGroup]) => (
                 <View style={styles.card} key={muscleGroup}>
                   <Text style={styles.cardTitle}>{muscleGroup}</Text>
@@ -306,7 +312,13 @@ export function StatisticsScreen() {
           {measurements?.length === 0 && (
             <Text style={styles.infoText}>{t("statistics.noMeasurements")}</Text>
           )}
-          {measurements &&
+          {measurements && measurements.length > 0 && isTablet ? (
+            // Su tablet: griglia 2 colonne di tile compatte (valore + delta
+            // + sparkline), stessa tile della Dashboard — 5 grafici a piena
+            // larghezza impilati non sfruttano lo spazio orizzontale extra.
+            <MeasureTilesGrid tiles={computeMeasureTiles(measurements)} />
+          ) : (
+            measurements &&
             measurements.length > 0 &&
             MEASUREMENT_FIELDS.map((field) => {
               const points = measurementsChronological
@@ -335,7 +347,8 @@ export function StatisticsScreen() {
                   />
                 </View>
               );
-            })}
+            })
+          )}
         </View>
       )}
     </ScrollView>

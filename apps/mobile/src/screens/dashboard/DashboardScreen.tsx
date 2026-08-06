@@ -40,7 +40,7 @@ import { acceptProgressionDefaults } from "../../api/profile";
 import { ApiRequestError } from "../../api/client";
 import { VerticalPeekList } from "../../components/VerticalPeekList";
 import { MiniLineChart } from "../../components/MiniLineChart";
-import { Sparkline } from "../../components/Sparkline";
+import { MeasureTilesGrid } from "../../components/MeasureTilesGrid";
 import { StreakCalendar } from "../../components/StreakCalendar";
 import { StatisticheCard } from "../../components/StatisticheCard";
 import { ResponsiveCardColumns } from "../../components/ResponsiveCardColumns";
@@ -55,7 +55,7 @@ import {
   sortExerciseGroups,
   type ExerciseRef,
 } from "../../utils/muscle-groups";
-import { MEASUREMENT_FIELDS, computeDelta } from "../../utils/measurements";
+import { computeMeasureTiles } from "../../utils/measurements";
 import { formatItemIndicator } from "../../utils/item-indicator";
 import { colors, radius, spacing } from "../../theme/theme";
 
@@ -305,42 +305,95 @@ export function DashboardScreen({ navigation }: Props) {
     );
   }
 
+  const statisticheCard = <StatisticheCard stats={stats} muscleGroupVolume={muscleGroupVolume} />;
+  const suggerimentiCard = (
+    <SuggerimentiCard
+      notifications={pendingSuggestions}
+      confirmingIds={confirmingIds}
+      onAccept={handleAccept}
+      onViewAll={() => navigation.navigate("Notifications")}
+    />
+  );
+  const progressioniCard = (
+    <ProgressioniCard
+      exercisesByMuscleGroup={exercisesByMuscleGroup}
+      exerciseHistories={exerciseHistories}
+    />
+  );
+  const misureCard = (
+    <MisureCard measurements={measurements} onViewAll={() => navigation.navigate("Statistics")} />
+  );
+  const costanzaCard = <CostanzaCard streakCalendar={stats.streakCalendar} />;
+  const prossimaSessioneCard = nextWorkout && (
+    <ProssimaSessioneCard
+      workout={nextWorkout}
+      onStart={() =>
+        navigation.navigate("Workouts", {
+          screen: "LogSession",
+          params: { id: nextWorkout.id },
+        })
+      }
+    />
+  );
+  const ultimaSessioneCard = lastSession && (
+    <UltimaSessioneCard session={lastSession} locale={i18n.language} />
+  );
+  const stalloCard = stalledExercise && <StalloCard stalled={stalledExercise} />;
+
   return (
     <ScrollView style={[styles.container, safeAreaPadding]} contentContainerStyle={styles.content}>
       <Text style={styles.subtitle}>{t("dashboard.subtitle")}</Text>
 
-      <ResponsiveCardColumns columns={columns}>
-        <StatisticheCard stats={stats} muscleGroupVolume={muscleGroupVolume} />
-        <SuggerimentiCard
-          notifications={pendingSuggestions}
-          confirmingIds={confirmingIds}
-          onAccept={handleAccept}
-          onViewAll={() => navigation.navigate("Notifications")}
-        />
-        <ProgressioniCard
-          exercisesByMuscleGroup={exercisesByMuscleGroup}
-          exerciseHistories={exerciseHistories}
-        />
-        <MisureCard
-          measurements={measurements}
-          onViewAll={() => navigation.navigate("Statistics")}
-        />
-        <CostanzaCard streakCalendar={stats.streakCalendar} />
-
-        {nextWorkout && (
-          <ProssimaSessioneCard
-            workout={nextWorkout}
-            onStart={() =>
-              navigation.navigate("Workouts", {
-                screen: "LogSession",
-                params: { id: nextWorkout.id },
-              })
-            }
-          />
-        )}
-        {lastSession && <UltimaSessioneCard session={lastSession} locale={i18n.language} />}
-        {stalledExercise && <StalloCard stalled={stalledExercise} />}
-      </ResponsiveCardColumns>
+      {columns === 1 ? (
+        // Telefono: nessun ordine esplicito da rispettare (mai chiesto),
+        // bucket a colonna singola invariato rispetto a prima.
+        <ResponsiveCardColumns columns={1}>
+          {statisticheCard}
+          {suggerimentiCard}
+          {progressioniCard}
+          {misureCard}
+          {costanzaCard}
+          {prossimaSessioneCard}
+          {ultimaSessioneCard}
+          {stalloCard}
+        </ResponsiveCardColumns>
+      ) : columns === 2 ? (
+        // Tablet verticale: ordine deciso con l'utente su artifact, non il
+        // bucket round-robin di ResponsiveCardColumns (che ignorerebbe
+        // l'importanza relativa delle card) — due colonne esplicite.
+        <View style={styles.columnsRow}>
+          <View style={styles.column}>
+            {statisticheCard}
+            {costanzaCard}
+            {stalloCard}
+            {progressioniCard}
+          </View>
+          <View style={styles.column}>
+            {suggerimentiCard}
+            {prossimaSessioneCard}
+            {ultimaSessioneCard}
+            {misureCard}
+          </View>
+        </View>
+      ) : (
+        // Tablet orizzontale: stesso principio, tre colonne esplicite.
+        <View style={styles.columnsRow}>
+          <View style={styles.column}>
+            {statisticheCard}
+            {costanzaCard}
+            {misureCard}
+          </View>
+          <View style={styles.column}>
+            {suggerimentiCard}
+            {stalloCard}
+            {progressioniCard}
+          </View>
+          <View style={styles.column}>
+            {prossimaSessioneCard}
+            {ultimaSessioneCard}
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -516,16 +569,11 @@ function ProgressioniCard({
   );
 }
 
-interface MeasureTileData {
-  field: (typeof MEASUREMENT_FIELDS)[number];
-  values: number[];
-  current: number;
-  delta: number | null;
-}
-
 /** Tile compatte per le misure (valore attuale + delta + sparkline), non
  *  mostrate se l'utente non ha ancora registrato nessuna misura. Stessa
- *  logica di apps/web/src/pages/DashboardPage.tsx (MisureCard). */
+ *  logica di apps/web/src/pages/DashboardPage.tsx (MisureCard). Calcolo
+ *  tile e rendering griglia estratti (computeMeasureTiles/MeasureTilesGrid)
+ *  perché li riusa anche il tab Misure di Statistiche. */
 function MisureCard({
   measurements,
   onViewAll,
@@ -534,20 +582,7 @@ function MisureCard({
   onViewAll: () => void;
 }) {
   const { t } = useTranslation();
-  const tiles: MeasureTileData[] = MEASUREMENT_FIELDS.map((field) => {
-    const nonNull = measurements.filter((m) => m[field.key] !== null);
-    if (nonNull.length === 0) {
-      return null;
-    }
-    const chronological = [...nonNull].reverse();
-    const values = chronological.map((m) => m[field.key] as number);
-    const current = values[values.length - 1];
-    if (current === undefined) {
-      return null;
-    }
-    const previous = values.length > 1 ? (values[values.length - 2] ?? null) : null;
-    return { field, values, current, delta: computeDelta(previous, current) };
-  }).filter((tile): tile is MeasureTileData => tile !== null);
+  const tiles = computeMeasureTiles(measurements);
 
   if (tiles.length === 0) {
     return null;
@@ -561,25 +596,7 @@ function MisureCard({
           <Text style={styles.link}>{t("dashboard.measurements.viewAll")}</Text>
         </TouchableOpacity>
       </View>
-      <View style={styles.measureTiles}>
-        {tiles.map(({ field, values, current, delta }) => (
-          <View style={styles.measureTile} key={field.key}>
-            <Text style={styles.measureTileLabel}>{t(`history.measurements.${field.key}`)}</Text>
-            <View style={styles.measureTileRow}>
-              <Text style={styles.measureTileValue}>
-                {current}
-                <Text style={styles.measureTileUnit}> {field.unit}</Text>
-              </Text>
-              {delta !== null && (
-                <Text style={[styles.delta, delta > 0 ? styles.deltaUp : styles.deltaDown]}>
-                  {delta > 0 ? "▲" : "▼"} {Math.abs(delta)}
-                </Text>
-              )}
-            </View>
-            <Sparkline values={values} />
-          </View>
-        ))}
-      </View>
+      <MeasureTilesGrid tiles={tiles} />
     </View>
   );
 }
@@ -743,6 +760,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: spacing.xs,
   },
+  // Colonne esplicite per tablet (ordine deciso card-per-card, non bucket
+  // round-robin di ResponsiveCardColumns) — stessi valori di row/column lì,
+  // per coerenza visiva col resto dell'app.
+  columnsRow: {
+    flexDirection: "row",
+    gap: spacing.md,
+    alignItems: "flex-start",
+  },
+  column: {
+    flex: 1,
+    gap: spacing.md,
+  },
   card: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -867,48 +896,6 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: 12,
     fontWeight: "700",
-  },
-  measureTiles: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  measureTile: {
-    flexBasis: "47%",
-    flexGrow: 1,
-    backgroundColor: colors.surface2,
-    borderRadius: radius.sm,
-    padding: spacing.sm,
-    gap: spacing.xs,
-  },
-  measureTileLabel: {
-    color: colors.textMuted,
-    fontSize: 11,
-  },
-  measureTileRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-  },
-  measureTileValue: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  measureTileUnit: {
-    fontSize: 11,
-    fontWeight: "400",
-    color: colors.textMuted,
-  },
-  delta: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  deltaUp: {
-    color: colors.accent,
-  },
-  deltaDown: {
-    color: colors.danger,
   },
   streakLegend: {
     flexDirection: "row",
