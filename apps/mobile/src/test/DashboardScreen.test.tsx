@@ -1,6 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 import { fireEvent, waitFor } from "@testing-library/react-native";
-import { renderWithProviders, mockFetchResponses } from "./helpers";
+import { renderWithProviders, mockFetchResponses, setDeviceDimensions } from "./helpers";
 import { DashboardScreen } from "../screens/dashboard/DashboardScreen";
 import type { Props as DashboardScreenProps } from "../screens/dashboard/DashboardScreen";
 
@@ -175,6 +175,28 @@ describe("DashboardScreen", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+    setDeviceDimensions("phone");
+  });
+
+  it("su tablet (portrait e landscape) mostra tutte le card nelle colonne esplicite", async () => {
+    mockFetchResponses(baseHandlers());
+
+    setDeviceDimensions("tabletPortrait");
+    const portraitScreen = await renderWithProviders(
+      <DashboardScreen navigation={mockNavigation()} route={mockRoute()} />
+    );
+    expect(await portraitScreen.findByText("Costanza recente")).toBeTruthy();
+    expect(portraitScreen.getByText("Progressioni per esercizio")).toBeTruthy();
+    expect(portraitScreen.getByText("Squat")).toBeTruthy();
+    portraitScreen.unmount();
+
+    setDeviceDimensions("tabletLandscape");
+    const landscapeScreen = await renderWithProviders(
+      <DashboardScreen navigation={mockNavigation()} route={mockRoute()} />
+    );
+    expect(await landscapeScreen.findByText("Costanza recente")).toBeTruthy();
+    expect(landscapeScreen.getByText("Progressioni per esercizio")).toBeTruthy();
+    expect(landscapeScreen.getByText("Squat")).toBeTruthy();
   });
 
   it("mostra statistiche, suggerimenti, stallo e naviga su Avvia sessione", async () => {

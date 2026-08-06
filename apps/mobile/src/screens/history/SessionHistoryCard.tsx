@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import type { SessionDetail } from "@gym-tracker/shared";
 import { colors, radius, spacing } from "../../theme/theme";
 import { formatRestSeconds, formatWeight } from "../../utils/session-history-utils";
+import { useIsTabletDevice } from "../../hooks/useResponsiveLayout";
+import { SessionHistoryTable } from "./SessionHistoryTable";
 
 interface SessionHistoryCardProps {
   session: SessionDetail;
@@ -21,6 +23,10 @@ export function SessionHistoryCard({
 }: SessionHistoryCardProps) {
   const { t, i18n } = useTranslation();
   const bodyweightLabel = t("workouts.detail.bodyweight");
+  // Solo su tablet: su telefono resta lo stack di righe (spazio scarso in
+  // larghezza, l'ordine cronologico delle sessioni conta più della
+  // densità — vedi CLAUDE.md sulla scelta "colonna singola" per Storico).
+  const isTablet = useIsTabletDevice();
 
   return (
     <View>
@@ -41,25 +47,29 @@ export function SessionHistoryCard({
         </View>
         {session.notes && <Text style={styles.notes}>{session.notes}</Text>}
 
-        {session.exercises.map((exercise) => (
-          <View key={exercise.exerciseId} style={styles.exerciseBlock}>
-            <Text style={styles.exerciseName}>{exercise.exerciseName}</Text>
-            {exercise.sets.map((set) => (
-              <View key={set.id} style={styles.row}>
-                <Text style={styles.rowLabel}>{t("session.set", { number: set.setNumber })}</Text>
-                <Text style={styles.rowValue}>{set.actualReps}</Text>
+        {isTablet ? (
+          <SessionHistoryTable exercises={session.exercises} bodyweightLabel={bodyweightLabel} />
+        ) : (
+          session.exercises.map((exercise) => (
+            <View key={exercise.exerciseId} style={styles.exerciseBlock}>
+              <Text style={styles.exerciseName}>{exercise.exerciseName}</Text>
+              {exercise.sets.map((set) => (
+                <View key={set.id} style={styles.row}>
+                  <Text style={styles.rowLabel}>{t("session.set", { number: set.setNumber })}</Text>
+                  <Text style={styles.rowValue}>{set.actualReps}</Text>
+                </View>
+              ))}
+              <View style={styles.row}>
+                <Text style={styles.rowLabel}>{t("session.weight")}</Text>
+                <Text style={styles.rowValue}>{formatWeight(exercise, bodyweightLabel)}</Text>
               </View>
-            ))}
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>{t("session.weight")}</Text>
-              <Text style={styles.rowValue}>{formatWeight(exercise, bodyweightLabel)}</Text>
+              <View style={styles.row}>
+                <Text style={styles.rowLabel}>{t("session.rest")}</Text>
+                <Text style={styles.rowValue}>{formatRestSeconds(exercise)}</Text>
+              </View>
             </View>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>{t("session.rest")}</Text>
-              <Text style={styles.rowValue}>{formatRestSeconds(exercise)}</Text>
-            </View>
-          </View>
-        ))}
+          ))
+        )}
 
         <TouchableOpacity
           style={styles.deleteButton}

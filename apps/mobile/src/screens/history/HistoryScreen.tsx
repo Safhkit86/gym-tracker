@@ -8,7 +8,7 @@ import { deleteMeasurement, listMeasurements } from "../../api/measurements";
 import { ApiRequestError } from "../../api/client";
 import { colors, radius, spacing } from "../../theme/theme";
 import { centeredContentStyle } from "../../theme/layout";
-import { useSafeAreaHorizontalPadding } from "../../hooks/useResponsiveLayout";
+import { useIsTabletDevice, useSafeAreaHorizontalPadding } from "../../hooks/useResponsiveLayout";
 import { computeWeekNumbers } from "../../utils/session-history-utils";
 import { SessionHistoryCard } from "./SessionHistoryCard";
 import { MeasurementEntryCard } from "./MeasurementEntryCard";
@@ -21,6 +21,12 @@ export function HistoryScreen() {
   const { token } = useAuth();
   const [tab, setTab] = useState<HistoryTab>("sessions");
   const safeAreaPadding = useSafeAreaHorizontalPadding();
+  // Su tablet la card di sessione mostra una tabella (SessionHistoryTable)
+  // invece dello stack di righe: usa la larghezza disponibile, non ha senso
+  // capparla a MAX_CONTENT_WIDTH_DP come il resto della colonna singola —
+  // il tab Misure invece resta cap+centrato in entrambi i casi (non
+  // coinvolto da questa modifica).
+  const isTablet = useIsTabletDevice();
 
   const [sessions, setSessions] = useState<SessionDetail[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -207,7 +213,7 @@ export function HistoryScreen() {
               />
             );
           }}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={isTablet ? styles.listContentWide : styles.listContent}
         />
       ) : (
         <FlatList
@@ -282,6 +288,11 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: spacing.xxl,
     ...centeredContentStyle,
+  },
+  // Su tablet la card di sessione mostra una tabella: niente cap di
+  // larghezza, la tabella usa lo spazio disponibile (vedi SessionHistoryTable).
+  listContentWide: {
+    paddingBottom: spacing.xxl,
   },
   headerContainer: {
     padding: spacing.lg,

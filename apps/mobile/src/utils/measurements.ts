@@ -1,3 +1,5 @@
+import type { MeasurementEntry } from "@gym-tracker/shared";
+
 /** Stessi campi di apps/web/src/utils/measurements.ts, ma senza `label`
  *  hardcoded in italiano: l'app mobile e' multi-lingua fin dal principio
  *  (a differenza della webapp), quindi l'etichetta si legge dal catalogo
@@ -22,4 +24,33 @@ export function computeDelta(previous: number | null, current: number | null): n
   }
   const diff = Math.round((current - previous) * 10) / 10;
   return diff !== 0 ? diff : null;
+}
+
+export interface MeasureTileData {
+  field: (typeof MEASUREMENT_FIELDS)[number];
+  values: number[];
+  current: number;
+  delta: number | null;
+}
+
+/** Un tile per campo con storico non vuoto (valore attuale + delta +
+ *  serie completa per lo sparkline) — estratto dalla tile "Misure" di
+ *  Dashboard perche' ora la riusa anche il tab Misure di Statistiche
+ *  (vedi MeasureTilesGrid.tsx), stessa logica in un solo posto invece di
+ *  duplicata in due schermate. */
+export function computeMeasureTiles(measurements: MeasurementEntry[]): MeasureTileData[] {
+  return MEASUREMENT_FIELDS.map((field) => {
+    const nonNull = measurements.filter((m) => m[field.key] !== null);
+    if (nonNull.length === 0) {
+      return null;
+    }
+    const chronological = [...nonNull].reverse();
+    const values = chronological.map((m) => m[field.key] as number);
+    const current = values[values.length - 1];
+    if (current === undefined) {
+      return null;
+    }
+    const previous = values.length > 1 ? (values[values.length - 2] ?? null) : null;
+    return { field, values, current, delta: computeDelta(previous, current) };
+  }).filter((tile): tile is MeasureTileData => tile !== null);
 }

@@ -63,6 +63,16 @@ export function MainTabNavigator() {
         tabBarInactiveTintColor: colors.textMuted,
         tabBarPosition: isTabletLandscape ? "left" : "bottom",
         tabBarVariant: isTabletLandscape ? "material" : "uikit",
+        // Senza questo, la sidebar "material" mette icona ed etichetta
+        // affiancate (comportamento di default quando c'è spazio) e si
+        // riserva una larghezza minima pensata per quel layout (~280dp,
+        // troppo rispetto alle 5 voci corte di questa app) — "below-icon"
+        // è permesso qui perché il blocco che lo vieta in combinazione con
+        // sidebar riguarda solo la variant "uikit", non "material" (vedi
+        // BottomTabBar.tsx di @react-navigation/bottom-tabs). Con
+        // l'etichetta sotto l'icona la sidebar torna a un rail stretto,
+        // largo quanto il contenuto.
+        tabBarLabelPosition: isTabletLandscape ? "below-icon" : undefined,
         tabBarStyle: isTabletLandscape
           ? { backgroundColor: colors.surface, borderRightColor: colors.border }
           : { backgroundColor: colors.surface, borderTopColor: colors.border },

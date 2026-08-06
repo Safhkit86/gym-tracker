@@ -19,7 +19,11 @@ interface SessionExerciseTableProps {
 
 const EXERCISE_COL_WIDTH = 150;
 const SET_COL_WIDTH = 84;
-const KG_COL_WIDTH = 84;
+// Più larga delle colonne Set: deve ospitare "bodyweight" (il testo più
+// lungo che può comparire qui, per gli esercizi a corpo libero) su una
+// riga sola — a 84dp (larghezza delle colonne Set) andava a capo su due
+// righe, trovato verificando sull'AVD.
+const KG_COL_WIDTH = 104;
 const REST_COL_WIDTH = 140;
 
 /** Vista "Registra sessione" per tablet in landscape: una tabella che
@@ -109,7 +113,9 @@ export function SessionExerciseTable({
                     casella allineata verticalmente"). */}
                 <Text style={styles.cellTarget}> </Text>
                 {exercise.isBodyweight ? (
-                  <Text style={styles.bodyweightText}>{t("workouts.detail.bodyweight")}</Text>
+                  <View style={styles.bodyweightBox}>
+                    <Text style={styles.bodyweightText}>{t("workouts.detail.bodyweight")}</Text>
+                  </View>
                 ) : (
                   <TextInput
                     style={styles.cellInput}
@@ -238,6 +244,15 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     color: colors.text,
   },
+  // Stesso box model di cellInput (bordo 1 + padding sm), bordo trasparente
+  // invece che colore bordo: senza questo il testo "corpo libero" era più
+  // basso della TextInput adiacente (Set N/Recupero), che ha un bordo e un
+  // padding che il semplice Text qui non replicava.
+  bodyweightBox: {
+    borderWidth: 1,
+    borderColor: "transparent",
+    padding: spacing.sm,
+  },
   bodyweightText: {
     color: colors.text,
     fontSize: 12,
@@ -271,10 +286,22 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: spacing.sm,
     paddingVertical: spacing.sm,
+    // Stesso paddingHorizontal di .cell: senza questo il pulsante timer qui
+    // finisce un po' più a destra di quello nella colonna Recupero della
+    // riga sopra (quella cella ha un inset di spacing.xs, questa riga no).
+    paddingHorizontal: spacing.xs,
   },
+  // Pillola come in SessionExerciseCard.tsx (verticale) — stesso
+  // .rest-divider della webapp: testo e bordo colore accento invece del
+  // grigio muto usato per le altre etichette.
   dividerText: {
-    flex: 1,
-    color: colors.textMuted,
+    flexShrink: 1,
+    color: colors.accent,
     fontSize: 11,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
   },
 });
