@@ -4,7 +4,8 @@ import type { SessionDetail } from "@gym-tracker/shared";
 import { colors, radius, spacing } from "../../theme/theme";
 import { formatRestSeconds, formatWeight } from "../../utils/session-history-utils";
 import { useIsTabletDevice } from "../../hooks/useResponsiveLayout";
-import { SessionHistoryTable } from "./SessionHistoryTable";
+import { MAX_CONTENT_WIDTH_DP } from "../../theme/layout";
+import { computeSessionTableWidth, SessionHistoryTable } from "./SessionHistoryTable";
 
 interface SessionHistoryCardProps {
   session: SessionDetail;
@@ -27,6 +28,24 @@ export function SessionHistoryCard({
   // larghezza, l'ordine cronologico delle sessioni conta più della
   // densità — vedi CLAUDE.md sulla scelta "colonna singola" per Storico).
   const isTablet = useIsTabletDevice();
+  // Su tablet la card si dimensiona sul contenuto reale della tabella
+  // (numero di set di questa sessione), non sulla larghezza disponibile:
+  // senza questo la card si stirava a piena larghezza del FlatList mentre
+  // la tabella al suo interno restava della sua larghezza naturale,
+  // lasciando uno spazio vuoto vistoso sulla destra (dentro un bordo
+  // visibile, a differenza della stessa tabella usata in Registra sessione
+  // dove non c'è un bordo a renderlo evidente) — riportato dall'utente.
+  // maxWidth (non solo width) cappa a MAX_CONTENT_WIDTH_DP per le sessioni
+  // con molti set: la card non supera comunque la larghezza leggibile
+  // usata altrove per i contenuti a colonna singola, e la tabella interna
+  // (già scrollabile in orizzontale) gestisce l'eccedenza.
+  const tabletCardStyle = isTablet
+    ? {
+        width: computeSessionTableWidth(session.exercises) + spacing.lg * 2,
+        maxWidth: MAX_CONTENT_WIDTH_DP,
+        alignSelf: "center" as const,
+      }
+    : undefined;
 
   return (
     <View>
@@ -35,7 +54,7 @@ export function SessionHistoryCard({
           <Text style={styles.weekDividerText}>{t("history.week", { number: week })}</Text>
         </View>
       )}
-      <View style={styles.card}>
+      <View style={[styles.card, tabletCardStyle]}>
         <View style={styles.header}>
           <View style={styles.titleBlock}>
             <Text style={styles.workoutName}>{session.workoutName}</Text>

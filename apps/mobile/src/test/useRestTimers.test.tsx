@@ -89,4 +89,30 @@ describe("useRestTimers", () => {
     expect(mockNotificationAsync).not.toHaveBeenCalled();
     expect(mockPlay).not.toHaveBeenCalled();
   });
+
+  it("non avvia un secondo timer mentre uno e' gia' attivo", () => {
+    const { result } = renderHook(() => useRestTimers(false));
+
+    act(() => {
+      result.current.startTimer(60, "Primo");
+    });
+    expect(result.current.timers).toHaveLength(1);
+
+    act(() => {
+      result.current.startTimer(90, "Secondo");
+    });
+    expect(result.current.timers).toHaveLength(1);
+    expect(result.current.timers[0]?.label).toBe("Primo");
+
+    act(() => {
+      result.current.cancelTimer(result.current.timers[0]!.id);
+    });
+    expect(result.current.timers).toHaveLength(0);
+
+    act(() => {
+      result.current.startTimer(30, "Terzo");
+    });
+    expect(result.current.timers).toHaveLength(1);
+    expect(result.current.timers[0]?.label).toBe("Terzo");
+  });
 });

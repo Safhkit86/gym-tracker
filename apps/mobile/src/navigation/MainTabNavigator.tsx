@@ -8,7 +8,7 @@ import { useIsTabletLandscape } from "../hooks/useResponsiveLayout";
 import { DashboardNavigator } from "./DashboardNavigator";
 import { HistoryNavigator } from "./HistoryNavigator";
 import { NotificationsNavigator } from "./NotificationsNavigator";
-import { StatisticsNavigator } from "./StatisticsNavigator";
+import { StatisticsNavigator, type StatisticsStackParamList } from "./StatisticsNavigator";
 import { WorkoutsNavigator, type WorkoutsStackParamList } from "./WorkoutsNavigator";
 
 export type MainTabParamList = {
@@ -18,7 +18,9 @@ export type MainTabParamList = {
   // serve per tipizzare correttamente la navigazione cross-tab annidata.
   Workouts: NavigatorScreenParams<WorkoutsStackParamList> | undefined;
   History: undefined;
-  Statistics: undefined;
+  // Stesso motivo di Workouts sopra: la Dashboard naviga qui passando
+  // { tab: "measurements" } dal link "Vedi tutte" della card Misure.
+  Statistics: NavigatorScreenParams<StatisticsStackParamList> | undefined;
   Notifications: undefined;
 };
 

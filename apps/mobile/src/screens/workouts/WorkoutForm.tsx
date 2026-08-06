@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -54,9 +54,20 @@ export function WorkoutForm({
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Set<string>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const listRef = useRef<FlatList<ExerciseForm>>(null);
 
   function addExercise(): void {
     setExercises((current) => [...current, emptyExercise(catalog[0]?.id ?? "")]);
+    // Il pulsante "Aggiungi esercizio" sta nell'header, in cima alla lista:
+    // senza scroll automatico, la nuova card appare in fondo, fuori dallo
+    // schermo, e l'utente deve accorgersi di scorrere per trovarla — non
+    // ovvio, verificato con l'utente. setTimeout (non requestAnimationFrame:
+    // la FlatList deve aver misurato la nuova riga prima di poterci
+    // scorrere, un frame non e' sempre sufficiente su dispositivi lenti)
+    // lascia il tempo al layout di aggiornarsi dopo il nuovo state.
+    setTimeout(() => {
+      listRef.current?.scrollToEnd({ animated: true });
+    }, 50);
   }
 
   function moveExercise(index: number, direction: -1 | 1): void {
@@ -170,6 +181,7 @@ export function WorkoutForm({
 
   return (
     <FlatList
+      ref={listRef}
       style={styles.list}
       data={exercises}
       keyExtractor={(item) => item.formId}

@@ -21,9 +21,11 @@ export function HistoryScreen() {
   const { token } = useAuth();
   const [tab, setTab] = useState<HistoryTab>("sessions");
   const safeAreaPadding = useSafeAreaHorizontalPadding();
-  // Su tablet la card di sessione mostra una tabella (SessionHistoryTable)
-  // invece dello stack di righe: usa la larghezza disponibile, non ha senso
-  // capparla a MAX_CONTENT_WIDTH_DP come il resto della colonna singola —
+  // Su tablet la card di sessione mostra una tabella (SessionHistoryTable):
+  // la card stessa si dimensiona sul contenuto (vedi SessionHistoryCard),
+  // qui basta non applicare il cap+centra della colonna singola al
+  // contenitore della lista, altrimenti limiterebbe anche le sessioni con
+  // molti set prima che possa farlo la card in base al proprio contenuto —
   // il tab Misure invece resta cap+centrato in entrambi i casi (non
   // coinvolto da questa modifica).
   const isTablet = useIsTabletDevice();
@@ -290,7 +292,8 @@ const styles = StyleSheet.create({
     ...centeredContentStyle,
   },
   // Su tablet la card di sessione mostra una tabella: niente cap di
-  // larghezza, la tabella usa lo spazio disponibile (vedi SessionHistoryTable).
+  // larghezza qui, ogni card si dimensiona sul proprio contenuto (vedi
+  // SessionHistoryCard.tsx).
   listContentWide: {
     paddingBottom: spacing.xxl,
   },

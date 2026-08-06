@@ -15,6 +15,32 @@ const SET_COL_WIDTH = 64;
 const KG_COL_WIDTH = 80;
 const REST_COL_WIDTH = 90;
 
+// Margine di sicurezza oltre alla somma esatta delle colonne: sommando le
+// larghezze dichiarate delle colonne il totale combacerebbe "a zero" con lo
+// spazio disponibile nella card (vedi styles.card in SessionHistoryCard.tsx),
+// ma l'arrotondamento in pixel reali di Yoga (dp -> px del dispositivo) puo'
+// sottrarre qualche px esattamente al bordo — trovato verificando sull'AVD:
+// l'ultima colonna (Recupero, allineata a destra) risultava tagliata di
+// un carattere pur con la matematica "esatta". Un margine fisso elimina la
+// dipendenza da un fit a zero tolleranza.
+const TABLE_WIDTH_SAFETY_MARGIN = 8;
+
+/** Larghezza reale del contenuto tabellare per una sessione — esportata
+ *  cosi' SessionHistoryCard puo' dimensionare la card sul contenuto
+ *  effettivo invece di stirarla a piena larghezza (vedi il commento su
+ *  styles.card in SessionHistoryCard.tsx). Stessa formula usata sotto per
+ *  il rendering, non duplicata a mano. */
+export function computeSessionTableWidth(exercises: SessionDetail["exercises"]): number {
+  const maxSets = exercises.reduce((max, exercise) => Math.max(max, exercise.sets.length), 0);
+  return (
+    EXERCISE_COL_WIDTH +
+    SET_COL_WIDTH * maxSets +
+    KG_COL_WIDTH +
+    REST_COL_WIDTH +
+    TABLE_WIDTH_SAFETY_MARGIN
+  );
+}
+
 /** Vista tabellare per Storico su tablet — stessa tabella di
  *  apps/web/src/pages/SessionHistoryPage.tsx (Esercizio · Set 1…N · Kg ·
  *  Recupero), qui in sola lettura: nessun input, nessun pulsante timer,
@@ -28,7 +54,7 @@ export function SessionHistoryTable({ exercises, bodyweightLabel }: SessionHisto
   const { t } = useTranslation();
   const maxSets = exercises.reduce((max, exercise) => Math.max(max, exercise.sets.length), 0);
   const setIndexes = Array.from({ length: maxSets }, (_, i) => i);
-  const tableWidth = EXERCISE_COL_WIDTH + SET_COL_WIDTH * maxSets + KG_COL_WIDTH + REST_COL_WIDTH;
+  const tableWidth = computeSessionTableWidth(exercises);
 
   return (
     <ScrollView
