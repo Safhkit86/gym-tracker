@@ -21,6 +21,17 @@ export class NotificationService {
     }
   }
 
+  /** Chiamata da "Accetta progressione" (Dashboard/Notifiche), non da "Segna
+   *  come letta": vedi il commento su acceptWithCascade nel repository per
+   *  le regole di cascata verso i suggerimenti più vecchi dello stesso
+   *  esercizio. */
+  async accept(userId: string, id: string): Promise<void> {
+    const updated = await this.notifications.acceptWithCascade(userId, id);
+    if (!updated) {
+      throw new NotFoundError("Notifica non trovata.");
+    }
+  }
+
   async markAllRead(userId: string): Promise<number> {
     return this.notifications.markAllRead(userId);
   }

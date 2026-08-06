@@ -39,6 +39,18 @@ export function createNotificationRoutes(
     }
   });
 
+  // Distinta da /read: oltre a segnare questa notifica come letta, segna
+  // come lette (non accettate) le notifiche più vecchie non ancora lette
+  // dello stesso esercizio — vedi NotificationService.accept.
+  router.patch("/notifications/:id/accept", async (req, res, next) => {
+    try {
+      await notifications.accept(userId(req), req.params.id);
+      res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  });
+
   router.post("/notifications/read-all", async (req, res, next) => {
     try {
       const count = await notifications.markAllRead(userId(req));
