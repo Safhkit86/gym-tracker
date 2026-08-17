@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +20,7 @@ import { centeredContentStyle } from "../../theme/layout";
 import type { WorkoutsStackParamList } from "../../navigation/WorkoutsNavigator";
 import { PromptModal } from "../../components/PromptModal";
 import { duplicateWorkoutInput } from "../../utils/workout-form-utils";
+import { useRefreshOnFocus } from "../../hooks/useRefreshOnFocus";
 
 type Props = NativeStackScreenProps<WorkoutsStackParamList, "WorkoutDetail">;
 
@@ -56,26 +57,44 @@ export function WorkoutDetailScreen({ navigation, route }: Props) {
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [showDuplicatePrompt, setShowDuplicatePrompt] = useState(false);
 
+  // Vale per l'intera durata di vita dello screen (mai smontato finche' non
+  // si cambia tab in modo permanente, vedi useRefreshOnFocus.ts): usato da
+  // load() sotto per non fare setState dopo che una singola invocazione e'
+  // stata "superata" da una successiva.
+  const isMountedRef = useRef(true);
   useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const load = useCallback(async (): Promise<void> => {
     if (!token) {
       return;
     }
-    let cancelled = false;
-    getWorkout(token, id)
-      .then((result) => {
-        if (!cancelled) {
-          setWorkout(result);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof ApiRequestError ? err.message : t("common.errorUnexpected"));
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
+    try {
+      const result = await getWorkout(token, id);
+      if (isMountedRef.current) {
+        setWorkout(result);
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        setError(err instanceof ApiRequestError ? err.message : t("common.errorUnexpected"));
+      }
+    }
   }, [token, id, t]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Rifà il fetch anche al ritorno in primo piano, non solo al mount — dopo
+  // aver modificato il nome/gli esercizi della scheda (Edit usa popTo, non
+  // replace: vedi EditWorkoutScreen.tsx, quindi questa stessa istanza di
+  // schermata torna in primo piano senza rimontare) senza questo il
+  // dettaglio mostrava ancora il nome/i dati precedenti alla modifica finché
+  // non si usciva e rientrava da capo (riportato dall'utente).
+  useRefreshOnFocus(navigation, load);
 
   function requestDelete(): void {
     Alert.alert(t("workouts.detail.deleteConfirmTitle"), undefined, [

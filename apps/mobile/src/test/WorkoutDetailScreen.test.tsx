@@ -13,6 +13,7 @@ function mockNavigation(): Props["navigation"] {
     navigate: jest.fn(),
     replace: jest.fn(),
     popTo: jest.fn(),
+    addListener: jest.fn(() => jest.fn()),
   } as unknown as Props["navigation"];
 }
 
@@ -206,5 +207,64 @@ describe("WorkoutDetailScreen", () => {
     await waitFor(() => {
       expect(navigation.replace).toHaveBeenCalledWith("WorkoutDetail", { id: "w2" });
     });
+  });
+
+  it("rifà il fetch al ritorno in primo piano, non solo al mount", async () => {
+    // Riproduce il bug riportato dall'utente: modificare il nome della
+    // scheda ed entrare in "Salva" da Edit torna qui con popTo (non
+    // replace, vedi EditWorkoutScreen.tsx) — questa stessa istanza di
+    // schermata resta montata e senza un refetch esplicito al focus
+    // mostrerebbe ancora il nome precedente alla modifica.
+    let focusListener: (() => void) | undefined;
+    const navigation = {
+      navigate: jest.fn(),
+      replace: jest.fn(),
+      popTo: jest.fn(),
+      addListener: jest.fn((event: string, listener: () => void) => {
+        if (event === "focus") {
+          focusListener = listener;
+        }
+        return jest.fn();
+      }),
+    } as unknown as Props["navigation"];
+
+    // useRefreshOnFocus ignora un focus troppo vicino al mount/all'ultimo
+    // refresh (debounce anti rate-limit, vedi useRefreshOnFocus.ts).
+    const dateNowSpy = jest.spyOn(Date, "now").mockReturnValue(1_000_000_000_000);
+
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: simpleWorkout },
+    ]);
+
+    const screen = await renderWithProviders(
+      <WorkoutDetailScreen navigation={navigation} route={mockRoute("w1")} />
+    );
+    expect(await screen.findByText("Spinta")).toBeTruthy();
+
+    // Nel frattempo, altrove (Edit), il nome è cambiato.
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.endsWith("/me")) {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ "content-type": "application/json" }),
+          json: async () => fakeUser,
+        } as Response;
+      }
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => ({ ...simpleWorkout, name: "Spinta pesante" }),
+      } as Response;
+    });
+
+    dateNowSpy.mockReturnValue(1_000_000_000_000 + 10_000);
+    expect(focusListener).toBeDefined();
+    focusListener?.();
+
+    expect(await screen.findByText("Spinta pesante")).toBeTruthy();
   });
 });
