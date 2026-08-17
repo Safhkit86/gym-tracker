@@ -3,6 +3,17 @@ import { Alert } from "react-native";
 import { fireEvent, waitFor } from "@testing-library/react-native";
 import { renderWithProviders, mockFetchResponses, setDeviceDimensions } from "./helpers";
 import { HistoryScreen } from "../screens/history/HistoryScreen";
+import type { Props as HistoryScreenProps } from "../screens/history/HistoryScreen";
+
+/** addListener("focus", ...) (useRefreshOnFocus) e' l'unico metodo che
+ *  questa schermata usa da `navigation` — vedi HistoryScreen.tsx. */
+function mockNavigation(): HistoryScreenProps["navigation"] {
+  return { addListener: jest.fn(() => jest.fn()) } as unknown as HistoryScreenProps["navigation"];
+}
+
+function mockRoute(): HistoryScreenProps["route"] {
+  return {} as HistoryScreenProps["route"];
+}
 
 const fakeUser = { id: "u1", email: "a@b.com", createdAt: new Date().toISOString() };
 
@@ -80,7 +91,9 @@ describe("HistoryScreen", () => {
     ]);
 
     setDeviceDimensions("tabletLandscape");
-    const screen = await renderWithProviders(<HistoryScreen />);
+    const screen = await renderWithProviders(
+      <HistoryScreen navigation={mockNavigation()} route={mockRoute()} />
+    );
 
     expect(await screen.findByText("Spinta")).toBeTruthy();
     expect(screen.getByText("Esercizio")).toBeTruthy();
@@ -100,7 +113,9 @@ describe("HistoryScreen", () => {
       { match: (u, m) => u.endsWith("/sessions/sess1") && m === "DELETE", body: undefined },
     ]);
 
-    const screen = await renderWithProviders(<HistoryScreen />);
+    const screen = await renderWithProviders(
+      <HistoryScreen navigation={mockNavigation()} route={mockRoute()} />
+    );
 
     expect(await screen.findByText("Spinta")).toBeTruthy();
     expect(screen.getByText("Panca piana")).toBeTruthy();
@@ -130,7 +145,9 @@ describe("HistoryScreen", () => {
       },
     ]);
 
-    const screen = await renderWithProviders(<HistoryScreen />);
+    const screen = await renderWithProviders(
+      <HistoryScreen navigation={mockNavigation()} route={mockRoute()} />
+    );
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Errore imprevisto. Riprova.");
   });
@@ -145,7 +162,9 @@ describe("HistoryScreen", () => {
       },
     ]);
 
-    const screen = await renderWithProviders(<HistoryScreen />);
+    const screen = await renderWithProviders(
+      <HistoryScreen navigation={mockNavigation()} route={mockRoute()} />
+    );
 
     await screen.findByText("Non hai ancora registrato nessuna sessione.");
     fireEvent.press(screen.getByRole("button", { name: "Misure" }));

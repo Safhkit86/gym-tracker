@@ -6,7 +6,10 @@ import { ProfileScreen } from "../screens/profile/ProfileScreen";
 import { ProfileHeaderButton } from "../components/ProfileHeaderButton";
 
 export type StatisticsStackParamList = {
-  StatisticsHome: undefined;
+  // Tab iniziale opzionale: la Dashboard vi naviga con { tab: "measurements" }
+  // dal link "Vedi tutte" della card Misure, stesso comportamento del
+  // query param ?tab=measurements della webapp (StatisticsPage.tsx).
+  StatisticsHome: { tab?: "sessions" | "measurements" } | undefined;
   Profile: undefined;
 };
 

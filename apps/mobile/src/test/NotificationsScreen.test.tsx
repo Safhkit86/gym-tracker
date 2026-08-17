@@ -1,7 +1,20 @@
 import * as SecureStore from "expo-secure-store";
 import { fireEvent, waitFor } from "@testing-library/react-native";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { renderWithProviders, mockFetchResponses } from "./helpers";
 import { NotificationsScreen } from "../screens/notifications/NotificationsScreen";
+import type { NotificationsStackParamList } from "../navigation/NotificationsNavigator";
+
+type Props = NativeStackScreenProps<NotificationsStackParamList, "NotificationsHome">;
+
+/** addListener("focus", ...) e' l'unico metodo di navigation che questa
+ *  schermata usa (per rifare il fetch al ritorno in primo piano, vedi
+ *  NotificationsScreen.tsx) — il ritorno (funzione di unsubscribe) non
+ *  viene mai chiamato nei test qui sotto, che non simulano un cambio di
+ *  focus reale. */
+function mockNavigation(): Props["navigation"] {
+  return { addListener: jest.fn(() => jest.fn()) } as unknown as Props["navigation"];
+}
 
 const fakeUser = { id: "u1", email: "a@b.com", createdAt: new Date().toISOString() };
 
@@ -67,7 +80,9 @@ describe("NotificationsScreen", () => {
       },
     ]);
 
-    const screen = await renderWithProviders(<NotificationsScreen />);
+    const screen = await renderWithProviders(
+      <NotificationsScreen navigation={mockNavigation()} route={{} as Props["route"]} />
+    );
 
     expect(await screen.findByText("Panca piana")).toBeTruthy();
     expect(screen.getByText("Squat")).toBeTruthy();
@@ -98,7 +113,9 @@ describe("NotificationsScreen", () => {
       },
     ]);
 
-    const screen = await renderWithProviders(<NotificationsScreen />);
+    const screen = await renderWithProviders(
+      <NotificationsScreen navigation={mockNavigation()} route={{} as Props["route"]} />
+    );
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Errore imprevisto. Riprova.");
   });
@@ -116,7 +133,9 @@ describe("NotificationsScreen", () => {
       },
     ]);
 
-    const screen = await renderWithProviders(<NotificationsScreen />);
+    const screen = await renderWithProviders(
+      <NotificationsScreen navigation={mockNavigation()} route={{} as Props["route"]} />
+    );
 
     await screen.findByText("Panca piana");
     fireEvent.press(screen.getByRole("button", { name: "Accetta tutte le progressioni" }));

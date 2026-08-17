@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -19,6 +19,7 @@ import {
   useResponsiveColumns,
   useSafeAreaHorizontalPadding,
 } from "../../hooks/useResponsiveLayout";
+import { useRefreshOnFocus } from "../../hooks/useRefreshOnFocus";
 import type { WorkoutsStackParamList } from "../../navigation/WorkoutsNavigator";
 
 type Props = NativeStackScreenProps<WorkoutsStackParamList, "WorkoutsList">;
@@ -31,26 +32,38 @@ export function WorkoutsListScreen({ navigation }: Props) {
   const [workouts, setWorkouts] = useState<WorkoutSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const isMountedRef = useRef(true);
   useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const load = useCallback(async (): Promise<void> => {
     if (!token) {
       return;
     }
-    let cancelled = false;
-    listWorkouts(token)
-      .then((result) => {
-        if (!cancelled) {
-          setWorkouts(result);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof ApiRequestError ? err.message : t("common.errorUnexpected"));
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
+    try {
+      const result = await listWorkouts(token);
+      if (isMountedRef.current) {
+        setWorkouts(result);
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        setError(err instanceof ApiRequestError ? err.message : t("common.errorUnexpected"));
+      }
+    }
   }, [token, t]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Rifà il fetch anche al ritorno in primo piano sulla schermata: senza,
+  // creare/duplicare una scheda e poi tornare qui (via "indietro") mostrava
+  // ancora l'elenco di prima del mount, senza le nuove schede — riportato
+  // dall'utente. Vedi useRefreshOnFocus.
+  useRefreshOnFocus(navigation, load);
 
   if (error) {
     return (

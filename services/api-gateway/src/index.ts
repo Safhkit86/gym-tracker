@@ -12,6 +12,12 @@ const app = createApp({
   historyServiceUrl: config.HISTORY_SERVICE_URL,
   notifyServiceUrl: config.NOTIFY_SERVICE_URL,
   tokens: createAccessTokenService(config.JWT_SECRET),
+  rateLimits: {
+    windowMs: config.RATE_LIMIT_WINDOW_MS,
+    globalMax: config.RATE_LIMIT_GLOBAL_MAX,
+    authMax: config.RATE_LIMIT_AUTH_MAX,
+    sensitiveMax: config.RATE_LIMIT_SENSITIVE_MAX,
+  },
   logger,
 });
 

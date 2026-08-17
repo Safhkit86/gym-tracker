@@ -15,6 +15,10 @@ interface SessionExerciseTableProps {
   onUpdateExercise: (exerciseIndex: number, patch: Partial<SessionExerciseForm>) => void;
   onUpdateSet: (exerciseIndex: number, setIndex: number, patch: Partial<SessionSetForm>) => void;
   onStartTimer: (seconds: number, label: string) => void;
+  /** Un timer di recupero è già attivo (in conto o in suoneria): tutte le
+   *  icone timer della tabella si disabilitano, non se ne può avviare un
+   *  secondo mentre uno è già in corso. */
+  hasActiveTimer: boolean;
 }
 
 const EXERCISE_COL_WIDTH = 150;
@@ -45,6 +49,7 @@ export function SessionExerciseTable({
   onUpdateExercise,
   onUpdateSet,
   onStartTimer,
+  hasActiveTimer,
 }: SessionExerciseTableProps) {
   const { t } = useTranslation();
   const maxSets = exercises.reduce((max, exercise) => Math.max(max, exercise.sets.length), 0);
@@ -150,9 +155,10 @@ export function SessionExerciseTable({
                   <TouchableOpacity
                     style={[
                       styles.timerButton,
-                      !isPositiveNumber(exercise.actualRestSeconds) && styles.timerButtonDisabled,
+                      (!isPositiveNumber(exercise.actualRestSeconds) || hasActiveTimer) &&
+                        styles.timerButtonDisabled,
                     ]}
-                    disabled={!isPositiveNumber(exercise.actualRestSeconds)}
+                    disabled={!isPositiveNumber(exercise.actualRestSeconds) || hasActiveTimer}
                     onPress={() =>
                       onStartTimer(
                         Number(exercise.actualRestSeconds),
@@ -174,7 +180,8 @@ export function SessionExerciseTable({
                   {t("workouts.detail.restAfterExercise", { seconds: exercise.restSeconds })}
                 </Text>
                 <TouchableOpacity
-                  style={styles.timerButton}
+                  style={[styles.timerButton, hasActiveTimer && styles.timerButtonDisabled]}
+                  disabled={hasActiveTimer}
                   onPress={() =>
                     onStartTimer(
                       exercise.restSeconds as number,

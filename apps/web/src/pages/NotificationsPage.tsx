@@ -3,6 +3,7 @@ import type { Notification, ProgressionDefault } from "@gym-tracker/shared";
 import { useAuth } from "../auth/useAuth";
 import { useUnreadCount } from "../notifications/useUnreadCount";
 import {
+  acceptNotification,
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
@@ -77,7 +78,7 @@ export function NotificationsPage() {
     }
     try {
       await acceptProgressionDefaults(token, [override]);
-      await markNotificationRead(token, notification.id);
+      await acceptNotification(token, notification.id);
       await refresh();
       refreshUnreadCount();
     } catch (err) {

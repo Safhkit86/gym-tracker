@@ -831,4 +831,48 @@ describe("LogSessionPage", () => {
     expect(await screen.findByText("Prima di Trazioni")).toBeInTheDocument();
     expect(screen.getByText("1:30")).toBeInTheDocument();
   });
+
+  it("disabilita tutti i pulsanti timer mentre uno e' gia' attivo", async () => {
+    const twoExerciseWorkout = {
+      ...WORKOUT_DETAIL,
+      exercises: [
+        WORKOUT_DETAIL.exercises[0],
+        {
+          ...WORKOUT_DETAIL.exercises[0],
+          id: "we2",
+          exerciseId: "e2",
+          exerciseName: "Trazioni",
+          restSeconds: 120,
+        },
+      ],
+    };
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: twoExerciseWorkout },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      preferencesHandler(),
+      progressionDefaultsHandler(),
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+      </Routes>,
+      ["/workouts/w1/log"]
+    );
+
+    await screen.findByText("Trazioni");
+    const startButtons = screen.getAllByRole("button", { name: /avvia timer recupero/i });
+    fireEvent.click(startButtons[0]);
+
+    await screen.findByText("Panca piana — recupero tra le serie");
+    for (const button of screen.getAllByRole("button", { name: /avvia timer recupero/i })) {
+      expect(button).toBeDisabled();
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: /^elimina$/i }));
+    for (const button of screen.getAllByRole("button", { name: /avvia timer recupero/i })) {
+      expect(button).not.toBeDisabled();
+    }
+  });
 });

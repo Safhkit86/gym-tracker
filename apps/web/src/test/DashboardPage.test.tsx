@@ -256,7 +256,7 @@ describe("DashboardPage", () => {
           body: undefined,
         },
         {
-          match: (u, m) => u.includes("/notifications/n1/read") && m === "PATCH",
+          match: (u, m) => u.includes("/notifications/n1/accept") && m === "PATCH",
           body: undefined,
         },
       ])
@@ -348,7 +348,10 @@ describe("DashboardPage", () => {
           match: (u, m) => u.includes("/me/progression-defaults") && m === "POST",
           body: undefined,
         },
-        { match: (u, m) => u.includes("/notifications/n1/read") && m === "PATCH", body: undefined },
+        {
+          match: (u, m) => u.includes("/notifications/n1/accept") && m === "PATCH",
+          body: undefined,
+        },
       ])
     );
 
@@ -366,6 +369,84 @@ describe("DashboardPage", () => {
     expect(await within(suggestionsCard).findByText("✓ Accettato")).toBeInTheDocument();
     expect(within(suggestionsCard).getByText("Curl a martello")).toBeInTheDocument();
     expect(within(suggestionsCard).getByRole("button", { name: "Accetta" })).toBeInTheDocument();
+  });
+
+  it("accettando il suggerimento piu' recente di un esercizio, quello piu' vecchio dello stesso esercizio sparisce anche lui", async () => {
+    seedAuthToken();
+    mockFetchResponses(
+      baseHandlers([
+        {
+          match: (u, m) => u.includes("/notifications?unread=true") && m === "GET",
+          // Ordine come lo restituisce davvero il backend (created_at
+          // decrescente, vedi notify-service): il più recente per primo.
+          body: [
+            {
+              id: "n2-newer",
+              exerciseId: "e1",
+              exerciseName: "Dip",
+              suggestionType: "increase_reps",
+              previousValue: 11,
+              suggestedValue: 12,
+              reason: "test",
+              triggeringSessionId: "s1",
+              readAt: null,
+              createdAt: "2026-08-02T10:00:00.000Z",
+            },
+            {
+              id: "n1-older",
+              exerciseId: "e1",
+              exerciseName: "Dip",
+              suggestionType: "increase_reps",
+              previousValue: 10,
+              suggestedValue: 11,
+              reason: "test",
+              triggeringSessionId: "s0",
+              readAt: null,
+              createdAt: "2026-08-01T10:00:00.000Z",
+            },
+          ],
+        },
+        {
+          match: (u, m) => u.includes("/me/progression-defaults") && m === "POST",
+          body: undefined,
+        },
+        {
+          match: (u, m) => u.includes("/notifications/n2-newer/accept") && m === "PATCH",
+          body: undefined,
+        },
+      ])
+    );
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/" element={<DashboardPage />} />
+      </Routes>
+    );
+
+    const suggestionsHeading = await screen.findByText("Suggerimenti di progressione");
+    const suggestionsCard = suggestionsHeading.closest(".card") as HTMLElement;
+    // Entrambi i suggerimenti sono per "Dip": due bottoni "Accetta" prima di
+    // accettare il piu' recente (il secondo, visto che sono ordinati per
+    // createdAt decrescente dal backend).
+    const acceptButtons = within(suggestionsCard).getAllByRole("button", { name: "Accetta" });
+    expect(acceptButtons).toHaveLength(2);
+    fireEvent.click(acceptButtons[0]);
+
+    await waitFor(
+      () => {
+        expect(within(suggestionsCard).queryByText("✓ Accettato")).not.toBeInTheDocument();
+      },
+      { timeout: 2000 }
+    );
+    // acceptNotification segna lato server anche il suggerimento più vecchio
+    // dello stesso esercizio: dopo l'animazione di conferma non deve restare
+    // visibile con un pulsante "Accetta" ancora attivo.
+    expect(
+      within(suggestionsCard).queryByRole("button", { name: "Accetta" })
+    ).not.toBeInTheDocument();
+    expect(
+      within(suggestionsCard).getByText("Nessun suggerimento in sospeso.")
+    ).toBeInTheDocument();
   });
 
   it("apre un solo accordion di 'Progressioni per esercizio' alla volta", async () => {

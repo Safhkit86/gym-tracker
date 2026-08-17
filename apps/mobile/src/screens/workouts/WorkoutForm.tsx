@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -10,10 +10,11 @@ import {
   View,
 } from "react-native";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Exercise, WorkoutInput } from "@gym-tracker/shared";
 import { ApiRequestError } from "../../api/client";
 import { colors, radius, spacing } from "../../theme/theme";
-import { centeredContentStyle } from "../../theme/layout";
+import { centeredContentStyle, MAX_CONTENT_WIDTH_DP } from "../../theme/layout";
 import { ExerciseCard } from "./ExerciseCard";
 import {
   emptyExercise,
@@ -54,9 +55,46 @@ export function WorkoutForm({
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Set<string>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const listRef = useRef<FlatList<ExerciseForm>>(null);
+  const insets = useSafeAreaInsets();
 
   function addExercise(): void {
     setExercises((current) => [...current, emptyExercise(catalog[0]?.id ?? "")]);
+    // Il pulsante "Aggiungi esercizio" sta nella barra fissa in fondo (non
+    // piu' nell'header, vedi footer sotto): senza scroll automatico, la
+    // nuova card appare comunque fuori dallo schermo, e l'utente deve
+    // accorgersi di scorrere per trovarla — non ovvio, verificato con
+    // l'utente. setTimeout (non requestAnimationFrame: la FlatList deve
+    // aver misurato la nuova riga prima di poterci scorrere, un frame non
+    // e' sempre sufficiente su dispositivi lenti) lascia il tempo al
+    // layout di aggiornarsi dopo il nuovo state.
+    setTimeout(() => {
+      listRef.current?.scrollToEnd({ animated: true });
+    }, 50);
+  }
+
+  // Stesso scroll automatico di addExercise, ma per un set aggiunto/duplicato
+  // DENTRO una card che puo' stare ovunque nella lista, non solo in fondo
+  // (riportato dall'utente: si doveva scorrere a mano per vedere il set
+  // appena aggiunto). scrollToIndex invece di scrollToEnd, allineato al
+  // fondo del viewport (viewPosition: 1) cosi' il nuovo set, aggiunto in
+  // fondo alla card, ricade nell'area visibile. onScrollToIndexFailed sotto
+  // e' la rete di sicurezza standard di RN per liste ad altezza variabile
+  // (nessun getItemLayout qui: il numero di set per card cambia).
+  function scrollToExercise(exerciseIndex: number): void {
+    setTimeout(() => {
+      listRef.current?.scrollToIndex({ index: exerciseIndex, viewPosition: 1, animated: true });
+    }, 50);
+  }
+
+  function handleScrollToIndexFailed(info: { index: number; averageItemLength: number }): void {
+    setTimeout(() => {
+      listRef.current?.scrollToOffset({
+        offset: info.averageItemLength * info.index,
+        animated: true,
+      });
+      scrollToExercise(info.index);
+    }, 100);
   }
 
   function moveExercise(index: number, direction: -1 | 1): void {
@@ -98,6 +136,7 @@ export function WorkoutForm({
         i === exerciseIndex ? { ...exercise, sets: [...exercise.sets, emptySet()] } : exercise
       )
     );
+    scrollToExercise(exerciseIndex);
   }
 
   function duplicateSet(exerciseIndex: number): void {
@@ -113,6 +152,7 @@ export function WorkoutForm({
         return { ...exercise, sets: [...exercise.sets, { ...lastSet }] };
       })
     );
+    scrollToExercise(exerciseIndex);
   }
 
   function removeSet(exerciseIndex: number, setIndex: number): void {
@@ -169,89 +209,103 @@ export function WorkoutForm({
   const catalogById = new Map(catalog.map((item) => [item.id, item]));
 
   return (
-    <FlatList
-      style={styles.list}
-      data={exercises}
-      keyExtractor={(item) => item.formId}
-      ListHeaderComponent={
-        <View style={styles.headerContainer}>
-          <View style={styles.toolbar}>
-            <TouchableOpacity
-              style={[styles.submitButton, isSubmitting && styles.buttonDisabled]}
-              onPress={handleSubmit}
-              disabled={isSubmitting}
-              accessibilityRole="button"
-              accessibilityLabel={submitLabel}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color={colors.accentContrast} />
-              ) : (
-                <Text style={styles.submitButtonText}>
-                  {isSubmitting ? submittingLabel : submitLabel}
-                </Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={addExercise}
-              accessibilityRole="button"
-              accessibilityLabel={t("workouts.create.addExercise")}
-            >
-              <Text style={styles.secondaryButtonText}>{t("workouts.create.addExercise")}</Text>
-            </TouchableOpacity>
-          </View>
+    <View style={styles.screen}>
+      <FlatList
+        ref={listRef}
+        style={styles.list}
+        data={exercises}
+        keyExtractor={(item) => item.formId}
+        onScrollToIndexFailed={handleScrollToIndexFailed}
+        ListHeaderComponent={
+          <View style={styles.headerContainer}>
+            {error && (
+              <Text style={styles.error} accessibilityRole="alert">
+                {error}
+              </Text>
+            )}
 
-          {error && (
-            <Text style={styles.error} accessibilityRole="alert">
-              {error}
+            <Text style={styles.label}>{t("workouts.create.name")}</Text>
+            <TextInput
+              style={[styles.input, fieldErrors.has("name") && styles.inputInvalid]}
+              value={name}
+              onChangeText={setName}
+              placeholderTextColor={colors.textMuted}
+              accessibilityLabel={t("workouts.create.name")}
+            />
+
+            <Text style={styles.label}>{t("workouts.create.notes")}</Text>
+            <TextInput
+              style={[styles.input, fieldErrors.has("notes") && styles.inputInvalid]}
+              value={notes}
+              onChangeText={setNotes}
+              placeholderTextColor={colors.textMuted}
+              accessibilityLabel={t("workouts.create.notes")}
+            />
+          </View>
+        }
+        renderItem={({ item, index }) => (
+          <ExerciseCard
+            exercise={item}
+            exerciseIndex={index}
+            selected={catalogById.get(item.exerciseId)}
+            groupedCatalog={groupedCatalog}
+            fieldErrors={fieldErrors}
+            canRemove={exercises.length > 1}
+            canMoveUp={index > 0}
+            canMoveDown={index < exercises.length - 1}
+            onMoveUp={() => moveExercise(index, -1)}
+            onMoveDown={() => moveExercise(index, 1)}
+            onUpdateExercise={(patch) => updateExercise(index, patch)}
+            onAddSet={() => addSet(index)}
+            onDuplicateSet={() => duplicateSet(index)}
+            onRemoveSet={(setIndex) => removeSet(index, setIndex)}
+            onUpdateSet={(setIndex, patch) => updateSet(index, setIndex, patch)}
+            onRequestRemove={() => requestRemoveExercise(index)}
+          />
+        )}
+        contentContainerStyle={styles.listContent}
+      />
+      {/* Barra fissa in fondo, non piu' in cima alla lista: "Crea scheda"/
+          "Salva modifiche" e "Aggiungi esercizio" erano irraggiungibili
+          senza riscorrere fino in cima dopo aver compilato una scheda con
+          molti esercizi — riportato dall'utente. Stesso principio di
+          RestTimerTray (sempre visibile), ma qui come footer che riserva
+          il proprio spazio invece di sovrapporsi al contenuto, per non
+          coprire l'ultima card mentre si scrolla. */}
+      <View style={[styles.footer, { paddingBottom: spacing.md + insets.bottom }]}>
+        <TouchableOpacity
+          style={[styles.submitButton, isSubmitting && styles.buttonDisabled]}
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+          accessibilityRole="button"
+          accessibilityLabel={submitLabel}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator color={colors.accentContrast} />
+          ) : (
+            <Text style={styles.submitButtonText}>
+              {isSubmitting ? submittingLabel : submitLabel}
             </Text>
           )}
-
-          <Text style={styles.label}>{t("workouts.create.name")}</Text>
-          <TextInput
-            style={[styles.input, fieldErrors.has("name") && styles.inputInvalid]}
-            value={name}
-            onChangeText={setName}
-            placeholderTextColor={colors.textMuted}
-            accessibilityLabel={t("workouts.create.name")}
-          />
-
-          <Text style={styles.label}>{t("workouts.create.notes")}</Text>
-          <TextInput
-            style={[styles.input, fieldErrors.has("notes") && styles.inputInvalid]}
-            value={notes}
-            onChangeText={setNotes}
-            placeholderTextColor={colors.textMuted}
-            accessibilityLabel={t("workouts.create.notes")}
-          />
-        </View>
-      }
-      renderItem={({ item, index }) => (
-        <ExerciseCard
-          exercise={item}
-          exerciseIndex={index}
-          selected={catalogById.get(item.exerciseId)}
-          groupedCatalog={groupedCatalog}
-          fieldErrors={fieldErrors}
-          canRemove={exercises.length > 1}
-          canMoveUp={index > 0}
-          canMoveDown={index < exercises.length - 1}
-          onMoveUp={() => moveExercise(index, -1)}
-          onMoveDown={() => moveExercise(index, 1)}
-          onUpdateExercise={(patch) => updateExercise(index, patch)}
-          onAddSet={() => addSet(index)}
-          onDuplicateSet={() => duplicateSet(index)}
-          onRemoveSet={(setIndex) => removeSet(index, setIndex)}
-          onUpdateSet={(setIndex, patch) => updateSet(index, setIndex, patch)}
-          onRequestRemove={() => requestRemoveExercise(index)}
-        />
-      )}
-      contentContainerStyle={styles.listContent}
-    />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={addExercise}
+          accessibilityRole="button"
+          accessibilityLabel={t("workouts.create.addExercise")}
+        >
+          <Text style={styles.secondaryButtonText}>{t("workouts.create.addExercise")}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: colors.bg,
+  },
   list: {
     flex: 1,
     backgroundColor: colors.bg,
@@ -263,10 +317,19 @@ const styles = StyleSheet.create({
   headerContainer: {
     padding: spacing.lg,
   },
-  toolbar: {
+  // Barra fissa in fondo (vedi commento nel render): stesso cap+centra del
+  // resto del form, cosi' su schermi larghi i pulsanti restano allineati
+  // sotto i campi invece di allargarsi a piena larghezza.
+  footer: {
     flexDirection: "row",
     gap: spacing.sm,
-    marginBottom: spacing.lg,
+    padding: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.bg,
+    width: "100%",
+    maxWidth: MAX_CONTENT_WIDTH_DP,
+    alignSelf: "center",
   },
   submitButton: {
     flex: 1,

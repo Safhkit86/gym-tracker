@@ -152,7 +152,7 @@ describe("NotificationsPage", () => {
         status: 204,
       },
       {
-        match: (u, m) => u.endsWith("/notifications/n1/read") && m === "PATCH",
+        match: (u, m) => u.endsWith("/notifications/n1/accept") && m === "PATCH",
         status: 204,
       },
     ]);

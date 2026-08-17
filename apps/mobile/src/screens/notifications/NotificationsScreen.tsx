@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
 import type { Notification, ProgressionDefault } from "@gym-tracker/shared";
 import { useAuth } from "../../auth/useAuth";
 import { useUnreadCount } from "../../notifications/useUnreadCount";
 import {
+  acceptNotification,
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
@@ -15,8 +17,12 @@ import { formatSuggestionDelta, toOverride } from "../../utils/suggestion-format
 import { colors, radius, spacing } from "../../theme/theme";
 import { centeredContentStyle } from "../../theme/layout";
 import { useSafeAreaHorizontalPadding } from "../../hooks/useResponsiveLayout";
+import { useRefreshOnFocus } from "../../hooks/useRefreshOnFocus";
+import type { NotificationsStackParamList } from "../../navigation/NotificationsNavigator";
 
-export function NotificationsScreen() {
+type Props = NativeStackScreenProps<NotificationsStackParamList, "NotificationsHome">;
+
+export function NotificationsScreen({ navigation }: Props) {
   const { t, i18n } = useTranslation();
   const { token } = useAuth();
   const { refreshUnreadCount } = useUnreadCount();
@@ -39,6 +45,13 @@ export function NotificationsScreen() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Rifà il fetch anche al ritorno in primo piano, non solo al mount —
+  // senza, tornare su Notifiche dopo aver accettato o letto un
+  // suggerimento altrove (es. Dashboard) mostrava ancora l'elenco caricato
+  // al mount, con lo stesso suggerimento ancora "da accettare" — riportato
+  // dall'utente. Vedi useRefreshOnFocus per il perché non useFocusEffect.
+  useRefreshOnFocus(navigation, refresh);
 
   async function handleMarkRead(id: string): Promise<void> {
     if (!token) {
@@ -76,7 +89,7 @@ export function NotificationsScreen() {
     }
     try {
       await acceptProgressionDefaults(token, [override]);
-      await markNotificationRead(token, notification.id);
+      await acceptNotification(token, notification.id);
       await refresh();
       refreshUnreadCount();
     } catch (err) {

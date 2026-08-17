@@ -7,7 +7,10 @@ import type { Props as DashboardScreenProps } from "../screens/dashboard/Dashboa
 type Props = DashboardScreenProps;
 
 function mockNavigation(): Props["navigation"] {
-  return { navigate: jest.fn() } as unknown as Props["navigation"];
+  return {
+    navigate: jest.fn(),
+    addListener: jest.fn(() => jest.fn()),
+  } as unknown as Props["navigation"];
 }
 
 function mockRoute(): Props["route"] {
@@ -162,7 +165,7 @@ function baseHandlers() {
       body: undefined,
     },
     {
-      match: (u: string, m: string) => u.endsWith("/notifications/n1/read") && m === "PATCH",
+      match: (u: string, m: string) => u.endsWith("/notifications/n1/accept") && m === "PATCH",
       body: undefined,
     },
   ];
@@ -226,11 +229,70 @@ describe("DashboardScreen", () => {
     });
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining("/notifications/n1/read"),
+        expect.stringContaining("/notifications/n1/accept"),
         expect.objectContaining({ method: "PATCH" })
       );
     });
     expect(await screen.findByText("✓ Accettato")).toBeTruthy();
+  });
+
+  it("accettando il suggerimento piu' recente di un esercizio, quello piu' vecchio dello stesso esercizio sparisce anche lui", async () => {
+    const olderNotification = {
+      ...notification,
+      id: "n1-older",
+      createdAt: "2026-08-01T10:00:00.000Z",
+    };
+    const newerNotification = {
+      ...notification,
+      id: "n2-newer",
+      createdAt: "2026-08-02T10:00:00.000Z",
+    };
+    const fetchMock = mockFetchResponses([
+      // Handler messi prima di ...baseHandlers(): mockFetchResponses usa
+      // il primo match, quindi questi sovrascrivono l'unica notifica e
+      // l'endpoint /accept di baseHandlers() senza doverli filtrare via.
+      {
+        match: (u: string, m: string) =>
+          u.includes("/notifications") && u.includes("unread=true") && m === "GET",
+        // Ordine come lo restituisce davvero il backend (created_at
+        // decrescente): il più recente per primo.
+        body: [newerNotification, olderNotification],
+      },
+      {
+        match: (u: string, m: string) =>
+          u.endsWith("/notifications/n2-newer/accept") && m === "PATCH",
+        body: undefined,
+      },
+      ...baseHandlers(),
+    ]);
+
+    const screen = await renderWithProviders(
+      <DashboardScreen navigation={mockNavigation()} route={mockRoute()} />
+    );
+
+    const acceptButtons = await screen.findAllByRole("button", { name: "Accetta" });
+    expect(acceptButtons).toHaveLength(2);
+    fireEvent.press(acceptButtons[0]);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining("/notifications/n2-newer/accept"),
+        expect.objectContaining({ method: "PATCH" })
+      );
+    });
+    expect(await screen.findByText("✓ Accettato")).toBeTruthy();
+
+    await waitFor(
+      () => {
+        expect(screen.queryByText("✓ Accettato")).toBeNull();
+      },
+      { timeout: 3000 }
+    );
+    // acceptNotification segna lato server anche il suggerimento più vecchio
+    // dello stesso esercizio: dopo l'animazione di conferma non deve restare
+    // visibile con un pulsante "Accetta" ancora attivo.
+    expect(screen.queryByRole("button", { name: "Accetta" })).toBeNull();
+    expect(screen.getByText("Nessun suggerimento in sospeso.")).toBeTruthy();
   });
 
   it("mostra un errore se il caricamento fallisce", async () => {

@@ -186,6 +186,13 @@ services:
       PROGRESS_SERVICE_URL: http://progress-service:4003
       HISTORY_SERVICE_URL: http://history-service:4005
       NOTIFY_SERVICE_URL: http://notify-service:4004
+      # Limite globale molto piu' alto che in produzione (default 300/15min,
+      # vedi rate-limit.ts): un giro di test manuale sull'emulatore Android,
+      # specie con le schermate che rifanno il fetch al cambio tab, genera
+      # facilmente piu' richieste di cosi' in una sessione di sviluppo. Non
+      # tocca .env.production/.env.production.example, che restano sul
+      # default di sicurezza.
+      RATE_LIMIT_GLOBAL_MAX: ${RATE_LIMIT_GLOBAL_MAX:-5000}
     ports:
       - "${API_GATEWAY_PORT:-4000}:4000"
     depends_on:

@@ -1,4 +1,5 @@
 import * as SecureStore from "expo-secure-store";
+import { Alert } from "react-native";
 import { fireEvent, waitFor } from "@testing-library/react-native";
 import { renderWithProviders, mockFetchResponses } from "./helpers";
 import { ProfileScreen } from "../screens/profile/ProfileScreen";
@@ -192,5 +193,27 @@ describe("ProfileScreen", () => {
     fireEvent.press(screen.getByRole("button", { name: "Invia codice di conferma" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Password attuale non corretta.");
+  });
+
+  it("nella tab Account, 'Esci' chiede conferma e poi cancella il token salvato", async () => {
+    // Prima non esisteva alcun modo per uscire dall'account nell'app mobile
+    // (riportato dall'utente) — aggiunto in tab Account, con conferma prima
+    // di procedere (stesso pattern delle azioni distruttive del resto
+    // dell'app: elimina scheda/sessione/misura).
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation((_title, _msg, buttons) => {
+      buttons?.find((b) => b.style === "destructive")?.onPress?.();
+    });
+    mockFetchResponses(baseHandlers());
+
+    const screen = await renderWithProviders(<ProfileScreen />);
+    await screen.findByDisplayValue("80");
+
+    fireEvent.press(screen.getByRole("button", { name: "Account" }));
+    fireEvent.press(screen.getByRole("button", { name: "Esci" }));
+
+    expect(alertSpy).toHaveBeenCalled();
+    await waitFor(async () => {
+      expect(await SecureStore.getItemAsync("gym-tracker.token")).toBeNull();
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -35,7 +35,7 @@ import { listExercises } from "../../api/exercises";
 import { getWorkout, listWorkouts } from "../../api/workouts";
 import { listSessions } from "../../api/sessions";
 import { listMeasurements } from "../../api/measurements";
-import { listNotifications, markNotificationRead } from "../../api/notifications";
+import { acceptNotification, listNotifications } from "../../api/notifications";
 import { acceptProgressionDefaults } from "../../api/profile";
 import { ApiRequestError } from "../../api/client";
 import { VerticalPeekList } from "../../components/VerticalPeekList";
@@ -48,6 +48,7 @@ import {
   useResponsiveColumns,
   useSafeAreaHorizontalPadding,
 } from "../../hooks/useResponsiveLayout";
+import { useRefreshOnFocus } from "../../hooks/useRefreshOnFocus";
 import {
   UNSPECIFIED_MUSCLE_GROUP,
   normalizeMuscleGroup,
@@ -117,93 +118,106 @@ export function DashboardScreen({ navigation }: Props) {
   const [measurements, setMeasurements] = useState<MeasurementEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // Vale per l'intera durata di vita dello screen (mai smontato finche' non
+  // si cambia tab in modo permanente): usato da load() sotto per non fare
+  // setState dopo che una singola invocazione e' stata "superata" da una
+  // successiva, non per un vero smontaggio (che con la navigazione a tab
+  // qui non avviene quasi mai) — vedi il commento su useRefreshOnFocus.
+  const isMountedRef = useRef(true);
   useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const load = useCallback(async (): Promise<void> => {
     if (!token) {
       return;
     }
-    let cancelled = false;
-
-    async function load(authToken: string): Promise<void> {
-      try {
-        const [statsResult, exercisesResult, workoutsResult, sessionsResult] = await Promise.all([
-          getDashboardStats(authToken),
-          listExercises(authToken),
-          listWorkouts(authToken),
-          listSessions(authToken, 1),
-        ]);
-        if (cancelled) {
-          return;
-        }
-        setStats(statsResult);
-        setExercises(exercisesResult);
-        const last = sessionsResult[0] ?? null;
-        setLastSession(last);
-
-        if (workoutsResult.length > 0) {
-          const workoutDetails = await Promise.all(
-            workoutsResult.map((w: WorkoutSummary) => getWorkout(authToken, w.id))
-          );
-          if (cancelled) {
-            return;
-          }
-
-          const lastIndex = last
-            ? workoutsResult.findIndex((w: WorkoutSummary) => w.id === last.workoutId)
-            : -1;
-          const nextIndex = (lastIndex + 1) % workoutsResult.length;
-          setNextWorkout(workoutDetails[nextIndex] ?? null);
-
-          const exerciseUnion = new Map<string, string>();
-          for (const detail of workoutDetails) {
-            for (const ex of detail.exercises) {
-              exerciseUnion.set(ex.exerciseId, ex.exerciseName);
-            }
-          }
-          setCurrentSchedeExercises(
-            [...exerciseUnion.entries()].map(([exerciseId, exerciseName]) => ({
-              exerciseId,
-              exerciseName,
-            }))
-          );
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof ApiRequestError ? err.message : t("dashboard.loadError"));
-        }
+    try {
+      const [statsResult, exercisesResult, workoutsResult, sessionsResult] = await Promise.all([
+        getDashboardStats(token),
+        listExercises(token),
+        listWorkouts(token),
+        listSessions(token, 1),
+      ]);
+      if (!isMountedRef.current) {
         return;
       }
+      setStats(statsResult);
+      setExercises(exercisesResult);
+      const last = sessionsResult[0] ?? null;
+      setLastSession(last);
 
-      // Sezioni secondarie: un fallimento qui non deve impedire la
-      // visualizzazione del resto della pagina (stesso pattern della
-      // webapp). Ognuna ha il proprio .catch(), cosi' il fallimento di una
-      // non ne impedisce altre.
-      Promise.all([listNotifications(authToken, true), getStalledExercise(authToken)])
-        .then(([notifications, stalled]) => {
-          if (!cancelled) {
-            setPendingSuggestions(notifications);
-            setStalledExercise(stalled);
-          }
-        })
-        .catch(() => {
-          /* opzionale: nessun errore bloccante */
-        });
+      if (workoutsResult.length > 0) {
+        const workoutDetails = await Promise.all(
+          workoutsResult.map((w: WorkoutSummary) => getWorkout(token, w.id))
+        );
+        if (!isMountedRef.current) {
+          return;
+        }
 
-      listMeasurements(authToken)
-        .then((measurementsResult) => {
-          if (!cancelled) {
-            setMeasurements(measurementsResult);
+        const lastIndex = last
+          ? workoutsResult.findIndex((w: WorkoutSummary) => w.id === last.workoutId)
+          : -1;
+        const nextIndex = (lastIndex + 1) % workoutsResult.length;
+        setNextWorkout(workoutDetails[nextIndex] ?? null);
+
+        const exerciseUnion = new Map<string, string>();
+        for (const detail of workoutDetails) {
+          for (const ex of detail.exercises) {
+            exerciseUnion.set(ex.exerciseId, ex.exerciseName);
           }
-        })
-        .catch(() => {
-          /* opzionale: nessun errore bloccante */
-        });
+        }
+        setCurrentSchedeExercises(
+          [...exerciseUnion.entries()].map(([exerciseId, exerciseName]) => ({
+            exerciseId,
+            exerciseName,
+          }))
+        );
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        setError(err instanceof ApiRequestError ? err.message : t("dashboard.loadError"));
+      }
+      return;
     }
 
-    void load(token);
-    return () => {
-      cancelled = true;
-    };
+    // Sezioni secondarie: un fallimento qui non deve impedire la
+    // visualizzazione del resto della pagina (stesso pattern della
+    // webapp). Ognuna ha il proprio .catch(), cosi' il fallimento di una
+    // non ne impedisce altre.
+    Promise.all([listNotifications(token, true), getStalledExercise(token)])
+      .then(([notifications, stalled]) => {
+        if (isMountedRef.current) {
+          setPendingSuggestions(notifications);
+          setStalledExercise(stalled);
+        }
+      })
+      .catch(() => {
+        /* opzionale: nessun errore bloccante */
+      });
+
+    listMeasurements(token)
+      .then((measurementsResult) => {
+        if (isMountedRef.current) {
+          setMeasurements(measurementsResult);
+        }
+      })
+      .catch(() => {
+        /* opzionale: nessun errore bloccante */
+      });
   }, [token, t]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Rifà il fetch anche al ritorno in primo piano, non solo al mount —
+  // senza, dopo aver accettato/letto un suggerimento in Notifiche o salvato
+  // una nuova misura, tornare in Dashboard mostrava ancora i dati
+  // dell'ultima visita (riportato dall'utente). Vedi useRefreshOnFocus.
+  useRefreshOnFocus(navigation, load);
 
   // Storico per i grafici: solo dopo aver saputo quali esercizi fanno
   // ancora parte delle schede attuali, in parallelo, non bloccante.
@@ -267,10 +281,21 @@ export function DashboardScreen({ navigation }: Props) {
     setConfirmingIds((prev) => new Set(prev).add(notification.id));
     try {
       await acceptProgressionDefaults(token, [override]);
-      await markNotificationRead(token, notification.id);
+      await acceptNotification(token, notification.id);
       refreshUnreadCount();
       setTimeout(() => {
-        setPendingSuggestions((prev) => prev.filter((n) => n.id !== notification.id));
+        // acceptNotification segna lato server anche le notifiche piu'
+        // vecchie non lette dello stesso esercizio (vedi
+        // notify-service/notification-service.ts): senza rimuoverle anche
+        // qui resterebbero visibili con un pulsante "Accetta" ancora
+        // attivo, mentre il server le considera gia' lette.
+        setPendingSuggestions((prev) =>
+          prev.filter(
+            (n) =>
+              n.id !== notification.id &&
+              !(n.exerciseId === notification.exerciseId && n.createdAt < notification.createdAt)
+          )
+        );
         setConfirmingIds((prev) => {
           const next = new Set(prev);
           next.delete(notification.id);
@@ -321,7 +346,15 @@ export function DashboardScreen({ navigation }: Props) {
     />
   );
   const misureCard = (
-    <MisureCard measurements={measurements} onViewAll={() => navigation.navigate("Statistics")} />
+    <MisureCard
+      measurements={measurements}
+      onViewAll={() =>
+        navigation.navigate("Statistics", {
+          screen: "StatisticsHome",
+          params: { tab: "measurements" },
+        })
+      }
+    />
   );
   const costanzaCard = <CostanzaCard streakCalendar={stats.streakCalendar} />;
   const prossimaSessioneCard = nextWorkout && (
