@@ -105,6 +105,13 @@ describe("WorkoutsListScreen", () => {
     // al mount, senza la nuova scheda — il tab/sidebar di navigazione non
     // smonta mai questa schermata, quindi serve un refetch esplicito al
     // focus (vedi useRefreshOnFocus), non solo quello iniziale.
+    // useRefreshOnFocus ignora un focus troppo vicino al mount/all'ultimo
+    // refresh (debounce anti rate-limit, vedi useRefreshOnFocus.ts):
+    // mockare Date.now() per far apparire il focus successivo oltre la
+    // soglia, senza toccare i timer reali (usati da renderWithProviders/
+    // findByText più sotto).
+    const dateNowSpy = jest.spyOn(Date, "now").mockReturnValue(1_000_000_000_000);
+
     let focusListener: (() => void) | undefined;
     const navigation = {
       navigate: jest.fn(),
@@ -162,6 +169,7 @@ describe("WorkoutsListScreen", () => {
       } as Response;
     });
 
+    dateNowSpy.mockReturnValue(1_000_000_000_000 + 10_000);
     expect(focusListener).toBeDefined();
     focusListener?.();
 
