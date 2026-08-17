@@ -88,7 +88,12 @@ export function WorkoutDetailScreen({ navigation, route }: Props) {
             return;
           }
           deleteWorkout(token, id)
-            .then(() => navigation.replace("WorkoutsList"))
+            // popTo (non replace): WorkoutsList e' la root dello stack, gia'
+            // presente sotto — replace ne creava sempre una seconda istanza
+            // in cima (stesso bug di LogSessionScreen/EditWorkoutScreen,
+            // qui meno visibile perche' le due liste sono identiche, ma
+            // comunque un'istanza di troppo da attraversare andando indietro).
+            .then(() => navigation.popTo("WorkoutsList"))
             .catch((err: unknown) => {
               setError(err instanceof ApiRequestError ? err.message : t("common.errorUnexpected"));
             });

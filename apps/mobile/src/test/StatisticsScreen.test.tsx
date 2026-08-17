@@ -8,6 +8,16 @@ function mockRoute(tab?: "sessions" | "measurements"): StatisticsScreenProps["ro
   return { params: { tab } } as StatisticsScreenProps["route"];
 }
 
+/** setParams (consumo one-shot di route.params.tab) e addListener("focus",
+ *  ...) (useRefreshOnFocus) sono gli unici due metodi che questa schermata
+ *  usa da `navigation` — vedi StatisticsScreen.tsx. */
+function mockNavigation(): StatisticsScreenProps["navigation"] {
+  return {
+    setParams: jest.fn(),
+    addListener: jest.fn(() => jest.fn()),
+  } as unknown as StatisticsScreenProps["navigation"];
+}
+
 const fakeUser = { id: "u1", email: "a@b.com", createdAt: new Date().toISOString() };
 
 const stats = {
@@ -118,10 +128,7 @@ describe("StatisticsScreen", () => {
     mockFetchResponses(baseHandlers());
 
     const screen = await renderWithProviders(
-      <StatisticsScreen
-        route={mockRoute()}
-        navigation={{} as StatisticsScreenProps["navigation"]}
-      />
+      <StatisticsScreen route={mockRoute()} navigation={mockNavigation()} />
     );
 
     expect(await screen.findByText("5")).toBeTruthy();
@@ -140,15 +147,48 @@ describe("StatisticsScreen", () => {
     ]);
 
     const screen = await renderWithProviders(
-      <StatisticsScreen
-        route={mockRoute("measurements")}
-        navigation={{} as StatisticsScreenProps["navigation"]}
-      />
+      <StatisticsScreen route={mockRoute("measurements")} navigation={mockNavigation()} />
     );
 
     // Nessun tocco sul tab "Misure": deve essere già quello attivo.
     expect(await screen.findByText("79kg")).toBeTruthy();
     expect(screen.queryByText("Panca piana — peso (kg)")).toBeNull();
+  });
+
+  it("un secondo route.params.tab='measurements' (schermata già montata) passa comunque al tab Misure", async () => {
+    // Riproduce il bug riportato dall'utente: la Dashboard naviga qui una
+    // seconda volta con {tab: "measurements"} mentre StatisticsScreen è
+    // già montata (il tab/sidebar di navigazione non la smonta mai) mentre
+    // l'utente aveva nel frattempo scelto manualmente il tab "sessions" —
+    // useState(route.params?.tab) da solo gira solo al primo mount, quindi
+    // senza il useEffect dedicato il secondo "Vedi tutte" non avrebbe
+    // alcun effetto.
+    mockFetchResponses([
+      ...baseHandlers(),
+      {
+        match: (u: string, m: string) => u.endsWith("/measurements") && m === "GET",
+        body: [measurementNew],
+      },
+    ]);
+
+    const navigation = mockNavigation();
+    const screen = await renderWithProviders(
+      <StatisticsScreen route={mockRoute("measurements")} navigation={navigation} />
+    );
+    await screen.findByText("79kg");
+
+    // L'utente sceglie manualmente "Sessioni di allenamento".
+    fireEvent.press(screen.getByRole("button", { name: "Sessioni di allenamento" }));
+    await screen.findByText("Panca piana — peso (kg)");
+
+    // La Dashboard naviga di nuovo qui con lo stesso param.
+    screen.rerender(<StatisticsScreen route={mockRoute("measurements")} navigation={navigation} />);
+
+    expect(await screen.findByText("79kg")).toBeTruthy();
+    expect(screen.queryByText("Panca piana — peso (kg)")).toBeNull();
+    // Il param va consumato, altrimenti un ritorno "normale" su questa tab
+    // (senza un nuovo "Vedi tutte") forzerebbe di nuovo il tab ad ogni focus.
+    expect(navigation.setParams).toHaveBeenCalledWith({ tab: undefined });
   });
 
   it("mostra un errore se il caricamento fallisce", async () => {
@@ -164,10 +204,7 @@ describe("StatisticsScreen", () => {
     ]);
 
     const screen = await renderWithProviders(
-      <StatisticsScreen
-        route={mockRoute()}
-        navigation={{} as StatisticsScreenProps["navigation"]}
-      />
+      <StatisticsScreen route={mockRoute()} navigation={mockNavigation()} />
     );
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Errore imprevisto. Riprova.");
@@ -183,10 +220,7 @@ describe("StatisticsScreen", () => {
     ]);
 
     const screen = await renderWithProviders(
-      <StatisticsScreen
-        route={mockRoute()}
-        navigation={{} as StatisticsScreenProps["navigation"]}
-      />
+      <StatisticsScreen route={mockRoute()} navigation={mockNavigation()} />
     );
 
     await screen.findByText("Panca piana — peso (kg)");
@@ -207,10 +241,7 @@ describe("StatisticsScreen", () => {
 
     setDeviceDimensions("tabletLandscape");
     const screen = await renderWithProviders(
-      <StatisticsScreen
-        route={mockRoute()}
-        navigation={{} as StatisticsScreenProps["navigation"]}
-      />
+      <StatisticsScreen route={mockRoute()} navigation={mockNavigation()} />
     );
 
     await screen.findByText("Panca piana — peso (kg)");

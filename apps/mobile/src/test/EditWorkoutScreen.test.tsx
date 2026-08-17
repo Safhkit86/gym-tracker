@@ -8,7 +8,7 @@ import type { WorkoutsStackParamList } from "../navigation/WorkoutsNavigator";
 type Props = NativeStackScreenProps<WorkoutsStackParamList, "EditWorkout">;
 
 function mockNavigation(): Props["navigation"] {
-  return { replace: jest.fn() } as unknown as Props["navigation"];
+  return { popTo: jest.fn() } as unknown as Props["navigation"];
 }
 
 function mockRoute(id: string): Props["route"] {
@@ -92,7 +92,7 @@ describe("EditWorkoutScreen", () => {
     fireEvent.press(screen.getByRole("button", { name: "Salva modifiche" }));
 
     await waitFor(() => {
-      expect(navigation.replace).toHaveBeenCalledWith("WorkoutDetail", { id: "w1" });
+      expect(navigation.popTo).toHaveBeenCalledWith("WorkoutDetail", { id: "w1" });
     });
   });
 

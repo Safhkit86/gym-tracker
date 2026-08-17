@@ -7,10 +7,12 @@ import {
   Text,
   TouchableOpacity,
   View,
+  type LayoutChangeEvent,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type {
   ProgressionEvent,
   SessionDetail,
@@ -25,7 +27,7 @@ import { ApiRequestError } from "../../api/client";
 import { useRestTimers } from "../../hooks/useRestTimers";
 import { RestTimerTray } from "../../components/RestTimerTray";
 import { colors, radius, spacing } from "../../theme/theme";
-import { centeredContentStyle } from "../../theme/layout";
+import { centeredContentStyle, MAX_CONTENT_WIDTH_DP } from "../../theme/layout";
 import { useIsTabletLandscape } from "../../hooks/useResponsiveLayout";
 import type { WorkoutsStackParamList } from "../../navigation/WorkoutsNavigator";
 import { SessionExerciseCard } from "./SessionExerciseCard";
@@ -73,6 +75,14 @@ export function LogSessionScreen({ navigation, route }: Props) {
   const [suggestions, setSuggestions] = useState<ProgressionEvent[]>([]);
   const [timerSoundEnabled, setTimerSoundEnabled] = useState(false);
   const { timers, startTimer, cancelTimer, snoozeTimer } = useRestTimers(timerSoundEnabled);
+  const insets = useSafeAreaInsets();
+  // Altezza reale della barra fissa "Registra sessione" (vedi footer sotto),
+  // misurata via onLayout: serve a RestTimerTray per non sovrapporsi ad
+  // essa quando un timer e' attivo (vedi extraBottomOffset).
+  const [footerHeight, setFooterHeight] = useState(0);
+  function handleFooterLayout(event: LayoutChangeEvent): void {
+    setFooterHeight(event.nativeEvent.layout.height);
+  }
 
   useEffect(() => {
     if (!token) {
@@ -212,7 +222,17 @@ export function LogSessionScreen({ navigation, route }: Props) {
 
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => navigation.replace("WorkoutDetail", { id: workout.id })}
+            // popTo (non replace): se si arriva qui da WorkoutDetail
+            // ("Avvia sessione"), quello stesso WorkoutDetail e' già nello
+            // stack sotto LogSession — replace lo sostituiva SEMPRE con
+            // un'istanza nuova, lasciandone due impilate (l'originale +
+            // quella appena creata) e rompendo il tasto indietro (due
+            // "indietro" per uscire dalla scheda invece di uno, riportato
+            // dall'utente). Se invece si arriva dalla Dashboard ("Avvia
+            // sessione" da Prossima sessione, stack senza WorkoutDetail),
+            // popTo si comporta come navigate: nessuna istanza da
+            // riportare in cima, ne aggiunge una sola.
+            onPress={() => navigation.popTo("WorkoutDetail", { id: workout.id })}
             accessibilityRole="button"
             accessibilityLabel={t("session.backToWorkout")}
           >
@@ -226,22 +246,6 @@ export function LogSessionScreen({ navigation, route }: Props) {
 
   const header = (
     <View style={styles.headerContainer}>
-      <View style={styles.toolbar}>
-        <TouchableOpacity
-          style={[styles.submitButton, isSubmitting && styles.buttonDisabled]}
-          onPress={handleSubmit}
-          disabled={isSubmitting}
-          accessibilityRole="button"
-          accessibilityLabel={t("session.submit")}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color={colors.accentContrast} />
-          ) : (
-            <Text style={styles.submitButtonText}>{t("session.submit")}</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-
       {error && (
         <Text style={styles.error} accessibilityRole="alert">
           {error}
@@ -266,14 +270,42 @@ export function LogSessionScreen({ navigation, route }: Props) {
           value={new Date(performedAt)}
           mode="date"
           maximumDate={new Date()}
-          onChange={(_event, date) => {
+          // onChange e' deprecata dalla libreria (onValueChange/onDismiss/
+          // onNeutralButtonPress la sostituiscono, vedi CHANGELOG del
+          // pacchetto) — onValueChange passa sempre una data valida (mai
+          // undefined, a differenza del vecchio onChange), onDismiss copre
+          // separatamente il caso "chiuso senza scegliere".
+          onValueChange={(_event, date) => {
             setShowDatePicker(false);
-            if (date) {
-              setPerformedAt(date.toISOString().slice(0, 10));
-            }
+            setPerformedAt(date.toISOString().slice(0, 10));
           }}
+          onDismiss={() => setShowDatePicker(false)}
         />
       )}
+    </View>
+  );
+
+  // Barra fissa in fondo (non piu' in cima alla lista, dove diventava
+  // irraggiungibile scrollando una sessione con molti esercizi — riportato
+  // dall'utente), stesso principio del footer di WorkoutForm.tsx.
+  const footer = (
+    <View
+      style={[styles.footer, { paddingBottom: spacing.md + insets.bottom }]}
+      onLayout={handleFooterLayout}
+    >
+      <TouchableOpacity
+        style={[styles.submitButton, isSubmitting && styles.buttonDisabled]}
+        onPress={handleSubmit}
+        disabled={isSubmitting}
+        accessibilityRole="button"
+        accessibilityLabel={t("session.submit")}
+      >
+        {isSubmitting ? (
+          <ActivityIndicator color={colors.accentContrast} />
+        ) : (
+          <Text style={styles.submitButtonText}>{t("session.submit")}</Text>
+        )}
+      </TouchableOpacity>
     </View>
   );
 
@@ -286,7 +318,7 @@ export function LogSessionScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       {isTabletLandscape ? (
-        <ScrollView contentContainerStyle={styles.landscapeContent}>
+        <ScrollView style={styles.landscapeScroll} contentContainerStyle={styles.landscapeContent}>
           {header}
           <SessionExerciseTable
             exercises={exercises}
@@ -315,7 +347,13 @@ export function LogSessionScreen({ navigation, route }: Props) {
           contentContainerStyle={styles.listContent}
         />
       )}
-      <RestTimerTray timers={timers} onCancel={cancelTimer} onSnooze={snoozeTimer} />
+      {footer}
+      <RestTimerTray
+        timers={timers}
+        onCancel={cancelTimer}
+        onSnooze={snoozeTimer}
+        extraBottomOffset={footerHeight}
+      />
     </View>
   );
 }
@@ -328,6 +366,12 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: spacing.xxl,
     ...centeredContentStyle,
+  },
+  // flex:1 esplicito: la ScrollView non lo eredita automaticamente da sola
+  // in una colonna flex con piu' fratelli (ora anche il footer sotto),
+  // stesso motivo di "list" in WorkoutForm.tsx.
+  landscapeScroll: {
+    flex: 1,
   },
   // Niente cap+centra qui a differenza di listContent: la tabella deve
   // poter usare tutta la larghezza del tablet in landscape, non i ~640dp
@@ -353,8 +397,17 @@ const styles = StyleSheet.create({
   headerContainer: {
     padding: spacing.lg,
   },
-  toolbar: {
-    marginBottom: spacing.lg,
+  // Barra fissa in fondo (vedi commento nel render sopra) — stesso
+  // cap+centra usato per il resto del form a colonna singola, cosi' su
+  // schermi larghi il pulsante non si allarga a piena larghezza.
+  footer: {
+    padding: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.bg,
+    width: "100%",
+    maxWidth: MAX_CONTENT_WIDTH_DP,
+    alignSelf: "center",
   },
   submitButton: {
     backgroundColor: colors.accent,

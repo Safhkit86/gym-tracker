@@ -52,7 +52,12 @@ export function EditWorkoutScreen({ navigation, route }: Props) {
       return;
     }
     const result = await updateWorkout(token, id, input);
-    navigation.replace("WorkoutDetail", { id: result.id });
+    // popTo (non replace): EditWorkout e' sempre raggiunta da un
+    // WorkoutDetail già nello stack sotto di essa ("Modifica" in
+    // WorkoutDetailScreen) — replace lo sostituiva SEMPRE con un'istanza
+    // nuova, lasciandone due impilate e rompendo il tasto indietro (stesso
+    // bug di LogSessionScreen, vedi il commento li' per i dettagli).
+    navigation.popTo("WorkoutDetail", { id: result.id });
   }
 
   if (loadError) {

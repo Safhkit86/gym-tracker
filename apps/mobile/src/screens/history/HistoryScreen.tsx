@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
 import type { MeasurementEntry, SessionDetail } from "@gym-tracker/shared";
 import { useAuth } from "../../auth/useAuth";
@@ -9,6 +10,8 @@ import { ApiRequestError } from "../../api/client";
 import { colors, radius, spacing } from "../../theme/theme";
 import { centeredContentStyle } from "../../theme/layout";
 import { useIsTabletDevice, useSafeAreaHorizontalPadding } from "../../hooks/useResponsiveLayout";
+import { useRefreshOnFocus } from "../../hooks/useRefreshOnFocus";
+import type { HistoryStackParamList } from "../../navigation/HistoryNavigator";
 import { computeWeekNumbers } from "../../utils/session-history-utils";
 import { SessionHistoryCard } from "./SessionHistoryCard";
 import { MeasurementEntryCard } from "./MeasurementEntryCard";
@@ -16,7 +19,9 @@ import { MeasurementEntryCard } from "./MeasurementEntryCard";
 type HistoryTab = "sessions" | "measurements";
 type SortOrder = "desc" | "asc";
 
-export function HistoryScreen() {
+export type Props = NativeStackScreenProps<HistoryStackParamList, "HistoryHome">;
+
+export function HistoryScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { token } = useAuth();
   const [tab, setTab] = useState<HistoryTab>("sessions");
@@ -39,51 +44,73 @@ export function HistoryScreen() {
   const [measurementsError, setMeasurementsError] = useState<string | null>(null);
   const [deletingMeasurementId, setDeletingMeasurementId] = useState<string | null>(null);
 
+  const isMountedRef = useRef(true);
   useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const loadSessions = useCallback(async (): Promise<void> => {
     if (!token) {
       return;
     }
-    let cancelled = false;
-    listSessions(token)
-      .then((result) => {
-        if (!cancelled) {
-          setSessions(result);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof ApiRequestError ? err.message : t("common.errorUnexpected"));
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
+    try {
+      const result = await listSessions(token);
+      if (isMountedRef.current) {
+        setSessions(result);
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        setError(err instanceof ApiRequestError ? err.message : t("common.errorUnexpected"));
+      }
+    }
   }, [token, t]);
 
-  // Caricamento lazy: solo alla prima apertura della vista Misure, non
-  // insieme alle sessioni (stesso motivo di apps/web/src/pages/SessionHistoryPage.tsx).
   useEffect(() => {
-    if (!token || tab !== "measurements" || measurements !== null) {
+    void loadSessions();
+  }, [loadSessions]);
+
+  const loadMeasurements = useCallback(async (): Promise<void> => {
+    if (!token) {
       return;
     }
-    let cancelled = false;
-    listMeasurements(token)
-      .then((result) => {
-        if (!cancelled) {
-          setMeasurements(result);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setMeasurementsError(
-            err instanceof ApiRequestError ? err.message : t("common.errorUnexpected")
-          );
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token, tab, measurements, t]);
+    try {
+      const result = await listMeasurements(token);
+      if (isMountedRef.current) {
+        setMeasurements(result);
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        setMeasurementsError(
+          err instanceof ApiRequestError ? err.message : t("common.errorUnexpected")
+        );
+      }
+    }
+  }, [token, t]);
+
+  // Caricamento lazy: solo alla prima apertura del tab Misure, non insieme
+  // alle sessioni (stesso motivo di
+  // apps/web/src/pages/SessionHistoryPage.tsx) — ma rifatto ogni volta che
+  // si passa al tab, non solo la prima (guard "measurements !== null"
+  // rimosso), cosi' una misura salvata altrove compare tornando qui.
+  useEffect(() => {
+    if (tab === "measurements") {
+      void loadMeasurements();
+    }
+  }, [tab, loadMeasurements]);
+
+  // Rifà il fetch anche al ritorno in primo piano sulla schermata (non
+  // solo al mount): una sessione loggata o una misura salvata altrove non
+  // comparivano tornando qui finche' non si smontava/rimontava la
+  // schermata a mano, cosa che con il tab/sidebar di navigazione non
+  // accade quasi mai — riportato dall'utente. Vedi useRefreshOnFocus.
+  useRefreshOnFocus(navigation, () => {
+    void loadSessions();
+    if (tab === "measurements") {
+      void loadMeasurements();
+    }
+  });
 
   function requestDeleteSession(id: string): void {
     Alert.alert(t("history.deleteSessionConfirmTitle"), undefined, [

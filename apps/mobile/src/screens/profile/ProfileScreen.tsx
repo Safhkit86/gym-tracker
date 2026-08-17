@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   Switch,
@@ -52,7 +53,7 @@ function today(): string {
 
 export function ProfileScreen() {
   const { t, i18n } = useTranslation();
-  const { token, user } = useAuth();
+  const { token, user, logout } = useAuth();
   const [tab, setTab] = useState<ProfileTab>("measurements");
   const measurementColumns = useResponsiveColumns(2);
   const measurementFieldStyle = fieldGridItemStyle(measurementColumns);
@@ -255,6 +256,21 @@ export function ProfileScreen() {
     }
   }
 
+  // Prima non esisteva alcun modo per uscire dall'account nell'app mobile —
+  // riportato dall'utente. Conferma con Alert prima di procedere, stesso
+  // pattern gia' usato per le azioni distruttive in questa app (elimina
+  // scheda/sessione/misura).
+  function requestLogout(): void {
+    Alert.alert(t("profile.account.logoutConfirmTitle"), undefined, [
+      { text: t("workouts.create.cancel"), style: "cancel" },
+      {
+        text: t("profile.account.logout"),
+        style: "destructive",
+        onPress: logout,
+      },
+    ]);
+  }
+
   return (
     <ScrollView style={[styles.container, safeAreaPadding]} contentContainerStyle={styles.content}>
       <View style={styles.tabRow}>
@@ -417,6 +433,15 @@ export function ProfileScreen() {
               </View>
             </>
           )}
+
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={requestLogout}
+            accessibilityRole="button"
+            accessibilityLabel={t("profile.account.logout")}
+          >
+            <Text style={styles.logoutButtonText}>{t("profile.account.logout")}</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -464,12 +489,13 @@ export function ProfileScreen() {
                       value={new Date(`${measuredOn}T00:00:00`)}
                       mode="date"
                       maximumDate={new Date()}
-                      onChange={(_event, date) => {
+                      // onChange e' deprecata (vedi lo stesso commento in
+                      // LogSessionScreen.tsx).
+                      onValueChange={(_event, date) => {
                         setShowDatePicker(false);
-                        if (date) {
-                          setMeasuredOn(date.toISOString().slice(0, 10));
-                        }
+                        setMeasuredOn(date.toISOString().slice(0, 10));
                       }}
+                      onDismiss={() => setShowDatePicker(false)}
                     />
                   )}
                   <Text style={styles.hint}>{t("profile.measurements.dateHint")}</Text>
@@ -804,6 +830,20 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: colors.text,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  logoutButton: {
+    marginTop: spacing.lg,
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    backgroundColor: colors.dangerBg,
+  },
+  logoutButtonText: {
+    color: colors.danger,
     fontSize: 14,
     fontWeight: "700",
   },

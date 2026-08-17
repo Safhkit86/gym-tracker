@@ -7,7 +7,10 @@ import type { Props as DashboardScreenProps } from "../screens/dashboard/Dashboa
 type Props = DashboardScreenProps;
 
 function mockNavigation(): Props["navigation"] {
-  return { navigate: jest.fn() } as unknown as Props["navigation"];
+  return {
+    navigate: jest.fn(),
+    addListener: jest.fn(() => jest.fn()),
+  } as unknown as Props["navigation"];
 }
 
 function mockRoute(): Props["route"] {

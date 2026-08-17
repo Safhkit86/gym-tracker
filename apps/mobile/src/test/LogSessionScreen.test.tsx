@@ -8,7 +8,7 @@ import type { WorkoutsStackParamList } from "../navigation/WorkoutsNavigator";
 type Props = NativeStackScreenProps<WorkoutsStackParamList, "LogSession">;
 
 function mockNavigation(): Props["navigation"] {
-  return { replace: jest.fn() } as unknown as Props["navigation"];
+  return { replace: jest.fn(), popTo: jest.fn() } as unknown as Props["navigation"];
 }
 
 function mockRoute(id: string): Props["route"] {
@@ -93,8 +93,9 @@ describe("LogSessionScreen", () => {
       },
     ]);
 
+    const navigation = mockNavigation();
     const screen = await renderWithProviders(
-      <LogSessionScreen navigation={mockNavigation()} route={mockRoute("w1")} />
+      <LogSessionScreen navigation={navigation} route={mockRoute("w1")} />
     );
 
     const repsInput = await screen.findByLabelText("Panca piana set 1 rep effettive");
@@ -107,6 +108,13 @@ describe("LogSessionScreen", () => {
     expect(
       await screen.findByText("Nessun suggerimento di progressione questa volta.")
     ).toBeTruthy();
+
+    // popTo (non replace/navigate): WorkoutDetail e' già nello stack sotto
+    // LogSessionScreen (raggiunta da "Avvia sessione" in WorkoutDetail) —
+    // regressione coperta dopo il bug riportato dall'utente (due "indietro"
+    // per uscire dalla scheda invece di uno, vedi LogSessionScreen.tsx).
+    fireEvent.press(screen.getByRole("button", { name: "Torna alla scheda" }));
+    expect(navigation.popTo).toHaveBeenCalledWith("WorkoutDetail", { id: "w1" });
   });
 
   it("su tablet in landscape mostra la tabella invece dello stack di card", async () => {

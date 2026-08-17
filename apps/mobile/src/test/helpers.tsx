@@ -47,16 +47,30 @@ const TEST_SAFE_AREA_METRICS = {
   insets: { top: 0, left: 0, right: 0, bottom: 0 },
 };
 
-export async function renderWithProviders(ui: ReactElement) {
-  const result = render(
+function withProviders(ui: ReactElement): ReactElement {
+  return (
     <SafeAreaProvider initialMetrics={TEST_SAFE_AREA_METRICS}>
       <AuthProvider>
         <NotificationsProvider>{ui}</NotificationsProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );
+}
+
+export async function renderWithProviders(ui: ReactElement) {
+  const result = render(withProviders(ui));
   await waitFor(() => {});
-  return result;
+  // rerender() di @testing-library/react-native sostituisce l'intero
+  // albero renderizzato, non solo il punto dove stava `ui`: senza
+  // riavvolgere anche qui negli stessi provider, un test che simula una
+  // seconda navigazione (nuovi route.params sullo stesso componente già
+  // montato, es. StatisticsScreen) perderebbe AuthProvider/
+  // NotificationsProvider al richiamo di rerender(), facendo fallire
+  // useAuth() con "deve essere usato dentro <AuthProvider>".
+  return {
+    ...result,
+    rerender: (nextUi: ReactElement) => result.rerender(withProviders(nextUi)),
+  };
 }
 
 interface FetchHandler {

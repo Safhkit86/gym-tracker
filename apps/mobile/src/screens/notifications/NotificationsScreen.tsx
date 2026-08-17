@@ -17,6 +17,7 @@ import { formatSuggestionDelta, toOverride } from "../../utils/suggestion-format
 import { colors, radius, spacing } from "../../theme/theme";
 import { centeredContentStyle } from "../../theme/layout";
 import { useSafeAreaHorizontalPadding } from "../../hooks/useResponsiveLayout";
+import { useRefreshOnFocus } from "../../hooks/useRefreshOnFocus";
 import type { NotificationsStackParamList } from "../../navigation/NotificationsNavigator";
 
 type Props = NativeStackScreenProps<NotificationsStackParamList, "NotificationsHome">;
@@ -45,21 +46,12 @@ export function NotificationsScreen({ navigation }: Props) {
     void refresh();
   }, [refresh]);
 
-  // Il tab/sidebar di navigazione mantiene le schermate montate quando si
-  // cambia tab (a differenza della webapp, dove ogni route smonta/rimonta
-  // la pagina): senza questo, tornare su Notifiche dopo aver accettato o
-  // letto un suggerimento altrove (es. Dashboard) mostrava ancora l'elenco
-  // caricato al mount, con lo stesso suggerimento ancora "da accettare" —
-  // riportato dall'utente. `navigation.addListener("focus", ...)` (invece
-  // di useFocusEffect, che userebbe useNavigation() e richiederebbe un vero
-  // NavigationContainer nei test, non nel setup di test di questo progetto,
-  // che mocka `navigation` come prop — vedi test/helpers.tsx) rifà il fetch
-  // ogni volta che questa schermata torna in primo piano.
-  useEffect(() => {
-    return navigation.addListener("focus", () => {
-      void refresh();
-    });
-  }, [navigation, refresh]);
+  // Rifà il fetch anche al ritorno in primo piano, non solo al mount —
+  // senza, tornare su Notifiche dopo aver accettato o letto un
+  // suggerimento altrove (es. Dashboard) mostrava ancora l'elenco caricato
+  // al mount, con lo stesso suggerimento ancora "da accettare" — riportato
+  // dall'utente. Vedi useRefreshOnFocus per il perché non useFocusEffect.
+  useRefreshOnFocus(navigation, refresh);
 
   async function handleMarkRead(id: string): Promise<void> {
     if (!token) {

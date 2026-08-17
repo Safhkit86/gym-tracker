@@ -255,7 +255,9 @@
       "otpLabel": "Code received by email",
       "otpSubmit": "Confirm password change",
       "otpSubmitting": "Confirming…",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "logout": "Log out",
+      "logoutConfirmTitle": "Do you want to log out?"
     },
     "measurements": {
       "loadError": "Unable to load your measurements.",

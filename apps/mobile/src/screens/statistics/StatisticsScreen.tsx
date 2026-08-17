@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -31,6 +31,7 @@ import {
   useResponsiveColumns,
   useSafeAreaHorizontalPadding,
 } from "../../hooks/useResponsiveLayout";
+import { useRefreshOnFocus } from "../../hooks/useRefreshOnFocus";
 import {
   UNSPECIFIED_MUSCLE_GROUP,
   normalizeMuscleGroup,
@@ -45,7 +46,7 @@ type StatisticsTab = "sessions" | "measurements";
 
 export type Props = NativeStackScreenProps<StatisticsStackParamList, "StatisticsHome">;
 
-export function StatisticsScreen({ route }: Props) {
+export function StatisticsScreen({ navigation, route }: Props) {
   const { t } = useTranslation();
   const { token } = useAuth();
   // Tab iniziale da route.params (link "Vedi tutte" della card Misure in
@@ -67,57 +68,83 @@ export function StatisticsScreen({ route }: Props) {
   const [measurements, setMeasurements] = useState<MeasurementEntry[] | null>(null);
   const [measurementsError, setMeasurementsError] = useState<string | null>(null);
 
+  // Il tab/sidebar di navigazione mantiene questa schermata montata: senza
+  // questo, un secondo "Vedi tutte" dalla card Misure della Dashboard (dopo
+  // che l'utente e' passato manualmente su un altro tab di Statistiche)
+  // non aveva alcun effetto, perche' l'inizializzazione di useState sopra
+  // gira solo al primo mount, non ad ogni nuovo route.params — riportato
+  // dall'utente. `navigation.setParams` consuma il param subito dopo
+  // averlo applicato, cosi' un ritorno "normale" su questa tab (senza un
+  // nuovo "Vedi tutte") non forza piu' il tab ad ogni focus.
+  //
+  // Dipendenza su `route.params` (l'intero oggetto), non su
+  // `route.params?.tab`: un secondo "Vedi tutte" con lo STESSO valore
+  // "measurements" del primo (es. dopo che l'utente e' tornato al tab
+  // "sessions" nel frattempo, senza pero' un nuovo route.params.tab
+  // diverso in valore) crea comunque un nuovo oggetto route.params ad ogni
+  // navigazione — dipendere dal solo valore della stringa non avrebbe
+  // rilevato il cambiamento, perche' "measurements" === "measurements" per
+  // React anche se la navigazione e' avvenuta due volte.
   useEffect(() => {
+    if (route.params?.tab) {
+      setTab(route.params.tab);
+      navigation.setParams({ tab: undefined });
+    }
+  }, [route.params, navigation]);
+
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const load = useCallback(async (): Promise<void> => {
     if (!token) {
       return;
     }
-    let cancelled = false;
+    try {
+      const [statsResult, exercisesResult, workoutsResult] = await Promise.all([
+        getDashboardStats(token),
+        listExercises(token),
+        listWorkouts(token),
+      ]);
+      if (!isMountedRef.current) {
+        return;
+      }
+      setStats(statsResult);
+      setExercises(exercisesResult);
 
-    async function load(authToken: string): Promise<void> {
-      try {
-        const [statsResult, exercisesResult, workoutsResult] = await Promise.all([
-          getDashboardStats(authToken),
-          listExercises(authToken),
-          listWorkouts(authToken),
-        ]);
-        if (cancelled) {
+      if (workoutsResult.length > 0) {
+        const workoutDetails = await Promise.all(
+          workoutsResult.map((w) => getWorkout(token, w.id))
+        );
+        if (!isMountedRef.current) {
           return;
         }
-        setStats(statsResult);
-        setExercises(exercisesResult);
-
-        if (workoutsResult.length > 0) {
-          const workoutDetails = await Promise.all(
-            workoutsResult.map((w) => getWorkout(authToken, w.id))
-          );
-          if (cancelled) {
-            return;
+        const exerciseUnion = new Map<string, string>();
+        for (const detail of workoutDetails) {
+          for (const ex of detail.exercises) {
+            exerciseUnion.set(ex.exerciseId, ex.exerciseName);
           }
-          const exerciseUnion = new Map<string, string>();
-          for (const detail of workoutDetails) {
-            for (const ex of detail.exercises) {
-              exerciseUnion.set(ex.exerciseId, ex.exerciseName);
-            }
-          }
-          setCurrentSchedeExercises(
-            [...exerciseUnion.entries()].map(([exerciseId, exerciseName]) => ({
-              exerciseId,
-              exerciseName,
-            }))
-          );
         }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof ApiRequestError ? err.message : t("statistics.loadError"));
-        }
+        setCurrentSchedeExercises(
+          [...exerciseUnion.entries()].map(([exerciseId, exerciseName]) => ({
+            exerciseId,
+            exerciseName,
+          }))
+        );
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        setError(err instanceof ApiRequestError ? err.message : t("statistics.loadError"));
       }
     }
-
-    void load(token);
-    return () => {
-      cancelled = true;
-    };
   }, [token, t]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   useEffect(() => {
     if (!token || currentSchedeExercises.length === 0) {
@@ -144,30 +171,45 @@ export function StatisticsScreen({ route }: Props) {
     };
   }, [token, currentSchedeExercises]);
 
-  // Caricamento lazy: solo alla prima apertura della vista Misure, stesso
-  // motivo dello Storico.
-  useEffect(() => {
-    if (!token || tab !== "measurements" || measurements !== null) {
+  const loadMeasurements = useCallback(async (): Promise<void> => {
+    if (!token) {
       return;
     }
-    let cancelled = false;
-    listMeasurements(token)
-      .then((result) => {
-        if (!cancelled) {
-          setMeasurements(result);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setMeasurementsError(
-            err instanceof ApiRequestError ? err.message : t("common.errorUnexpected")
-          );
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token, tab, measurements]);
+    try {
+      const result = await listMeasurements(token);
+      if (isMountedRef.current) {
+        setMeasurements(result);
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        setMeasurementsError(
+          err instanceof ApiRequestError ? err.message : t("common.errorUnexpected")
+        );
+      }
+    }
+  }, [token, t]);
+
+  // Rifà il fetch ogni volta che si passa al tab Misure, non solo la prima
+  // (rimosso il guard "measurements !== null" di prima): senza, salvare una
+  // nuova misura e poi tornare qui mostrava ancora i valori vecchi —
+  // riportato dall'utente.
+  useEffect(() => {
+    if (tab === "measurements") {
+      void loadMeasurements();
+    }
+  }, [tab, loadMeasurements]);
+
+  // Rifà il fetch anche al ritorno in primo piano su questa schermata
+  // (mount escluso, già coperto dagli effetti sopra): senza, dati salvati
+  // altrove (una sessione loggata, una misura aggiunta) non comparivano
+  // finché non si smontava/rimontava la schermata a mano, cosa che con il
+  // tab/sidebar di navigazione non accade quasi mai — vedi useRefreshOnFocus.
+  useRefreshOnFocus(navigation, () => {
+    void load();
+    if (tab === "measurements") {
+      void loadMeasurements();
+    }
+  });
 
   const muscleGroupByExerciseId = useMemo(() => {
     const map = new Map<string, string>();

@@ -14,12 +14,22 @@ interface RestTimerTrayProps {
   timers: RestTimer[];
   onCancel: (id: string) => void;
   onSnooze: (id: string) => void;
+  /** Altezza di un'eventuale barra fissa sotto il tray (es. il pulsante
+   *  "Registra sessione" in fondo a LogSessionScreen), da aggiungere
+   *  all'offset da fondo schermo cosi' il tray non ci si sovrappone.
+   *  Default 0 (nessuna barra sotto, comportamento invariato). */
+  extraBottomOffset?: number;
 }
 
 /** Widget dei timer di recupero attivi: fisso in basso, impilato se piu' di
  *  uno, sempre visibile durante lo scroll di Registra sessione — stesso
  *  ruolo di apps/web/src/components/RestTimerTray.tsx. */
-export function RestTimerTray({ timers, onCancel, onSnooze }: RestTimerTrayProps) {
+export function RestTimerTray({
+  timers,
+  onCancel,
+  onSnooze,
+  extraBottomOffset = 0,
+}: RestTimerTrayProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
@@ -28,7 +38,10 @@ export function RestTimerTray({ timers, onCancel, onSnooze }: RestTimerTrayProps
   }
 
   return (
-    <View style={[styles.tray, { bottom: spacing.md + insets.bottom }]} pointerEvents="box-none">
+    <View
+      style={[styles.tray, { bottom: spacing.md + insets.bottom + extraBottomOffset }]}
+      pointerEvents="box-none"
+    >
       {timers.map((timer) => (
         <View
           key={timer.id}

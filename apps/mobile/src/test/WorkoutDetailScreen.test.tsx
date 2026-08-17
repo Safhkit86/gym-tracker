@@ -9,7 +9,11 @@ import type { WorkoutsStackParamList } from "../navigation/WorkoutsNavigator";
 type Props = NativeStackScreenProps<WorkoutsStackParamList, "WorkoutDetail">;
 
 function mockNavigation(): Props["navigation"] {
-  return { navigate: jest.fn(), replace: jest.fn() } as unknown as Props["navigation"];
+  return {
+    navigate: jest.fn(),
+    replace: jest.fn(),
+    popTo: jest.fn(),
+  } as unknown as Props["navigation"];
 }
 
 function mockRoute(id: string): Props["route"] {
@@ -177,7 +181,7 @@ describe("WorkoutDetailScreen", () => {
 
     expect(alertSpy).toHaveBeenCalled();
     await waitFor(() => {
-      expect(navigation.replace).toHaveBeenCalledWith("WorkoutsList");
+      expect(navigation.popTo).toHaveBeenCalledWith("WorkoutsList");
     });
   });
 

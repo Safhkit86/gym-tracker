@@ -255,7 +255,9 @@
       "otpLabel": "Codice ricevuto via email",
       "otpSubmit": "Conferma cambio password",
       "otpSubmitting": "Conferma in corso…",
-      "cancel": "Annulla"
+      "cancel": "Annulla",
+      "logout": "Esci",
+      "logoutConfirmTitle": "Vuoi uscire dall'account?"
     },
     "measurements": {
       "loadError": "Impossibile caricare le misure.",
