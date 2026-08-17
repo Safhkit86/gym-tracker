@@ -20,6 +20,19 @@ const envSchema = z.object({
   HISTORY_SERVICE_URL: z.string().url(),
   NOTIFY_SERVICE_URL: z.string().url(),
   JWT_SECRET: z.string().min(1, "JWT_SECRET non puo' essere vuoto"),
+  // Opzionali, default = gli stessi valori hardcoded in rate-limit.ts (nessuna
+  // di queste var impostata => comportamento identico a prima). Esistono
+  // solo per poter alzare il limite globale in sviluppo (docker-compose.yml,
+  // dove un giro di test manuale/emulatore puo' facilmente superare 300
+  // richieste in 15 minuti) senza toccare il default di produzione.
+  RATE_LIMIT_WINDOW_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(15 * 60 * 1000),
+  RATE_LIMIT_GLOBAL_MAX: z.coerce.number().int().positive().default(300),
+  RATE_LIMIT_AUTH_MAX: z.coerce.number().int().positive().default(10),
+  RATE_LIMIT_SENSITIVE_MAX: z.coerce.number().int().positive().default(20),
 });
 
 export type Config = z.infer<typeof envSchema>;
