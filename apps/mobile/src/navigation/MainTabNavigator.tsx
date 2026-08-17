@@ -1,6 +1,6 @@
 import { Text } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import type { NavigatorScreenParams } from "@react-navigation/native";
+import { StackActions, type NavigatorScreenParams } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { colors } from "../theme/theme";
 import { useUnreadCount } from "../notifications/useUnreadCount";
@@ -92,6 +92,33 @@ export function MainTabNavigator() {
         name="Workouts"
         options={{ title: t("nav.workouts") }}
         component={WorkoutsNavigator}
+        listeners={({ navigation, route }) => ({
+          // Il tab "Schede" è uno stack nidificato che React Navigation
+          // mantiene così com'era quando si cambia tab (comportamento di
+          // default, mai configurato diversamente altrove in questo
+          // navigator) — dopo un log sessione (che atterra su
+          // WorkoutDetail, vedi popTo in LogSessionScreen) tornare qui da
+          // un'altra tab mostrava ancora quel dettaglio invece della
+          // lista (riportato dall'utente). Un tocco sull'icona del tab
+          // deve sempre riportare alla lista principale: nessun controllo
+          // su "è già il tab attivo?" perché StackActions.popToTop() è un
+          // no-op se lo stack è già alla radice, quindi è sicuro farlo
+          // incondizionatamente ad ogni tabPress. Non scatta invece per
+          // una navigazione programmatica cross-tab con una schermata
+          // specifica (es. "Avvia sessione"/"Vedi tutte" dalla Dashboard,
+          // che usano navigation.navigate con params): tabPress si
+          // attiva solo su un vero tocco della tab bar.
+          tabPress: () => {
+            const state = navigation.getState();
+            const workoutsRoute = state.routes.find((r) => r.name === route.name);
+            if (workoutsRoute?.state?.key) {
+              navigation.dispatch({
+                ...StackActions.popToTop(),
+                target: workoutsRoute.state.key,
+              });
+            }
+          },
+        })}
       />
       <Tab.Screen
         name="History"
