@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { AccessTokenService, PublicUser } from "@gym-tracker/shared";
+import type { AccessTokenService, AuthResponse, PublicUser } from "@gym-tracker/shared";
 import { UnauthorizedError } from "../errors.js";
 import type { UserRepository } from "../repositories/user-repository.js";
 import type { PasswordChangeService } from "../domain/password-change-service.js";
@@ -40,6 +40,37 @@ export function createMeRoutes(
         id: user.id,
         email: user.email,
         createdAt: user.createdAt.toISOString(),
+      };
+      res.status(200).json(body);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Rinnova il token corrente (stesso utente, nuova scadenza): richiede un
+  // Bearer ancora valido, quindi funziona solo se chiamato PRIMA che scada
+  // (sessione "a scorrimento" — vedi apps/web e apps/mobile, LogSessionPage/
+  // LogSessionScreen, l'unico punto che lo richiama periodicamente finche'
+  // resta aperto, dato che una sessione di allenamento puo' durare piu' di
+  // un'ora, oltre la scadenza fissa del token). Nessun refresh token
+  // separato: la firma JWT e' stateless, "rinnovare" significa solo
+  // riemettere lo stesso claim con una nuova scadenza.
+  router.post("/me/token/refresh", authenticate(tokens), async (req, res, next) => {
+    try {
+      const claims = req.userClaims;
+      if (!claims) {
+        throw new UnauthorizedError();
+      }
+
+      const user = await users.findById(claims.sub);
+      if (!user) {
+        throw new UnauthorizedError("Utente non trovato.");
+      }
+
+      const newToken = await tokens.sign({ sub: user.id, email: user.email });
+      const body: AuthResponse = {
+        token: newToken,
+        user: { id: user.id, email: user.email, createdAt: user.createdAt.toISOString() },
       };
       res.status(200).json(body);
     } catch (err) {
