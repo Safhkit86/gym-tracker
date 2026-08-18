@@ -875,4 +875,224 @@ describe("LogSessionPage", () => {
       expect(button).not.toBeDisabled();
     }
   });
+
+  describe("bozza locale (rete di sicurezza indipendente dal token)", () => {
+    const DRAFT_KEY = "gym-tracker.log-session-draft.w1";
+
+    it("salva una bozza in localStorage mentre si compila il form", async () => {
+      mockFetchResponses([
+        { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+        { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+        preferencesHandler(),
+      ]);
+
+      renderWithProviders(
+        <Routes>
+          <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+        </Routes>,
+        ["/workouts/w1/log"]
+      );
+
+      const reps = await screen.findByLabelText(/panca piana set 1 rep effettive/i);
+      fireEvent.change(reps, { target: { value: "7" } });
+
+      await waitFor(() => {
+        const raw = localStorage.getItem(DRAFT_KEY);
+        expect(raw).not.toBeNull();
+        const draft = JSON.parse(raw as string);
+        expect(draft.exercises[0].sets[0].actualReps).toBe("7");
+      });
+    });
+
+    it("ripristina una bozza recente per la stessa scheda, con avviso", async () => {
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({
+          performedAt: "2026-08-01",
+          exercises: [
+            {
+              exerciseId: "e1",
+              exerciseName: "Panca piana",
+              workoutExerciseId: "we1",
+              progressionIncrement: 2.5,
+              restSeconds: 90,
+              targetRestMinSeconds: 90,
+              targetRestMaxSeconds: 120,
+              actualRestSeconds: "95",
+              isBodyweight: false,
+              actualWeight: "77.5",
+              sets: [
+                {
+                  setNumber: 1,
+                  targetMinReps: 10,
+                  targetMaxReps: null,
+                  isMaxEffort: false,
+                  actualReps: "6",
+                  targetRestMinSeconds: 90,
+                  targetRestMaxSeconds: 120,
+                },
+              ],
+            },
+          ],
+          savedAt: Date.now(),
+        })
+      );
+      mockFetchResponses([
+        { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+        { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+        preferencesHandler(),
+      ]);
+
+      renderWithProviders(
+        <Routes>
+          <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+        </Routes>,
+        ["/workouts/w1/log"]
+      );
+
+      const reps = (await screen.findByLabelText(
+        /panca piana set 1 rep effettive/i
+      )) as HTMLInputElement;
+      expect(reps.value).toBe("6");
+      const weight = screen.getByLabelText(/panca piana kg effettivi/i) as HTMLInputElement;
+      expect(weight.value).toBe("77.5");
+      expect(screen.getByText(/bozza precedente ripristinata/i)).toBeInTheDocument();
+    });
+
+    it("ignora una bozza troppo vecchia (oltre 24 ore)", async () => {
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({
+          performedAt: "2026-08-01",
+          exercises: [],
+          savedAt: Date.now() - 25 * 60 * 60 * 1000,
+        })
+      );
+      mockFetchResponses([
+        { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+        { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+        preferencesHandler(),
+      ]);
+
+      renderWithProviders(
+        <Routes>
+          <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+        </Routes>,
+        ["/workouts/w1/log"]
+      );
+
+      const reps = (await screen.findByLabelText(
+        /panca piana set 1 rep effettive/i
+      )) as HTMLInputElement;
+      expect(reps.value).toBe("10"); // obiettivo della scheda, non la bozza scartata
+      expect(screen.queryByText(/bozza precedente ripristinata/i)).not.toBeInTheDocument();
+    });
+
+    it("'Scarta e ricomincia' torna ai valori di default e svuota la bozza salvata", async () => {
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({
+          performedAt: "2026-08-01",
+          exercises: [
+            {
+              exerciseId: "e1",
+              exerciseName: "Panca piana",
+              workoutExerciseId: "we1",
+              progressionIncrement: 2.5,
+              restSeconds: 90,
+              targetRestMinSeconds: 90,
+              targetRestMaxSeconds: 120,
+              actualRestSeconds: "95",
+              isBodyweight: false,
+              actualWeight: "77.5",
+              sets: [
+                {
+                  setNumber: 1,
+                  targetMinReps: 10,
+                  targetMaxReps: null,
+                  isMaxEffort: false,
+                  actualReps: "6",
+                  targetRestMinSeconds: 90,
+                  targetRestMaxSeconds: 120,
+                },
+              ],
+            },
+          ],
+          savedAt: Date.now(),
+        })
+      );
+      mockFetchResponses([
+        { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+        { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+        preferencesHandler(),
+      ]);
+
+      renderWithProviders(
+        <Routes>
+          <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+        </Routes>,
+        ["/workouts/w1/log"]
+      );
+
+      await screen.findByText(/bozza precedente ripristinata/i);
+      fireEvent.click(screen.getByRole("button", { name: /scarta e ricomincia/i }));
+
+      const reps = screen.getByLabelText(/panca piana set 1 rep effettive/i) as HTMLInputElement;
+      expect(reps.value).toBe("10");
+      expect(screen.queryByText(/bozza precedente ripristinata/i)).not.toBeInTheDocument();
+      expect(localStorage.getItem(DRAFT_KEY)).toBeNull();
+    });
+
+    it("svuota la bozza dopo aver registrato la sessione con successo", async () => {
+      const fetchMock = mockFetchResponses([
+        { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+        { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+        preferencesHandler(),
+        {
+          match: (u, m) => u.endsWith("/sessions") && m === "POST",
+          status: 201,
+          body: {
+            id: "sess1",
+            workoutId: "w1",
+            workoutName: "Push day",
+            workoutNotes: null,
+            performedAt: new Date().toISOString(),
+            notes: null,
+            exercises: [],
+            createdAt: new Date().toISOString(),
+          },
+        },
+        {
+          match: (u, m) => u.endsWith("/sessions/sess1/status") && m === "GET",
+          body: { status: "no-suggestion", suggestions: [] },
+        },
+      ]);
+
+      renderWithProviders(
+        <Routes>
+          <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+        </Routes>,
+        ["/workouts/w1/log"]
+      );
+
+      const reps = await screen.findByLabelText(/panca piana set 1 rep effettive/i);
+      fireEvent.change(reps, { target: { value: "7" } });
+      await waitFor(() => {
+        expect(localStorage.getItem(DRAFT_KEY)).not.toBeNull();
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /registra sessione/i }));
+
+      await waitFor(() => {
+        const postCall = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+        expect(postCall).toBeDefined();
+      });
+      expect(localStorage.getItem(DRAFT_KEY)).toBeNull();
+    });
+  });
 });

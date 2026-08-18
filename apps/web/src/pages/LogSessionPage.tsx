@@ -15,6 +15,7 @@ import { getAccountPreferences, getProgressionDefaults } from "../api/profile";
 import { ApiRequestError } from "../api/client";
 import { NARROW_TABLE_LAYOUT_QUERY, useIsNarrowViewport } from "../hooks/useIsNarrowViewport";
 import { useRestTimers } from "../hooks/useRestTimers";
+import { useSlidingSession } from "../hooks/useSlidingSession";
 import { RestTimerTray } from "../components/RestTimerTray";
 import { IconButton } from "../components/IconButton";
 import { TimerIcon } from "../components/icons";
@@ -61,6 +62,53 @@ interface SessionExerciseForm {
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/** Bozza locale del form, indipendente dal token: rete di sicurezza contro
+ *  qualunque perdita dei dati inseriti (token scaduto nonostante il
+ *  rinnovo, tab chiusa per sbaglio, blip di rete) — non solo la scadenza
+ *  del token, che useSlidingSession copre separatamente sopra. Chiave per
+ *  scheda: aprire "Registra sessione" per una scheda diversa non deve
+ *  mostrare la bozza di un'altra. */
+const DRAFT_STORAGE_PREFIX = "gym-tracker.log-session-draft.";
+/** Oltre questa età una bozza si considera abbandonata (non un'interruzione
+ *  recente da riprendere) e viene ignorata silenziosamente. */
+const DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+interface SessionDraft {
+  performedAt: string;
+  exercises: SessionExerciseForm[];
+  savedAt: number;
+}
+
+function draftKey(workoutId: string): string {
+  return `${DRAFT_STORAGE_PREFIX}${workoutId}`;
+}
+
+function loadDraft(workoutId: string): SessionDraft | null {
+  const raw = localStorage.getItem(draftKey(workoutId));
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(raw) as SessionDraft;
+    if (Date.now() - parsed.savedAt > DRAFT_MAX_AGE_MS) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    // Bozza corrotta (es. formato cambiato in una versione precedente):
+    // ignorarla silenziosamente, non bloccare il caricamento della pagina.
+    return null;
+  }
+}
+
+function saveDraft(workoutId: string, draft: Omit<SessionDraft, "savedAt">): void {
+  localStorage.setItem(draftKey(workoutId), JSON.stringify({ ...draft, savedAt: Date.now() }));
+}
+
+function clearDraft(workoutId: string): void {
+  localStorage.removeItem(draftKey(workoutId));
 }
 
 /** Il motore di regole valuta una sessione in modo asincrono (consumando
@@ -251,7 +299,7 @@ function buildInitialExercises(
 }
 
 export function LogSessionPage() {
-  const { token } = useAuth();
+  const { token, refreshToken } = useAuth();
   const { id } = useParams<{ id: string }>();
   const { refreshUnreadCount } = useUnreadCount();
 
@@ -269,8 +317,18 @@ export function LogSessionPage() {
   );
   const [suggestions, setSuggestions] = useState<ProgressionEvent[]>([]);
   const [timerSoundEnabled, setTimerSoundEnabled] = useState(false);
+  // Fresca da server (non dalla bozza locale): serve a "Scarta bozza" per
+  // poter tornare ai valori di default senza ricaricare la pagina.
+  const [freshExercises, setFreshExercises] = useState<SessionExerciseForm[]>([]);
+  const [draftRestored, setDraftRestored] = useState(false);
   const isNarrow = useIsNarrowViewport(NARROW_TABLE_LAYOUT_QUERY);
   const { timers, startTimer, cancelTimer, snoozeTimer } = useRestTimers(timerSoundEnabled);
+
+  // Una sessione di allenamento puo' durare piu' a lungo della scadenza
+  // fissa del token (1h): finche' questa pagina resta aperta, il token
+  // viene rinnovato periodicamente cosi' non si rischia di dover rifare il
+  // login perdendo i dati inseriti. Vedi useSlidingSession.
+  useSlidingSession(refreshToken);
 
   useEffect(() => {
     if (!token || !id) {
@@ -284,20 +342,61 @@ export function LogSessionPage() {
     ])
       .then(([detail, previousSessions, preferences, progressionDefaults]) => {
         setWorkout(detail);
-        setExercises(
-          buildInitialExercises(
-            detail,
-            previousSessions,
-            preferences.prefillScope,
-            progressionDefaults
-          )
+        const initial = buildInitialExercises(
+          detail,
+          previousSessions,
+          preferences.prefillScope,
+          progressionDefaults
         );
+        setFreshExercises(initial);
+
+        // Rete di sicurezza indipendente dal token (vedi commento su
+        // loadDraft sopra): se esiste una bozza recente per questa scheda,
+        // riprende da li' invece che dai valori di default.
+        const draft = loadDraft(detail.id);
+        if (draft) {
+          setExercises(draft.exercises);
+          setPerformedAt(draft.performedAt);
+          setDraftRestored(true);
+        } else {
+          setExercises(initial);
+        }
         setTimerSoundEnabled(preferences.timerSoundEnabled);
       })
       .catch((err: unknown) => {
         setError(err instanceof ApiRequestError ? err.message : "Impossibile caricare la scheda.");
       });
   }, [token, id]);
+
+  // Salva la bozza ad ogni modifica, finche' la scheda e' caricata e non si
+  // e' ancora inviata la sessione: niente scritture premature con lo stato
+  // vuoto iniziale (guard su `workout`), niente scritture dopo l'invio
+  // (guard su `result`, la bozza viene comunque svuotata da handleSubmit).
+  // Scrive solo se lo stato differisce davvero dai valori di default: senza
+  // questo confronto, "Scarta bozza" (che riporta exercises a
+  // freshExercises) verrebbe subito ri-salvato da questo stesso effetto al
+  // render successivo, vanificando lo scarto.
+  useEffect(() => {
+    if (!workout || result) {
+      return;
+    }
+    const isUnchanged =
+      performedAt === today() && JSON.stringify(exercises) === JSON.stringify(freshExercises);
+    if (isUnchanged) {
+      return;
+    }
+    saveDraft(workout.id, { performedAt, exercises });
+  }, [workout, result, performedAt, exercises, freshExercises]);
+
+  function discardDraft(): void {
+    if (!workout) {
+      return;
+    }
+    clearDraft(workout.id);
+    setExercises(freshExercises);
+    setPerformedAt(today());
+    setDraftRestored(false);
+  }
 
   function updateExercise(exerciseIndex: number, patch: Partial<SessionExerciseForm>): void {
     setExercises((current) =>
@@ -363,6 +462,7 @@ export function LogSessionPage() {
           };
         }),
       });
+      clearDraft(workout.id);
       setResult(response);
       setSuggestionStatus("pending");
       void pollForSuggestions(token, response.id);
@@ -461,6 +561,14 @@ export function LogSessionPage() {
         <Link to={`/workouts/${workout.id}`}>← {workout.name}</Link>
       </p>
       <h1>Registra sessione</h1>
+      {draftRestored && (
+        <p className="draft-notice" role="status">
+          Bozza precedente ripristinata.{" "}
+          <button type="button" className="link-button" onClick={discardDraft}>
+            Scarta e ricomincia
+          </button>
+        </p>
+      )}
       <form onSubmit={handleSubmit}>
         <section className="card session-card">
           <div className="session-card__header">

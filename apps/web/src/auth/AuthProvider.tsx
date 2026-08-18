@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { PublicUser } from "@gym-tracker/shared";
 import * as authApi from "../api/auth";
 import { UNAUTHORIZED_EVENT } from "../api/client";
@@ -74,6 +74,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  // Letto da un ref sempre aggiornato (non dalla closure di refreshToken
+  // sotto, che altrimenti catturerebbe il token del render in cui e' stata
+  // creata): senza, un consumatore che tiene un riferimento stabile alla
+  // funzione (es. l'intervallo di useSlidingSession, mai ricreato dopo il
+  // primo render) continuerebbe a rinnovare lo stesso token ormai scaduto
+  // da un pezzo invece dell'ultimo emesso.
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
+
+  const refreshToken = useCallback(async (): Promise<void> => {
+    if (!tokenRef.current) {
+      return;
+    }
+    const result = await authApi.refreshToken(tokenRef.current);
+    setUser(result.user);
+    persistToken(result.token);
+  }, []);
+
   // Un 401 su una richiesta autenticata (token scaduto/non valido) fa logout
   // automatico: senza questo, il token resta "valido" lato client finche' non
   // si ricarica la pagina, e ogni chiamata continua a fallire mostrando
@@ -83,7 +101,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, logout);
   }, [logout]);
 
-  const value: AuthContextValue = { token, user, isLoading, login, register, logout };
+  const value: AuthContextValue = {
+    token,
+    user,
+    isLoading,
+    login,
+    register,
+    logout,
+    refreshToken,
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
