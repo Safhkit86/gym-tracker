@@ -30,6 +30,13 @@ jest.mock("expo-screen-orientation", () => ({
   },
 }));
 
+// @react-native-async-storage/async-storage e' un modulo nativo: usa il
+// mock ufficiale del pacchetto (in-memory), stesso pattern documentato dal
+// suo README invece di scriverne uno a mano.
+jest.mock("@react-native-async-storage/async-storage", () =>
+  require("@react-native-async-storage/async-storage/jest/async-storage-mock")
+);
+
 // expo-secure-store usa il Keychain/Keystore nativo: non esiste in ambiente
 // Jest, quindi lo sostituiamo con un'implementazione in-memory per i test
 // (jest-expo mocka molti moduli expo-*, ma non questo). La Map deve vivere

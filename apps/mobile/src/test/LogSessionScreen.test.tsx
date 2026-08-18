@@ -1,5 +1,6 @@
 import * as SecureStore from "expo-secure-store";
-import { fireEvent } from "@testing-library/react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { fireEvent, waitFor } from "@testing-library/react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { renderWithProviders, mockFetchResponses, setDeviceDimensions } from "./helpers";
 import { LogSessionScreen } from "../screens/workouts/LogSessionScreen";
@@ -56,6 +57,7 @@ const accountPreferences = {
 
 beforeEach(async () => {
   await SecureStore.setItemAsync("gym-tracker.token", "fake-token");
+  await AsyncStorage.clear();
 });
 
 describe("LogSessionScreen", () => {
@@ -196,5 +198,195 @@ describe("LogSessionScreen", () => {
     );
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Scheda non trovata.");
+  });
+
+  describe("bozza locale (rete di sicurezza indipendente dal token)", () => {
+    const DRAFT_KEY = "gym-tracker.log-session-draft.w1";
+
+    it("salva una bozza in AsyncStorage mentre si compila il form", async () => {
+      mockFetchResponses([
+        { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
+        { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: workout },
+        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+        {
+          match: (u, m) => u.endsWith("/me/account-preferences") && m === "GET",
+          body: accountPreferences,
+        },
+        { match: (u, m) => u.endsWith("/me/progression-defaults") && m === "GET", body: [] },
+      ]);
+
+      const screen = await renderWithProviders(
+        <LogSessionScreen navigation={mockNavigation()} route={mockRoute("w1")} />
+      );
+
+      const repsInput = await screen.findByLabelText("Panca piana set 1 rep effettive");
+      fireEvent.changeText(repsInput, "7");
+
+      await waitFor(async () => {
+        const raw = await AsyncStorage.getItem(DRAFT_KEY);
+        expect(raw).not.toBeNull();
+        const draft = JSON.parse(raw as string);
+        expect(draft.exercises[0].sets[0].actualReps).toBe("7");
+      });
+    });
+
+    it("ripristina una bozza recente per la stessa scheda, con avviso", async () => {
+      await AsyncStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({
+          performedAt: "2026-08-01",
+          exercises: [
+            {
+              exerciseId: "e1",
+              exerciseName: "Panca piana",
+              workoutExerciseId: "we1",
+              progressionIncrement: null,
+              restSeconds: null,
+              targetRestMinSeconds: 90,
+              targetRestMaxSeconds: null,
+              actualRestSeconds: "95",
+              isBodyweight: false,
+              actualWeight: "77.5",
+              sets: [
+                {
+                  setNumber: 1,
+                  targetMinReps: 8,
+                  targetMaxReps: null,
+                  isMaxEffort: false,
+                  actualReps: "6",
+                  targetRestMinSeconds: 90,
+                  targetRestMaxSeconds: null,
+                },
+              ],
+            },
+          ],
+          savedAt: Date.now(),
+        })
+      );
+      mockFetchResponses([
+        { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
+        { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: workout },
+        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+        {
+          match: (u, m) => u.endsWith("/me/account-preferences") && m === "GET",
+          body: accountPreferences,
+        },
+        { match: (u, m) => u.endsWith("/me/progression-defaults") && m === "GET", body: [] },
+      ]);
+
+      const screen = await renderWithProviders(
+        <LogSessionScreen navigation={mockNavigation()} route={mockRoute("w1")} />
+      );
+
+      const repsInput = await screen.findByLabelText("Panca piana set 1 rep effettive");
+      expect(repsInput.props.value).toBe("6");
+      expect(screen.getByLabelText("Panca piana kg effettivi").props.value).toBe("77.5");
+      expect(screen.getByText("Bozza precedente ripristinata.")).toBeTruthy();
+    });
+
+    it("'Scarta e ricomincia' torna ai valori di default e svuota la bozza salvata", async () => {
+      await AsyncStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({
+          performedAt: "2026-08-01",
+          exercises: [
+            {
+              exerciseId: "e1",
+              exerciseName: "Panca piana",
+              workoutExerciseId: "we1",
+              progressionIncrement: null,
+              restSeconds: null,
+              targetRestMinSeconds: 90,
+              targetRestMaxSeconds: null,
+              actualRestSeconds: "95",
+              isBodyweight: false,
+              actualWeight: "77.5",
+              sets: [
+                {
+                  setNumber: 1,
+                  targetMinReps: 8,
+                  targetMaxReps: null,
+                  isMaxEffort: false,
+                  actualReps: "6",
+                  targetRestMinSeconds: 90,
+                  targetRestMaxSeconds: null,
+                },
+              ],
+            },
+          ],
+          savedAt: Date.now(),
+        })
+      );
+      mockFetchResponses([
+        { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
+        { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: workout },
+        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+        {
+          match: (u, m) => u.endsWith("/me/account-preferences") && m === "GET",
+          body: accountPreferences,
+        },
+        { match: (u, m) => u.endsWith("/me/progression-defaults") && m === "GET", body: [] },
+      ]);
+
+      const screen = await renderWithProviders(
+        <LogSessionScreen navigation={mockNavigation()} route={mockRoute("w1")} />
+      );
+
+      await screen.findByText("Bozza precedente ripristinata.");
+      fireEvent.press(screen.getByRole("button", { name: "Scarta e ricomincia" }));
+
+      expect(screen.getByLabelText("Panca piana set 1 rep effettive").props.value).toBe("8");
+      expect(screen.queryByText("Bozza precedente ripristinata.")).toBeNull();
+      await waitFor(async () => {
+        expect(await AsyncStorage.getItem(DRAFT_KEY)).toBeNull();
+      });
+    });
+
+    it("svuota la bozza dopo aver registrato la sessione con successo", async () => {
+      mockFetchResponses([
+        { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
+        { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: workout },
+        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+        {
+          match: (u, m) => u.endsWith("/me/account-preferences") && m === "GET",
+          body: accountPreferences,
+        },
+        { match: (u, m) => u.endsWith("/me/progression-defaults") && m === "GET", body: [] },
+        {
+          match: (u, m) => u.endsWith("/sessions") && m === "POST",
+          body: {
+            id: "sess1",
+            workoutId: "w1",
+            workoutName: "Spinta",
+            workoutNotes: null,
+            performedAt: new Date().toISOString(),
+            notes: null,
+            exercises: [],
+            createdAt: "",
+          },
+        },
+        {
+          match: (u, m) => u.endsWith("/sessions/sess1/status") && m === "GET",
+          body: { status: "no-suggestion", suggestions: [] },
+        },
+      ]);
+
+      const screen = await renderWithProviders(
+        <LogSessionScreen navigation={mockNavigation()} route={mockRoute("w1")} />
+      );
+
+      const repsInput = await screen.findByLabelText("Panca piana set 1 rep effettive");
+      fireEvent.changeText(repsInput, "7");
+      await waitFor(async () => {
+        expect(await AsyncStorage.getItem(DRAFT_KEY)).not.toBeNull();
+      });
+
+      fireEvent.press(screen.getByRole("button", { name: "Registra sessione" }));
+
+      await screen.findByText("Nessun suggerimento di progressione questa volta.");
+      await waitFor(async () => {
+        expect(await AsyncStorage.getItem(DRAFT_KEY)).toBeNull();
+      });
+    });
   });
 });

@@ -25,6 +25,7 @@ import { getSessionStatus, listSessions, logSession } from "../../api/sessions";
 import { getAccountPreferences, getProgressionDefaults } from "../../api/profile";
 import { ApiRequestError } from "../../api/client";
 import { useRestTimers } from "../../hooks/useRestTimers";
+import { useSlidingSession } from "../../hooks/useSlidingSession";
 import { RestTimerTray } from "../../components/RestTimerTray";
 import { colors, radius, spacing } from "../../theme/theme";
 import { centeredContentStyle, MAX_CONTENT_WIDTH_DP } from "../../theme/layout";
@@ -38,6 +39,11 @@ import {
   type SessionExerciseForm,
   type SessionSetForm,
 } from "../../utils/session-form-utils";
+import {
+  clearSessionDraft,
+  loadSessionDraft,
+  saveSessionDraft,
+} from "../../utils/session-draft-storage";
 
 type Props = NativeStackScreenProps<WorkoutsStackParamList, "LogSession">;
 
@@ -58,7 +64,7 @@ function wait(ms: number): Promise<void> {
 
 export function LogSessionScreen({ navigation, route }: Props) {
   const { t, i18n } = useTranslation();
-  const { token } = useAuth();
+  const { token, refreshToken } = useAuth();
   const { id } = route.params;
   const isTabletLandscape = useIsTabletLandscape();
 
@@ -74,6 +80,10 @@ export function LogSessionScreen({ navigation, route }: Props) {
   );
   const [suggestions, setSuggestions] = useState<ProgressionEvent[]>([]);
   const [timerSoundEnabled, setTimerSoundEnabled] = useState(false);
+  // Fresca da server (non dalla bozza locale): serve a "Scarta bozza" per
+  // poter tornare ai valori di default senza ricaricare la schermata.
+  const [freshExercises, setFreshExercises] = useState<SessionExerciseForm[]>([]);
+  const [draftRestored, setDraftRestored] = useState(false);
   const { timers, startTimer, cancelTimer, snoozeTimer } = useRestTimers(timerSoundEnabled);
   const insets = useSafeAreaInsets();
   // Altezza reale della barra fissa "Registra sessione" (vedi footer sotto),
@@ -83,6 +93,12 @@ export function LogSessionScreen({ navigation, route }: Props) {
   function handleFooterLayout(event: LayoutChangeEvent): void {
     setFooterHeight(event.nativeEvent.layout.height);
   }
+
+  // Una sessione di allenamento puo' durare piu' a lungo della scadenza
+  // fissa del token (1h): finche' questa schermata resta aperta, il token
+  // viene rinnovato periodicamente cosi' non si rischia di dover rifare il
+  // login perdendo i dati inseriti. Vedi useSlidingSession.
+  useSlidingSession(refreshToken);
 
   useEffect(() => {
     if (!token) {
@@ -95,19 +111,34 @@ export function LogSessionScreen({ navigation, route }: Props) {
       getAccountPreferences(token),
       getProgressionDefaults(token),
     ])
-      .then(([detail, previousSessions, preferences, progressionDefaults]) => {
-        if (!cancelled) {
-          setWorkout(detail);
-          setExercises(
-            buildInitialExercises(
-              detail,
-              previousSessions,
-              preferences.prefillScope,
-              progressionDefaults
-            )
-          );
-          setTimerSoundEnabled(preferences.timerSoundEnabled);
+      .then(async ([detail, previousSessions, preferences, progressionDefaults]) => {
+        if (cancelled) {
+          return;
         }
+        setWorkout(detail);
+        const initial = buildInitialExercises(
+          detail,
+          previousSessions,
+          preferences.prefillScope,
+          progressionDefaults
+        );
+        setFreshExercises(initial);
+
+        // Rete di sicurezza indipendente dal token (vedi commento su
+        // session-draft-storage.ts): se esiste una bozza recente per questa
+        // scheda, riprende da li' invece che dai valori di default.
+        const draft = await loadSessionDraft(detail.id);
+        if (cancelled) {
+          return;
+        }
+        if (draft) {
+          setExercises(draft.exercises);
+          setPerformedAt(draft.performedAt);
+          setDraftRestored(true);
+        } else {
+          setExercises(initial);
+        }
+        setTimerSoundEnabled(preferences.timerSoundEnabled);
       })
       .catch((err: unknown) => {
         if (!cancelled) {
@@ -118,6 +149,33 @@ export function LogSessionScreen({ navigation, route }: Props) {
       cancelled = true;
     };
   }, [token, id, t]);
+
+  // Salva la bozza ad ogni modifica, finche' la scheda e' caricata e non si
+  // e' ancora inviata la sessione. Scrive solo se lo stato differisce
+  // davvero dai valori di default: senza questo confronto, "Scarta bozza"
+  // (che riporta exercises a freshExercises) verrebbe subito ri-salvato da
+  // questo stesso effetto al render successivo, vanificando lo scarto.
+  useEffect(() => {
+    if (!workout || result) {
+      return;
+    }
+    const isUnchanged =
+      performedAt === today() && JSON.stringify(exercises) === JSON.stringify(freshExercises);
+    if (isUnchanged) {
+      return;
+    }
+    void saveSessionDraft(workout.id, { performedAt, exercises });
+  }, [workout, result, performedAt, exercises, freshExercises]);
+
+  function discardDraft(): void {
+    if (!workout) {
+      return;
+    }
+    void clearSessionDraft(workout.id);
+    setExercises(freshExercises);
+    setPerformedAt(today());
+    setDraftRestored(false);
+  }
 
   function updateExercise(exerciseIndex: number, patch: Partial<SessionExerciseForm>): void {
     setExercises((current) =>
@@ -150,6 +208,7 @@ export function LogSessionScreen({ navigation, route }: Props) {
     setIsSubmitting(true);
     try {
       const response = await logSession(token, toSessionInput(workout, performedAt, exercises));
+      void clearSessionDraft(workout.id);
       setResult(response);
       setSuggestionStatus("pending");
       void pollForSuggestions(token, response.id);
@@ -253,6 +312,15 @@ export function LogSessionScreen({ navigation, route }: Props) {
       )}
 
       {workout.notes && <Text style={styles.workoutNotes}>{workout.notes}</Text>}
+
+      {draftRestored && (
+        <View style={styles.draftNotice} accessibilityRole="alert">
+          <Text style={styles.draftNoticeText}>{t("session.draftRestored")}</Text>
+          <TouchableOpacity onPress={discardDraft} accessibilityRole="button">
+            <Text style={styles.draftNoticeAction}>{t("session.discardDraft")}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <Text style={styles.label}>{t("session.date")}</Text>
       <TouchableOpacity
@@ -396,6 +464,33 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     padding: spacing.lg,
+  },
+  // Stesso trattamento (12%/35% di opacita' sull'accent) della classe
+  // .draft-notice della webapp — qui via rgba, dato che React Native non
+  // supporta color-mix().
+  draftNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    backgroundColor: "rgba(34, 195, 176, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(34, 195, 176, 0.35)",
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  draftNoticeText: {
+    color: colors.text,
+    fontSize: 13,
+    flexShrink: 1,
+  },
+  draftNoticeAction: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
   // Barra fissa in fondo (vedi commento nel render sopra) — stesso
   // cap+centra usato per il resto del form a colonna singola, cosi' su

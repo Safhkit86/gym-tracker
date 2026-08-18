@@ -9,6 +9,10 @@ export interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  /** Rinnova il token corrente senza richiedere nuove credenziali: usato da
+   *  useSlidingSession per non far scadere il token durante un'attivita'
+   *  lunga (es. Registra sessione). */
+  refreshToken: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
