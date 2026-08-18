@@ -235,6 +235,31 @@ button.secondary:hover:not(:disabled) {
   margin: 0;
 }
 
+.draft-notice {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  font-size: 0.875rem;
+  margin: 0 0 var(--space-4);
+}
+
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link-button:hover {
+  color: var(--color-accent-hover);
+}
+
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);

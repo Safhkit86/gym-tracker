@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { DeviceEventEmitter } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import type { PublicUser } from "@gym-tracker/shared";
@@ -97,6 +97,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  // Letto da un ref sempre aggiornato (stesso motivo dell'equivalente su
+  // web): senza, un consumatore che tiene un riferimento stabile alla
+  // funzione (l'intervallo di useSlidingSession) continuerebbe a rinnovare
+  // lo stesso token ormai vecchio invece dell'ultimo emesso.
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
+
+  const refreshToken = useCallback(async (): Promise<void> => {
+    if (!tokenRef.current) {
+      return;
+    }
+    const result = await authApi.refreshToken(tokenRef.current);
+    setUser(result.user);
+    await persistToken(result.token);
+  }, []);
+
   // Un 401 su una richiesta autenticata (token scaduto/non valido) fa logout
   // automatico: senza questo, il token resta "valido" lato client finche' non
   // si riavvia l'app, e ogni chiamata continua a fallire mostrando l'errore
@@ -107,7 +123,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.remove();
   }, [logout]);
 
-  const value: AuthContextValue = { token, user, isLoading, login, register, logout };
+  const value: AuthContextValue = {
+    token,
+    user,
+    isLoading,
+    login,
+    register,
+    logout,
+    refreshToken,
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

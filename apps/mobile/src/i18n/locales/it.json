@@ -137,6 +137,8 @@
     "noSuggestion": "Nessun suggerimento di progressione questa volta.",
     "suggestionsTimeout": "Sessione registrata. Verifica in corso — se disponibile, lo vedrai tra le notifiche.",
     "backToWorkout": "Torna alla scheda",
+    "draftRestored": "Bozza precedente ripristinata.",
+    "discardDraft": "Scarta e ricomincia",
     "table": {
       "exercise": "Esercizio"
     }
