@@ -297,6 +297,63 @@ button.secondary:hover:not(:disabled) {
   margin-top: var(--space-4);
 }
 
+/* --- Pagina di approvazione import storico (schede non trovate nel
+   catalogo, vedi SessionImportReviewDialog): stesso overlay/card di
+   .confirm-dialog ma piu' larga e con altezza limitata + scroll interno,
+   dato che elenca una card per ogni scheda mancante invece di un solo
+   messaggio. --- */
+.review-dialog {
+  width: 100%;
+  max-width: 42rem;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.review-dialog__groups {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: var(--space-4) 0;
+}
+
+.review-dialog__group {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
+}
+
+.review-dialog__group-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.review-dialog__group-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.review-dialog__preview {
+  font-size: 0.8rem;
+  margin: 0 0 var(--space-3);
+}
+
+.review-dialog__mode {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.review-dialog__mode button {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+}
+
 /* --- Navbar --- */
 
 .app-nav {
