@@ -353,7 +353,9 @@ describe("importSessionsWithResolutions", () => {
     const analysis = {
       resolved: [
         {
-          session: session({ exercises: [{ ...session().exercises[0], exerciseName: "PANCA PIANA" }] }),
+          session: session({
+            exercises: [{ ...session().exercises[0], exerciseName: "PANCA PIANA" }],
+          }),
           workoutId: "w1",
         },
       ],
