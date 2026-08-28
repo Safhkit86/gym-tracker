@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import type { ProgressionEvent, WorkoutDetail } from "@gym-tracker/shared";
 import { useAuth } from "../auth/useAuth";
 import { createWorkout, deleteWorkout, getWorkout } from "../api/workouts";
+import { listExercises } from "../api/exercises";
 import { listProgressionEvents } from "../api/progression";
 import { listNotifications } from "../api/notifications";
 import { getProgressionDefaults } from "../api/profile";
@@ -10,8 +11,14 @@ import { ApiRequestError } from "../api/client";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { PromptDialog } from "../components/PromptDialog";
 import { IconButton } from "../components/IconButton";
-import { CopyIcon, PencilIcon, PlayIcon, TrashIcon } from "../components/icons";
+import { CopyIcon, DownloadIcon, PencilIcon, PlayIcon, TrashIcon } from "../components/icons";
 import { duplicateWorkoutInput } from "../components/workout-form-utils";
+import {
+  buildExportRows,
+  downloadCsvFile,
+  singleWorkoutFilename,
+  toCsvText,
+} from "../components/workout-import-export";
 
 export function WorkoutDetailPage() {
   const { token } = useAuth();
@@ -33,6 +40,7 @@ export function WorkoutDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (!token || !id) {
@@ -112,6 +120,24 @@ export function WorkoutDetailPage() {
     }
   }
 
+  async function handleExport(): Promise<void> {
+    if (!token || !workout) {
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const catalog = await listExercises(token);
+      downloadCsvFile(
+        toCsvText(buildExportRows([workout], catalog)),
+        singleWorkoutFilename(workout.name)
+      );
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Impossibile esportare la scheda.");
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   if (error) {
     return (
       <main>
@@ -154,6 +180,12 @@ export function WorkoutDetailPage() {
             icon={<CopyIcon />}
             label="Duplica scheda"
             disabled={isDuplicating}
+          />
+          <IconButton
+            onClick={handleExport}
+            icon={<DownloadIcon />}
+            label="Esporta scheda"
+            disabled={isExporting}
           />
           <IconButton
             onClick={() => setShowDeleteConfirm(true)}

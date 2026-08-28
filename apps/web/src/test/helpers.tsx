@@ -74,3 +74,17 @@ export function mockFetchResponses(handlers: FetchHandler[]) {
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
+
+/** Legge il contenuto testuale di un Blob nei test (es. quello passato a
+ *  URL.createObjectURL da un export). Ne' Blob.text() ne' Response(blob).text()
+ *  funzionano in jsdom (l'ambiente di questi test): il primo non e'
+ *  implementato, il secondo usa il Response di jsdom che non legge il
+ *  contenuto reale del Blob. FileReader e' l'unica delle tre che funziona qui. */
+export function readBlobAsText(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(blob);
+  });
+}

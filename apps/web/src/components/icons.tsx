@@ -125,6 +125,26 @@ export function ChevronDownIcon() {
   );
 }
 
+export function DownloadIcon() {
+  return (
+    <svg {...iconProps()}>
+      <path d="M12 3v12" />
+      <path d="m7 11 5 5 5-5" />
+      <path d="M5 21h14" />
+    </svg>
+  );
+}
+
+export function UploadIcon() {
+  return (
+    <svg {...iconProps()}>
+      <path d="M12 21V9" />
+      <path d="m7 13 5-5 5 5" />
+      <path d="M5 21h14" />
+    </svg>
+  );
+}
+
 export function GripIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">

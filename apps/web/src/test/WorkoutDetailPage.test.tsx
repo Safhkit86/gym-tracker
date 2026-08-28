@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
-import { renderWithProviders, seedAuthToken, mockFetchResponses } from "./helpers";
+import { renderWithProviders, seedAuthToken, mockFetchResponses, readBlobAsText } from "./helpers";
 import { WorkoutDetailPage } from "../pages/WorkoutDetailPage";
 
 const FAKE_USER = { id: "u1", email: "test@example.com", createdAt: new Date().toISOString() };
@@ -392,5 +392,63 @@ describe("WorkoutDetailPage", () => {
       ],
     });
     expect(await screen.findByRole("heading", { name: "Push day v2" })).toBeInTheDocument();
+  });
+
+  it("esporta la scheda in un file CSV al click su 'Esporta scheda'", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+      { match: (u, m) => u.includes("/progression") && m === "GET", body: [] },
+      {
+        match: (u, m) => u.endsWith("/exercises") && m === "GET",
+        body: [
+          {
+            id: "e1",
+            userId: null,
+            name: "Panca piana",
+            muscleGroup: "Petto",
+            description: null,
+            sourceUrl: null,
+          },
+        ],
+      },
+    ]);
+
+    // jsdom non implementa URL.createObjectURL: aggiunto qui, ripulito a
+    // fine test cosi' non rimane sull'oggetto URL globale per gli altri test.
+    const createObjectURL = vi.fn((_blob: Blob) => "blob:fake-url");
+    const revokeObjectURL = vi.fn();
+    URL.createObjectURL = createObjectURL;
+    URL.revokeObjectURL = revokeObjectURL;
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    try {
+      renderWithProviders(
+        <Routes>
+          <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
+        </Routes>,
+        ["/workouts/w1"]
+      );
+
+      await screen.findByRole("heading", { name: "Push day" });
+      fireEvent.click(screen.getByRole("button", { name: /esporta scheda/i }));
+
+      await waitFor(() => {
+        expect(createObjectURL).toHaveBeenCalled();
+      });
+      expect(clickSpy).toHaveBeenCalled();
+
+      const blob = createObjectURL.mock.calls[0][0] as Blob;
+      const csv = await readBlobAsText(blob);
+      const lines = csv.replace(/^\uFEFF/, "").split("\r\n");
+      expect(lines[0]).toBe(
+        "scheda;note_scheda;esercizio;gruppo_muscolare;posizione;note_esercizio;recupero_dopo_esercizio_sec;incremento_progressione;set;rep_min;rep_max;peso_kg;recupero_min_sec;recupero_max_sec;sforzo_massimo"
+      );
+      expect(lines[1]).toContain("Push day");
+      expect(lines[1]).toContain("Panca piana");
+      expect(lines[1]).toContain("Petto");
+    } finally {
+      clickSpy.mockRestore();
+    }
   });
 });
