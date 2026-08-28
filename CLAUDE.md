@@ -118,6 +118,27 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   reanimated/gesture-handler (es. riordino di una lista), preferire
   un'alternativa senza gesture nativi (es. pulsanti ↑/↓) finche' non si
   passa a una dev build custom (EAS Build) invece di Expo Go.
+- Per collegare un build nativo di `apps/mobile` (dev-client, installato via
+  USB) al backend su un PC di sviluppo: `apps/mobile/src/api/client.ts` legge
+  `EXPO_PUBLIC_API_BASE_URL` da `apps/mobile/.env` (non committato, va
+  aggiornato se il PC cambia IP — vedi il commento nel file). Con il telefono
+  ancora collegato via cavo, `adb reverse tcp:8081 tcp:8081` (Metro) e
+  `adb reverse tcp:<porta-gateway> tcp:<porta-gateway>` (api-gateway, dev o
+  prod) permettono di usare `localhost` sia nel bundle-location dell'app sia
+  in `EXPO_PUBLIC_API_BASE_URL`, bypassando del tutto Wi-Fi/firewall — il
+  modo piu' affidabile per iterare. Se il PC non ha ancora `adb` installato,
+  `winget install --id Google.PlatformTools` lo aggiunge (non serve l'intero
+  Android Studio). **Per farlo funzionare anche via Wi-Fi** (bundle-location
+  sull'IP LAN del PC, non `localhost`) serve in piu' il plugin
+  `expo-build-properties` con `android.usesCleartextTraffic: true` in
+  `app.json`: il bundle JS si scarica comunque anche senza (passa da un
+  meccanismo nativo diverso, non soggetto alla policy), ma le chiamate reali
+  dell'app (`fetch` verso l'API) restano bloccate silenziosamente da Android
+  (blocca di default il traffico HTTP non cifrato verso host diversi da
+  "localhost") — sintomo: l'app scarica il bundle ma poi resta su una
+  schermata grigia vuota, senza errori ne' in console ne' in logcat.
+  Richiede una nuova build nativa per avere effetto (non basta cambiare
+  `app.json` su un build gia' installato).
 - Un restyling grafico di `apps/web` copre **tutte** le pagine esistenti, non
   solo quelle toccate dalla feature che lo ha motivato: prima di chiudere una
   PR di restyling, passa in rassegna ogni file in `src/pages/` e applica le
