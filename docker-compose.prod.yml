@@ -12,7 +12,8 @@ name: gym-tracker-prod
 #   da un finto server SMTP locale);
 # - account-service/notify-service leggono SMTP_HOST/SMTP_PORT da variabile
 #   invece del letterale "mailpit" hardcodato in dev;
-# - nuovo servizio "web" (la webapp, mai containerizzata prima d'ora);
+# - servizio "web" con lo stage nginx/build statica del Dockerfile invece
+#   dello stage "dev" (Vite dev server) usato in dev;
 # - ogni servizio resta in ascolto INTERNAMENTE sulla stessa porta di dev
 #   (deve combaciare con l'HEALTHCHECK/EXPOSE hardcodato nel suo Dockerfile,
 #   condiviso con lo stack di dev): cambia solo la porta lato HOST
@@ -199,8 +200,9 @@ services:
       - history-service
       - notify-service
 
-  # --- Webapp: build statica servita da nginx (mai containerizzata in dev,
-  # dove gira con `npm run dev` sull'host) ---
+  # --- Webapp: build statica servita da nginx (stage "runtime" del
+  # Dockerfile; in dev usa invece lo stage "dev", Vite dev server con hot
+  # reload — vedi docker-compose.yml) ---
   web:
     build:
       context: .

@@ -101,7 +101,7 @@ cd services/account-service && npm run dev         # avvia account-service in wa
 #   cd apps/web && npm run dev             # webapp su http://localhost:5173
 ```
 
-Oppure avvia tutto containerizzato:
+Oppure avvia tutto containerizzato (webapp inclusa, su http://localhost:5173):
 
 ```bash
 docker compose up -d --build
@@ -110,20 +110,27 @@ curl http://localhost:4000/health   # api-gateway: unico punto di ingresso
 
 ## Provare la webapp a mano
 
-Se il backend è già attivo (es. `docker compose ps` mostra i servizi
-`healthy`), basta avviare la webapp:
+`docker compose up -d` avvia anche la webapp (container `web`, stage "dev"
+del suo Dockerfile: Vite dev server con hot reload, codice sorgente montato
+dall'host — modifichi i file come sempre, nessun rebuild dell'immagine).
+Basta aprire **http://localhost:5173** dopo che `docker compose ps` mostra
+tutto `healthy`.
+
+In alternativa, per girare fuori da Docker (es. debugger IDE agganciato al
+processo Node):
 
 ```bash
 cd apps/web
 npm run dev
 ```
 
-e aprire **http://localhost:5173**.
+e aprire comunque **http://localhost:5173** (ferma prima il container `web`
+con `docker compose stop web`, altrimenti la porta è già occupata).
 
 Per ripartire da zero (macchina appena riavviata, container fermi):
 
 ```bash
-docker compose up -d   # infrastruttura + servizi
+docker compose up -d   # infrastruttura + servizi + webapp
 
 # solo la prima volta o dopo un nuovo checkout/pull
 npm run db:migrate --workspace=@gym-tracker/account-service
@@ -131,8 +138,6 @@ npm run db:migrate --workspace=@gym-tracker/workout-service
 npm run db:migrate --workspace=@gym-tracker/progress-service
 npm run db:migrate --workspace=@gym-tracker/history-service
 npm run db:migrate --workspace=@gym-tracker/notify-service
-
-cd apps/web && npm run dev   # webapp su http://localhost:5173
 ```
 
 Flusso di prova consigliato una volta dentro l'app:
@@ -226,8 +231,9 @@ Un secondo stack Docker Compose, isolato da quello di sviluppo (container,
 rete, volumi e porte tutti diversi, così i due non si mescolano mai anche
 girando sulla stessa macchina): `docker-compose.prod.yml` invece di
 `docker-compose.yml`, con il proprio file di variabili `.env.production`
-invece di `.env`. Include anche la webapp (`apps/web`), containerizzata qui
-per la prima volta (in dev gira solo con `npm run dev`).
+invece di `.env`. Include anche la webapp (`apps/web`), qui come build
+statica servita da nginx invece del Vite dev server con hot reload usato
+in dev.
 
 **Va sempre avviato con il file esplicito**, mai con un semplice
 `docker compose up` (che userebbe lo stack di dev):
