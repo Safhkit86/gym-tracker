@@ -644,6 +644,12 @@ button.secondary:hover:not(:disabled) {
   margin: 0;
 }
 
+.workouts-list-head__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 /* --- Workout detail --- */
 
 .workout-exercise {
