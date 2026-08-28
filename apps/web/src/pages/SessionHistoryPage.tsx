@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState, type ChangeEvent } from "react";
 import type { MeasurementEntry, SessionDetail } from "@gym-tracker/shared";
 import { useAuth } from "../auth/useAuth";
 import { deleteSession, listSessions } from "../api/sessions";
@@ -6,9 +6,23 @@ import { deleteMeasurement, listMeasurements } from "../api/measurements";
 import { ApiRequestError } from "../api/client";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { IconButton } from "../components/IconButton";
-import { TrashIcon } from "../components/icons";
+import { DownloadIcon, TrashIcon, UploadIcon } from "../components/icons";
 import { NARROW_TABLE_LAYOUT_QUERY, useIsNarrowViewport } from "../hooks/useIsNarrowViewport";
 import { MEASUREMENT_FIELDS, computeDelta } from "../utils/measurements";
+import { SessionImportReviewDialog } from "../components/SessionImportReviewDialog";
+import {
+  analyzeSessionImport,
+  buildSessionExportRows,
+  downloadCsvFile,
+  importSessionsWithResolutions,
+  parseSessionImportCsv,
+  readFileAsText,
+  sessionsFilename,
+  toCsvText,
+  CsvImportError,
+  type MissingWorkoutResolution,
+  type SessionImportAnalysis,
+} from "../components/session-import-export";
 
 type SortOrder = "desc" | "asc";
 type HistoryTab = "sessions" | "measurements";
@@ -20,10 +34,16 @@ function formatWeight(session: SessionDetail["exercises"][number]): string {
   return weight !== null ? `${weight} kg` : "corpo libero";
 }
 
-/** Recupero prima di passare all'esercizio successivo (prescritto dalla
- *  scheda al momento del log). */
+/** Recupero effettivo tra le serie, quello inserito dall'utente in Registra
+ *  Sessione (SessionSet.actualRestSeconds) — non exercise.restSeconds, che è
+ *  solo il valore informativo prescritto dalla scheda (mai modificabile in
+ *  Registra Sessione, vedi il commento su ExerciseLogForm lì) e quasi sempre
+ *  assente se la scheda non lo specifica esplicitamente. Stesso set preso a
+ *  riferimento di formatWeight sopra (il primo), stessa assunzione di
+ *  recupero uguale su tutte le serie dell'esercizio. */
 function formatRestSeconds(exercise: SessionDetail["exercises"][number]): string {
-  return exercise.restSeconds !== null ? `${exercise.restSeconds}s` : "—";
+  const restSeconds = exercise.sets[0]?.actualRestSeconds ?? null;
+  return restSeconds !== null ? `${restSeconds}s` : "—";
 }
 
 /** Numero di settimana per sessione, indipendente dall'ordinamento mostrato:
@@ -57,6 +77,17 @@ export function SessionHistoryPage() {
   const [measurementsError, setMeasurementsError] = useState<string | null>(null);
   const [deletingMeasurementId, setDeletingMeasurementId] = useState<string | null>(null);
   const [confirmDeleteMeasurementId, setConfirmDeleteMeasurementId] = useState<string | null>(null);
+
+  const [isExportingAll, setIsExportingAll] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResult, setImportResult] = useState<string | null>(null);
+  // Import senza schede mancanti: solo un conferma/annulla, come le schede.
+  const [pendingSimpleImport, setPendingSimpleImport] = useState<SessionImportAnalysis | null>(
+    null
+  );
+  // Import con almeno una scheda non trovata nel catalogo: pagina di approvazione.
+  const [pendingReview, setPendingReview] = useState<SessionImportAnalysis | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!token) {
@@ -103,6 +134,108 @@ export function SessionHistoryPage() {
       cancelled = true;
     };
   }, [token, tab, measurements]);
+
+  async function handleExportAll(): Promise<void> {
+    if (!token || !sessions || sessions.length === 0) {
+      return;
+    }
+    setIsExportingAll(true);
+    setError(null);
+    try {
+      downloadCsvFile(toCsvText(buildSessionExportRows(sessions)), sessionsFilename());
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Impossibile esportare lo storico.");
+    } finally {
+      setIsExportingAll(false);
+    }
+  }
+
+  function handleImportClick(): void {
+    fileInputRef.current?.click();
+  }
+
+  async function handleFileSelected(event: ChangeEvent<HTMLInputElement>): Promise<void> {
+    const file = event.target.files?.[0];
+    // Azzerato subito: permette di riselezionare lo stesso file (altrimenti
+    // il browser non rilancia onChange se il path scelto non cambia).
+    event.target.value = "";
+    if (!file || !token) {
+      return;
+    }
+    setError(null);
+    setImportResult(null);
+    try {
+      const text = await readFileAsText(file);
+      const portableSessions = parseSessionImportCsv(text);
+      const analysis = await analyzeSessionImport(token, portableSessions);
+      if (analysis.missing.length === 0) {
+        setPendingSimpleImport(analysis);
+      } else {
+        setPendingReview(analysis);
+      }
+    } catch (err) {
+      setError(
+        err instanceof CsvImportError
+          ? err.message
+          : err instanceof ApiRequestError
+            ? err.message
+            : "Impossibile leggere il file."
+      );
+    }
+  }
+
+  async function runImport(
+    analysis: SessionImportAnalysis,
+    resolutions: MissingWorkoutResolution[]
+  ): Promise<void> {
+    if (!token) {
+      return;
+    }
+    setIsImporting(true);
+    try {
+      const result = await importSessionsWithResolutions(token, analysis, resolutions);
+      setSessions(await listSessions(token));
+      const parts: string[] = [];
+      if (result.createdSessions.length > 0) {
+        parts.push(
+          `${result.createdSessions.length} ${result.createdSessions.length === 1 ? "sessione importata" : "sessioni importate"}.`
+        );
+      }
+      if (result.createdWorkoutNames.length > 0) {
+        parts.push(`Schede create: ${result.createdWorkoutNames.join(", ")}.`);
+      }
+      if (result.failed.length > 0) {
+        parts.push(
+          `Non importate: ${result.failed
+            .map((f) => `"${f.workoutName}" del ${f.performedAt} (${f.message})`)
+            .join(", ")}.`
+        );
+      }
+      setImportResult(parts.join(" ") || "Nessuna sessione importata.");
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Impossibile importare il file.");
+    } finally {
+      setIsImporting(false);
+    }
+  }
+
+  async function handleSimpleImportConfirm(): Promise<void> {
+    const analysis = pendingSimpleImport;
+    setPendingSimpleImport(null);
+    if (!analysis) {
+      return;
+    }
+    await runImport(analysis, []);
+  }
+
+  async function handleReviewConfirm(resolutions: MissingWorkoutResolution[]): Promise<void> {
+    const analysis = pendingReview;
+    setPendingReview(null);
+    if (!analysis) {
+      return;
+    }
+    await runImport(analysis, resolutions);
+  }
 
   async function handleDeleteMeasurement(): Promise<void> {
     const id = confirmDeleteMeasurementId;
@@ -172,11 +305,34 @@ export function SessionHistoryPage() {
 
       {tab === "sessions" && (
         <>
+          <div className="toolbar">
+            <IconButton
+              onClick={handleImportClick}
+              icon={<UploadIcon />}
+              label="Importa storico"
+              disabled={isImporting}
+            />
+            <IconButton
+              onClick={handleExportAll}
+              icon={<DownloadIcon />}
+              label="Esporta storico"
+              disabled={isExportingAll || !sessions || sessions.length === 0}
+            />
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            aria-label="File storico da importare"
+            onChange={handleFileSelected}
+            hidden
+          />
           {error && (
             <p role="alert" className="form-error">
               {error}
             </p>
           )}
+          {importResult && <p role="status">{importResult}</p>}
           {sessions === null && !error && <p>Caricamento…</p>}
           {sessions?.length === 0 && <p>Non hai ancora registrato nessuna sessione.</p>}
 
@@ -292,6 +448,25 @@ export function SessionHistoryPage() {
             message="Sei sicuro di voler eliminare questa sessione?"
             onConfirm={handleDelete}
             onCancel={() => setConfirmDeleteId(null)}
+          />
+
+          <ConfirmDialog
+            open={pendingSimpleImport !== null}
+            message={
+              pendingSimpleImport
+                ? `Importare ${pendingSimpleImport.resolved.length} ${pendingSimpleImport.resolved.length === 1 ? "sessione" : "sessioni"}? Verranno aggiunte come nuove, senza toccare quelle esistenti.`
+                : ""
+            }
+            onConfirm={handleSimpleImportConfirm}
+            onCancel={() => setPendingSimpleImport(null)}
+          />
+
+          <SessionImportReviewDialog
+            open={pendingReview !== null}
+            groups={pendingReview?.missing ?? []}
+            existingWorkouts={pendingReview?.existingWorkouts ?? []}
+            onConfirm={handleReviewConfirm}
+            onCancel={() => setPendingReview(null)}
           />
         </>
       )}

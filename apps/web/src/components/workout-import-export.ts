@@ -1,7 +1,21 @@
 import type { Exercise, WorkoutDetail, WorkoutInput } from "@gym-tracker/shared";
 import { ApiRequestError } from "../api/client";
-import { createExercise, listExercises } from "../api/exercises";
+import { listExercises } from "../api/exercises";
 import { createWorkout } from "../api/workouts";
+import {
+  CsvImportError,
+  parseCsvRows,
+  parseOptionalNumber,
+  slugify,
+  todayIsoDate,
+} from "../utils/csv";
+import { buildExerciseCache, resolveExerciseId } from "../utils/resolve-exercise";
+
+export { downloadCsvFile, readFileAsText, buildCsvText as toCsvText } from "../utils/csv";
+/** Alias storico: stesso errore condiviso da tutte le funzionalità di
+ *  import CSV (vedi utils/csv.ts), riesportato con questo nome perché
+ *  pagine/test di questa funzionalità già lo importano così. */
+export { CsvImportError as WorkoutImportFileError } from "../utils/csv";
 
 /**
  * Formato del file di export/import delle schede: CSV con una riga per SET
@@ -71,10 +85,6 @@ export interface PortableWorkout {
   notes: string | null;
   exercises: PortableExercise[];
 }
-
-/** Errore di parsing/validazione di un file di import: messaggio gia'
- *  pronto per l'utente, mai i dettagli tecnici del parse CSV. */
-export class WorkoutImportFileError extends Error {}
 
 // --- Export ---
 
@@ -153,136 +163,15 @@ export function buildExportRows(workouts: WorkoutDetail[], catalog: Exercise[]):
   return rows;
 }
 
-function csvField(value: string): string {
-  return /[;"\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
-}
-
-/** Serializza le righe in testo CSV: separatore ";", terminatore di riga
- *  CRLF (lo standard del formato) e un BOM UTF-8 in testa — senza, Excel su
- *  Windows spesso interpreta un CSV UTF-8 come ANSI e mostra le lettere
- *  accentate (à, è, ì, ò, ù) come caratteri corrotti. */
-export function toCsvText(rows: string[][]): string {
-  return `\uFEFF${rows.map((row) => row.map(csvField).join(";")).join("\r\n")}\r\n`;
-}
-
-/** Slug da usare nel nome del file scaricato: minuscolo, solo lettere/numeri/trattini. */
-function slugify(text: string): string {
-  const slug = text
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // rimuove gli accenti (es. "è" -> "e"), scomposti da normalize("NFD")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return slug || "scheda";
-}
-
-function todayIsoDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export function singleWorkoutFilename(name: string): string {
-  return `gym-tracker-${slugify(name)}-${todayIsoDate()}.csv`;
+  return `gym-tracker-${slugify(name, "scheda")}-${todayIsoDate()}.csv`;
 }
 
 export function planFilename(): string {
   return `gym-tracker-piano-${todayIsoDate()}.csv`;
 }
 
-/** Avvia il download del file nel browser: nessun round-trip di rete, solo
- *  un Blob locale scaricato via un link temporaneo (mai aggiunto al DOM). */
-export function downloadCsvFile(content: string, filename: string): void {
-  const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
 // --- Import ---
-
-/** Legge il contenuto testuale di un file scelto dall'utente. FileReader
- *  invece del piu' diretto `File.prototype.text()`: quest'ultimo non e'
- *  implementato da jsdom (l'ambiente dei test), FileReader si'. */
-export function readFileAsText(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error ?? new Error("Impossibile leggere il file."));
-    reader.readAsText(file);
-  });
-}
-
-/** Parser CSV minimale (RFC 4180): supporta separatore ";", campi tra
- *  virgolette con "" per la virgoletta letterale e campi multilinea,
- *  terminatori di riga sia CRLF che LF. Righe completamente vuote scartate. */
-function parseCsv(text: string): string[][] {
-  const input = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = "";
-  let inQuotes = false;
-  let i = 0;
-  while (i < input.length) {
-    const char = input[i];
-    if (inQuotes) {
-      if (char === '"') {
-        if (input[i + 1] === '"') {
-          field += '"';
-          i += 2;
-        } else {
-          inQuotes = false;
-          i += 1;
-        }
-      } else {
-        field += char;
-        i += 1;
-      }
-      continue;
-    }
-    if (char === '"') {
-      inQuotes = true;
-      i += 1;
-    } else if (char === ";") {
-      row.push(field);
-      field = "";
-      i += 1;
-    } else if (char === "\r") {
-      i += 1;
-    } else if (char === "\n") {
-      row.push(field);
-      rows.push(row);
-      row = [];
-      field = "";
-      i += 1;
-    } else {
-      field += char;
-      i += 1;
-    }
-  }
-  if (field !== "" || row.length > 0) {
-    row.push(field);
-    rows.push(row);
-  }
-  return rows.filter((r) => !(r.length === 1 && r[0].trim() === ""));
-}
-
-/** Tollera la virgola come separatore decimale (locale italiana, comune
- *  editando a mano in Excel: "82,5") oltre al punto. Cella vuota = null. */
-function parseOptionalNumber(raw: string, rowNumber: number, column: string): number | null {
-  if (raw === "") {
-    return null;
-  }
-  const value = Number(raw.replace(",", "."));
-  if (Number.isNaN(value)) {
-    throw new WorkoutImportFileError(
-      `Riga ${rowNumber}: la colonna "${column}" non è un numero valido ("${raw}").`
-    );
-  }
-  return value;
-}
 
 function parseBoolean(raw: string): boolean {
   return TRUE_VALUES.has(raw.trim().toLowerCase());
@@ -295,21 +184,21 @@ function parseBoolean(raw: string): boolean {
  *  sforzo massimo) restano al server, che le applica gia' su ogni
  *  POST /workouts — duplicarle qui produrrebbe due fonti di verita'. */
 export function parseWorkoutImportCsv(text: string): PortableWorkout[] {
-  const rows = parseCsv(text);
+  const rows = parseCsvRows(text);
   if (rows.length === 0) {
-    throw new WorkoutImportFileError("Il file è vuoto.");
+    throw new CsvImportError("Il file è vuoto.");
   }
 
   const header = rows[0].map((h) => h.trim().toLowerCase());
   const indexOf = new Map(header.map((h, i) => [h, i]));
   const missing = REQUIRED_COLUMNS.filter((c) => !indexOf.has(c));
   if (missing.length > 0) {
-    throw new WorkoutImportFileError(`Mancano le colonne obbligatorie: ${missing.join(", ")}.`);
+    throw new CsvImportError(`Mancano le colonne obbligatorie: ${missing.join(", ")}.`);
   }
 
   const dataRows = rows.slice(1);
   if (dataRows.length === 0) {
-    throw new WorkoutImportFileError("Il file non contiene nessuna riga di dati.");
+    throw new CsvImportError("Il file non contiene nessuna riga di dati.");
   }
 
   function cell(row: string[], name: string): string {
@@ -328,18 +217,18 @@ export function parseWorkoutImportCsv(text: string): PortableWorkout[] {
     const workoutName = cell(row, "scheda");
     const exerciseName = cell(row, "esercizio");
     if (!workoutName) {
-      throw new WorkoutImportFileError(`Riga ${rowNumber}: la colonna "scheda" è vuota.`);
+      throw new CsvImportError(`Riga ${rowNumber}: la colonna "scheda" è vuota.`);
     }
     if (!exerciseName) {
-      throw new WorkoutImportFileError(`Riga ${rowNumber}: la colonna "esercizio" è vuota.`);
+      throw new CsvImportError(`Riga ${rowNumber}: la colonna "esercizio" è vuota.`);
     }
     const position = parseOptionalNumber(cell(row, "posizione"), rowNumber, "posizione");
     if (position === null) {
-      throw new WorkoutImportFileError(`Riga ${rowNumber}: la colonna "posizione" è vuota.`);
+      throw new CsvImportError(`Riga ${rowNumber}: la colonna "posizione" è vuota.`);
     }
     const setNumber = parseOptionalNumber(cell(row, "set"), rowNumber, "set");
     if (setNumber === null) {
-      throw new WorkoutImportFileError(`Riga ${rowNumber}: la colonna "set" è vuota.`);
+      throw new CsvImportError(`Riga ${rowNumber}: la colonna "set" è vuota.`);
     }
 
     let workout = workoutByName.get(workoutName);
@@ -349,7 +238,7 @@ export function parseWorkoutImportCsv(text: string): PortableWorkout[] {
       workouts.push(workout);
     }
 
-    const exerciseKey = `${workoutName} ${position}`;
+    const exerciseKey = `${workoutName} ${position}`;
     let exercise = exerciseByKey.get(exerciseKey);
     if (!exercise) {
       exercise = {
@@ -400,32 +289,6 @@ export interface ImportResult {
   failed: Array<{ name: string; message: string }>;
 }
 
-/** Risolve un nome esercizio in un id del catalogo di chi importa: match
- *  per nome case-insensitive; se non trovato, crea un nuovo esercizio
- *  personale con quel nome (e muscleGroup, se presente). `cache` viene
- *  aggiornata cosi' due schede nello stesso file che citano lo stesso
- *  esercizio non ancora esistente non ne creano due copie. Sequenziale
- *  (non Promise.all) apposta: evita che lo stesso nome nuovo, ripetuto due
- *  volte nella stessa scheda, venga creato due volte per una corsa sulla
- *  cache condivisa. */
-async function resolveExerciseId(
-  token: string,
-  exercise: PortableExercise,
-  cache: Map<string, Exercise>
-): Promise<string> {
-  const key = exercise.exerciseName.trim().toLowerCase();
-  const existing = cache.get(key);
-  if (existing) {
-    return existing.id;
-  }
-  const created = await createExercise(token, {
-    name: exercise.exerciseName.trim(),
-    muscleGroup: exercise.muscleGroup ?? undefined,
-  });
-  cache.set(key, created);
-  return created.id;
-}
-
 function toWorkoutInput(portable: PortableWorkout, exerciseIds: string[]): WorkoutInput {
   return {
     name: portable.name,
@@ -459,7 +322,7 @@ export async function importWorkoutsFromFile(
   workouts: PortableWorkout[]
 ): Promise<ImportResult> {
   const catalog = await listExercises(token);
-  const cache = new Map<string, Exercise>(catalog.map((e) => [e.name.trim().toLowerCase(), e]));
+  const cache = buildExerciseCache(catalog);
 
   const created: WorkoutDetail[] = [];
   const failed: Array<{ name: string; message: string }> = [];
@@ -468,7 +331,9 @@ export async function importWorkoutsFromFile(
     try {
       const exerciseIds: string[] = [];
       for (const exercise of portable.exercises) {
-        exerciseIds.push(await resolveExerciseId(token, exercise, cache));
+        exerciseIds.push(
+          await resolveExerciseId(token, exercise.exerciseName, exercise.muscleGroup, cache)
+        );
       }
       const result = await createWorkout(token, toWorkoutInput(portable, exerciseIds));
       created.push(result);

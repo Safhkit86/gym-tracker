@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { screen, fireEvent, waitFor, within } from "@testing-library/react";
-import { renderWithProviders, seedAuthToken, mockFetchResponses } from "./helpers";
+import { renderWithProviders, seedAuthToken, mockFetchResponses, readBlobAsText } from "./helpers";
 import { SessionHistoryPage } from "../pages/SessionHistoryPage";
 
 const FAKE_USER = { id: "u1", email: "test@example.com", createdAt: new Date().toISOString() };
@@ -40,6 +40,7 @@ const SESSION_OLDER = {
           actualReps: 10,
           actualWeight: 80,
           actualRpe: 8,
+          actualRestSeconds: 90,
         },
         {
           id: "s2",
@@ -49,6 +50,7 @@ const SESSION_OLDER = {
           actualReps: 9,
           actualWeight: 80,
           actualRpe: 8,
+          actualRestSeconds: 90,
         },
       ],
     },
@@ -190,6 +192,31 @@ describe("SessionHistoryPage", () => {
     expect(screen.getByText("90s")).toBeInTheDocument();
   });
 
+  it("mostra il recupero EFFETTIVO inserito in Registra Sessione, non quello informativo prescritto dalla scheda", async () => {
+    const sessionWithDifferentRest = {
+      ...SESSION_OLDER,
+      exercises: [
+        {
+          ...SESSION_OLDER.exercises[0],
+          restSeconds: 60, // valore prescritto dalla scheda, solo informativo
+          sets: SESSION_OLDER.exercises[0].sets.map((set) => ({
+            ...set,
+            actualRestSeconds: 120, // quello davvero inserito dall'utente
+          })),
+        },
+      ],
+    };
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [sessionWithDifferentRest] },
+    ]);
+
+    renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+
+    expect(await screen.findByText("120s")).toBeInTheDocument();
+    expect(screen.queryByText("60s")).not.toBeInTheDocument();
+  });
+
   it("elimina una sessione dopo conferma", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
@@ -206,6 +233,183 @@ describe("SessionHistoryPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/non hai ancora registrato/i)).toBeInTheDocument();
+    });
+  });
+
+  const SESSION_CSV_HEADER =
+    "id_sessione;scheda;data;note_sessione;esercizio;posizione;recupero_dopo_esercizio_sec;incremento_progressione;set;rep_fatte;peso_kg;rpe;recupero_effettivo_sec";
+
+  function csvFile(content: string, name = "storico.csv"): File {
+    return new File([content], name, { type: "text/csv" });
+  }
+
+  describe("import/export CSV", () => {
+    it("esporta lo storico in un file CSV al click su 'Esporta storico'", async () => {
+      mockFetchResponses([
+        { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [SESSION_OLDER] },
+      ]);
+
+      const createObjectURL = vi.fn((_blob: Blob) => "blob:fake-url");
+      URL.createObjectURL = createObjectURL;
+      URL.revokeObjectURL = vi.fn();
+      const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+      try {
+        renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+        await screen.findByText("Panca piana");
+
+        fireEvent.click(screen.getByRole("button", { name: /esporta storico/i }));
+
+        await waitFor(() => {
+          expect(createObjectURL).toHaveBeenCalled();
+        });
+        const blob = createObjectURL.mock.calls[0][0] as Blob;
+        const csv = await readBlobAsText(blob);
+        const lines = csv
+          .replace(/^\uFEFF/, "")
+          .trim()
+          .split("\r\n");
+        expect(lines[0]).toBe(SESSION_CSV_HEADER);
+        expect(lines[1]).toContain("Push day");
+        expect(lines[1]).toContain("Panca piana");
+      } finally {
+        clickSpy.mockRestore();
+      }
+    });
+
+    it("mostra un errore se il file importato non ha le colonne obbligatorie", async () => {
+      mockFetchResponses([
+        { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      ]);
+
+      renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+      await screen.findByText(/non hai ancora registrato/i);
+
+      const input = screen.getByLabelText(/file storico da importare/i);
+      fireEvent.change(input, { target: { files: [csvFile("colonna_a;colonna_b\nfoo;bar")] } });
+
+      expect(await screen.findByText(/mancano le colonne obbligatorie/i)).toBeInTheDocument();
+    });
+
+    it("scheda già nel catalogo: conferma semplice, poi registra la sessione", async () => {
+      const IMPORT_FILE = [
+        SESSION_CSV_HEADER,
+        ";Push day;2026-07-20;;Panca piana;1;;;1;10;80;8;",
+      ].join("\r\n");
+      const fetchMock = mockFetchResponses([
+        { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [SESSION_OLDER] },
+        {
+          match: (u, m) => u.endsWith("/workouts") && m === "GET",
+          body: [
+            {
+              id: "w1",
+              name: "Push day",
+              notes: null,
+              exerciseCount: 1,
+              createdAt: "",
+              updatedAt: "",
+            },
+          ],
+        },
+        {
+          match: (u, m) => u.endsWith("/exercises") && m === "GET",
+          body: [
+            {
+              id: "e1",
+              userId: null,
+              name: "Panca piana",
+              muscleGroup: "Petto",
+              description: null,
+              sourceUrl: null,
+            },
+          ],
+        },
+        {
+          match: (u, m) => u.endsWith("/sessions") && m === "POST",
+          status: 201,
+          body: { ...SESSION_OLDER, id: "new-session" },
+        },
+      ]);
+
+      renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+      await screen.findByText("Panca piana");
+
+      const input = screen.getByLabelText(/file storico da importare/i);
+      fireEvent.change(input, { target: { files: [csvFile(IMPORT_FILE)] } });
+
+      const dialog = await screen.findByRole("alertdialog");
+      expect(within(dialog).getByText(/importare 1 sessione/i)).toBeInTheDocument();
+      fireEvent.click(within(dialog).getByRole("button", { name: "Sì" }));
+
+      await waitFor(() => {
+        expect(
+          fetchMock.mock.calls.some(
+            ([url, init]) =>
+              (url as string).toString().endsWith("/sessions") && init?.method === "POST"
+          )
+        ).toBe(true);
+      });
+      expect(await screen.findByText(/1 sessione importata/i)).toBeInTheDocument();
+    });
+
+    it("scheda non nel catalogo: mostra la pagina di approvazione, poi crea la scheda e registra la sessione", async () => {
+      const IMPORT_FILE = [
+        SESSION_CSV_HEADER,
+        ";Gambe pesanti;2026-07-20;;Squat;1;;;1;5;80;;",
+      ].join("\r\n");
+      const CREATED_WORKOUT = { id: "w-new", name: "Gambe pesanti" };
+      const fetchMock = mockFetchResponses([
+        { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+        { match: (u, m) => u.endsWith("/workouts") && m === "GET", body: [] },
+        { match: (u, m) => u.endsWith("/exercises") && m === "GET", body: [] },
+        {
+          match: (u, m) => u.endsWith("/exercises") && m === "POST",
+          status: 201,
+          body: {
+            id: "e-squat",
+            userId: "u1",
+            name: "Squat",
+            muscleGroup: null,
+            description: null,
+            sourceUrl: null,
+          },
+        },
+        {
+          match: (u, m) => u.endsWith("/workouts") && m === "POST",
+          status: 201,
+          body: CREATED_WORKOUT,
+        },
+        {
+          match: (u, m) => u.endsWith("/sessions") && m === "POST",
+          status: 201,
+          body: { ...SESSION_OLDER, id: "new-session", workoutName: "Gambe pesanti" },
+        },
+      ]);
+
+      renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+      await screen.findByText(/non hai ancora registrato/i);
+
+      const input = screen.getByLabelText(/file storico da importare/i);
+      fireEvent.change(input, { target: { files: [csvFile(IMPORT_FILE)] } });
+
+      expect(await screen.findByText("Gambe pesanti")).toBeInTheDocument();
+      expect(screen.getByText(/squat \(1 set\)/i)).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "Conferma" }));
+
+      await waitFor(() => {
+        expect(
+          fetchMock.mock.calls.some(
+            ([url, init]) =>
+              (url as string).toString().endsWith("/workouts") && init?.method === "POST"
+          )
+        ).toBe(true);
+      });
+      expect(await screen.findByText(/schede create: gambe pesanti/i)).toBeInTheDocument();
     });
   });
 
