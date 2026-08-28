@@ -23,6 +23,13 @@ import {
   type MissingWorkoutResolution,
   type SessionImportAnalysis,
 } from "../components/session-import-export";
+import {
+  buildMeasurementExportRows,
+  importMeasurementsFromFile,
+  measurementsFilename,
+  parseMeasurementImportCsv,
+  type PortableMeasurement,
+} from "../components/measurement-import-export";
 
 type SortOrder = "desc" | "asc";
 type HistoryTab = "sessions" | "measurements";
@@ -77,6 +84,17 @@ export function SessionHistoryPage() {
   const [measurementsError, setMeasurementsError] = useState<string | null>(null);
   const [deletingMeasurementId, setDeletingMeasurementId] = useState<string | null>(null);
   const [confirmDeleteMeasurementId, setConfirmDeleteMeasurementId] = useState<string | null>(null);
+
+  const [isExportingMeasurements, setIsExportingMeasurements] = useState(false);
+  const [isImportingMeasurements, setIsImportingMeasurements] = useState(false);
+  const [measurementImportResult, setMeasurementImportResult] = useState<string | null>(null);
+  // Nessuna pagina di approvazione: a differenza di schede/sessioni non c'è
+  // un catalogo da abbinare, solo un conferma/annulla come le schede senza
+  // ambiguità.
+  const [pendingMeasurementImport, setPendingMeasurementImport] = useState<
+    PortableMeasurement[] | null
+  >(null);
+  const measurementFileInputRef = useRef<HTMLInputElement>(null);
 
   const [isExportingAll, setIsExportingAll] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -235,6 +253,84 @@ export function SessionHistoryPage() {
       return;
     }
     await runImport(analysis, resolutions);
+  }
+
+  async function handleExportMeasurements(): Promise<void> {
+    if (!token || !measurements || measurements.length === 0) {
+      return;
+    }
+    setIsExportingMeasurements(true);
+    setMeasurementsError(null);
+    try {
+      downloadCsvFile(toCsvText(buildMeasurementExportRows(measurements)), measurementsFilename());
+    } catch (err) {
+      setMeasurementsError(
+        err instanceof ApiRequestError ? err.message : "Impossibile esportare le misure."
+      );
+    } finally {
+      setIsExportingMeasurements(false);
+    }
+  }
+
+  function handleImportMeasurementsClick(): void {
+    measurementFileInputRef.current?.click();
+  }
+
+  async function handleMeasurementFileSelected(
+    event: ChangeEvent<HTMLInputElement>
+  ): Promise<void> {
+    const file = event.target.files?.[0];
+    // Azzerato subito: permette di riselezionare lo stesso file (altrimenti
+    // il browser non rilancia onChange se il path scelto non cambia).
+    event.target.value = "";
+    if (!file || !token) {
+      return;
+    }
+    setMeasurementsError(null);
+    setMeasurementImportResult(null);
+    try {
+      const text = await readFileAsText(file);
+      setPendingMeasurementImport(parseMeasurementImportCsv(text));
+    } catch (err) {
+      setMeasurementsError(
+        err instanceof CsvImportError
+          ? err.message
+          : err instanceof ApiRequestError
+            ? err.message
+            : "Impossibile leggere il file."
+      );
+    }
+  }
+
+  async function handleMeasurementImportConfirm(): Promise<void> {
+    const entries = pendingMeasurementImport;
+    setPendingMeasurementImport(null);
+    if (!token || !entries) {
+      return;
+    }
+    setIsImportingMeasurements(true);
+    try {
+      const result = await importMeasurementsFromFile(token, entries);
+      setMeasurements(await listMeasurements(token));
+      const parts: string[] = [];
+      if (result.imported > 0) {
+        parts.push(
+          `${result.imported} ${result.imported === 1 ? "misurazione importata" : "misurazioni importate"}.`
+        );
+      }
+      if (result.failed.length > 0) {
+        parts.push(
+          `Non importate: ${result.failed.map((f) => `${f.measuredOn} (${f.message})`).join(", ")}.`
+        );
+      }
+      setMeasurementImportResult(parts.join(" ") || "Nessuna misurazione importata.");
+    } catch (err) {
+      setMeasurementsError(
+        err instanceof ApiRequestError ? err.message : "Impossibile importare il file."
+      );
+    } finally {
+      setIsImportingMeasurements(false);
+    }
   }
 
   async function handleDeleteMeasurement(): Promise<void> {
@@ -473,11 +569,34 @@ export function SessionHistoryPage() {
 
       {tab === "measurements" && (
         <div className="measurements-view">
+          <div className="toolbar">
+            <IconButton
+              onClick={handleImportMeasurementsClick}
+              icon={<UploadIcon />}
+              label="Importa misure"
+              disabled={isImportingMeasurements}
+            />
+            <IconButton
+              onClick={handleExportMeasurements}
+              icon={<DownloadIcon />}
+              label="Esporta misure"
+              disabled={isExportingMeasurements || !measurements || measurements.length === 0}
+            />
+          </div>
+          <input
+            ref={measurementFileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            aria-label="File misure da importare"
+            onChange={handleMeasurementFileSelected}
+            hidden
+          />
           {measurementsError && (
             <p role="alert" className="form-error">
               {measurementsError}
             </p>
           )}
+          {measurementImportResult && <p role="status">{measurementImportResult}</p>}
           {measurements === null && !measurementsError && <p>Caricamento…</p>}
           {measurements?.length === 0 && <p>Non hai ancora registrato nessuna misurazione.</p>}
 
@@ -544,6 +663,17 @@ export function SessionHistoryPage() {
             message="Sei sicuro di voler eliminare questa misurazione?"
             onConfirm={handleDeleteMeasurement}
             onCancel={() => setConfirmDeleteMeasurementId(null)}
+          />
+
+          <ConfirmDialog
+            open={pendingMeasurementImport !== null}
+            message={
+              pendingMeasurementImport
+                ? `Importare ${pendingMeasurementImport.length} ${pendingMeasurementImport.length === 1 ? "misurazione" : "misurazioni"}? Le date già presenti verranno aggiornate con i nuovi valori, le altre aggiunte come nuove.`
+                : ""
+            }
+            onConfirm={handleMeasurementImportConfirm}
+            onCancel={() => setPendingMeasurementImport(null)}
           />
         </div>
       )}

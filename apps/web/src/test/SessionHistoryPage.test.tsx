@@ -508,5 +508,126 @@ describe("SessionHistoryPage", () => {
         ).toBeInTheDocument();
       });
     });
+
+    const MEASUREMENT_CSV_HEADER = "data;peso_kg;petto_cm;braccio_cm;vita_cm;gamba_cm";
+
+    describe("import/export CSV", () => {
+      it("esporta le misure in un file CSV al click su 'Esporta misure'", async () => {
+        mockFetchResponses([
+          { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+          { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+          { match: (u, m) => u.endsWith("/measurements") && m === "GET", body: [ENTRY_OLDER] },
+        ]);
+
+        const createObjectURL = vi.fn((_blob: Blob) => "blob:fake-url");
+        URL.createObjectURL = createObjectURL;
+        URL.revokeObjectURL = vi.fn();
+        const clickSpy = vi
+          .spyOn(HTMLAnchorElement.prototype, "click")
+          .mockImplementation(() => {});
+
+        try {
+          renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+          await screen.findByText(/non hai ancora registrato nessuna sessione/i);
+          fireEvent.click(screen.getByRole("button", { name: "Misure" }));
+          await screen.findByText("13/07/2026");
+
+          fireEvent.click(screen.getByRole("button", { name: /esporta misure/i }));
+
+          await waitFor(() => {
+            expect(createObjectURL).toHaveBeenCalled();
+          });
+          const blob = createObjectURL.mock.calls[0][0] as Blob;
+          const csv = await readBlobAsText(blob);
+          const lines = csv
+            .replace(/^\uFEFF/, "")
+            .trim()
+            .split("\r\n");
+          expect(lines[0]).toBe(MEASUREMENT_CSV_HEADER);
+          expect(lines[1]).toBe("2026-07-13;80;101;35.5;88;58");
+        } finally {
+          clickSpy.mockRestore();
+        }
+      });
+
+      it("mostra un errore se il file importato non ha la colonna obbligatoria data", async () => {
+        mockFetchResponses([
+          { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+          { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+          { match: (u, m) => u.endsWith("/measurements") && m === "GET", body: [] },
+        ]);
+
+        renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+        await screen.findByText(/non hai ancora registrato nessuna sessione/i);
+        fireEvent.click(screen.getByRole("button", { name: "Misure" }));
+        await screen.findByText(/non hai ancora registrato nessuna misurazione/i);
+
+        const input = screen.getByLabelText(/file misure da importare/i);
+        fireEvent.change(input, { target: { files: [csvFile("peso_kg\n75", "misure.csv")] } });
+
+        expect(await screen.findByText(/mancano le colonne obbligatorie/i)).toBeInTheDocument();
+      });
+
+      it("importa le misure dopo conferma, riusando l'altezza corrente dell'account", async () => {
+        const IMPORT_FILE = [MEASUREMENT_CSV_HEADER, "2026-07-20;79.1;101.5;35.8;87;58.2"].join(
+          "\r\n"
+        );
+        const fetchMock = mockFetchResponses([
+          { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+          { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+          // Handler di "/me/measurements" PRIMA di quello generico
+          // "/measurements": endsWith("/measurements") matcherebbe anche
+          // "/me/measurements" (find() prende il primo handler che risponde
+          // true), quindi l'ordine qui conta.
+          {
+            match: (u, m) => u.endsWith("/me/measurements") && m === "GET",
+            body: {
+              heightCm: 181,
+              weightKg: 80,
+              chestCm: 101,
+              armCm: 35.5,
+              waistCm: 88,
+              legCm: 58,
+            },
+          },
+          {
+            match: (u, m) => u.endsWith("/me/measurements") && m === "PUT",
+            body: {},
+          },
+          { match: (u, m) => u.endsWith("/measurements") && m === "GET", body: [ENTRY_OLDER] },
+        ]);
+
+        renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+        await screen.findByText(/non hai ancora registrato nessuna sessione/i);
+        fireEvent.click(screen.getByRole("button", { name: "Misure" }));
+        await screen.findByText("13/07/2026");
+
+        const input = screen.getByLabelText(/file misure da importare/i);
+        fireEvent.change(input, { target: { files: [csvFile(IMPORT_FILE, "misure.csv")] } });
+
+        const dialog = await screen.findByRole("alertdialog");
+        expect(within(dialog).getByText(/importare 1 misurazione/i)).toBeInTheDocument();
+        fireEvent.click(within(dialog).getByRole("button", { name: "Sì" }));
+
+        await waitFor(() => {
+          const putCall = fetchMock.mock.calls.find(
+            ([url, init]) =>
+              (url as string).toString().endsWith("/me/measurements") && init?.method === "PUT"
+          );
+          expect(putCall).toBeDefined();
+          const body = JSON.parse((putCall?.[1]?.body as string) ?? "{}");
+          expect(body).toEqual({
+            heightCm: 181,
+            weightKg: 79.1,
+            chestCm: 101.5,
+            armCm: 35.8,
+            waistCm: 87,
+            legCm: 58.2,
+            measuredOn: "2026-07-20",
+          });
+        });
+        expect(await screen.findByText(/1 misurazione importata/i)).toBeInTheDocument();
+      });
+    });
   });
 });
