@@ -45,6 +45,22 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   singoli workspace: senza il manifest di root, `/app` non è riconosciuto
   come workspace root e `npm run build --workspace=...` fallisce con
   `ENOENT: package.json`. Usa il Dockerfile di `account-service` come modello.
+- `apps/web` è containerizzata sia in dev che in prod, con stage Docker
+  diversi nello stesso `apps/web/Dockerfile`: `dev` (Vite dev server con hot
+  reload, usato da `docker-compose.yml`) e `runtime` (nginx su build statica,
+  usato da `docker-compose.prod.yml`). Lo stage `dev` non copia il codice
+  sorgente nell'immagine: `docker-compose.yml` monta l'intero monorepo come
+  bind mount su `/app` (necessario per npm workspaces), con due volumi
+  nominati dedicati (`web-node-modules`, `web-app-node-modules`) sui path di
+  `node_modules` per evitare che il bind mount nasconda le dipendenze già
+  installate nell'immagine — un volume nominato, al primo avvio, si
+  inizializza copiando il contenuto già presente nell'immagine in quel path,
+  quindi l'ordine conta (installazione delle dipendenze nel Dockerfile prima
+  che il volume venga dichiarato in compose). Se cambia `apps/web/package.json`
+  vanno ricreati anche questi due volumi, non solo l'immagine. Pattern da
+  replicare per un futuro servizio frontend con hot reload containerizzato,
+  non necessario per i servizi backend Express (nessun bundler/dev server
+  coinvolto, `npm run dev` con `tsx watch` funziona già bene sull'host).
 - Ogni `src/config.ts` carica il `.env` di root con `dotenv` (vedi
   `services/account-service/src/config.ts`) prima di validare lo schema zod:
   serve solo quando il servizio gira sull'host (`npm run dev`/`db:migrate`

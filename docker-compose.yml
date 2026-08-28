@@ -202,5 +202,38 @@ services:
       - history-service
       - notify-service
 
+  # --- Webapp: Vite dev server con hot reload (stage "dev" del Dockerfile,
+  # non lo stage "runtime" a nginx usato da docker-compose.prod.yml). Codice
+  # sorgente montato dall'host (bind mount sull'intero monorepo, necessario
+  # per npm workspaces): modifichi i file su disco come sempre, Vite li
+  # ricarica nel browser senza rebuild dell'immagine. I volumi nominati su
+  # node_modules evitano che il bind mount nasconda le dipendenze installate
+  # nell'immagine (vedi commento nel Dockerfile) — vanno ricreati
+  # (`docker compose down -v` seleziona anche quelli, oppure `docker volume
+  # rm gym-tracker_web-node-modules gym-tracker_web-app-node-modules`) se
+  # cambi package.json e le dipendenze installate nell'immagine cambiano.
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: dev
+    restart: unless-stopped
+    environment:
+      # Indirizzo raggiungibile dal BROWSER (fuori da Docker), non
+      # l'hostname interno "api-gateway": letta dal dev server di Vite ad
+      # ogni richiesta (a differenza del build statico di prod, qui non e'
+      # "cotta" nel bundle una volta per tutte).
+      VITE_API_BASE_URL: http://localhost:${API_GATEWAY_PORT:-4000}
+    ports:
+      - "${WEB_PORT:-5173}:5173"
+    volumes:
+      - .:/app
+      - web-node-modules:/app/node_modules
+      - web-app-node-modules:/app/apps/web/node_modules
+    depends_on:
+      - api-gateway
+
 volumes:
   postgres-data:
+  web-node-modules:
+  web-app-node-modules:

@@ -1,9 +1,10 @@
 # syntax=docker/dockerfile:1
 
-# Il build context e' la root del monorepo (vedi docker-compose.prod.yml),
-# necessario perche' npm workspaces risolva @gym-tracker/shared. Solo per lo
-# stack di produzione: in dev la webapp gira con `npm run dev` sull'host,
-# mai containerizzata.
+# Il build context e' la root del monorepo (vedi docker-compose.yml/
+# docker-compose.prod.yml), necessario perche' npm workspaces risolva
+# @gym-tracker/shared. Due stage finali distinti: "dev" (Vite dev server con
+# hot reload, usato da docker-compose.yml) e "runtime" (nginx su build
+# statica, usato da docker-compose.prod.yml) — vedi i rispettivi stage sotto.
 
 FROM node:20-alpine AS base
 WORKDIR /app
@@ -15,6 +16,20 @@ COPY tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/package.json
 COPY apps/web/package.json apps/web/package.json
 RUN npm install --workspace=@gym-tracker/shared --workspace=@gym-tracker/web --include-workspace-root
+
+# --- Stage dev: Vite dev server con hot reload (docker-compose.yml) ---
+# Codice sorgente NON copiato qui: docker-compose.yml monta l'intero
+# monorepo come bind mount su /app (in scrittura, per l'hot reload), con
+# volumi dedicati su node_modules/apps/web/node_modules per non far
+# scomparire quelli installati qui sotto quando il bind mount li sovrascrive
+# (un volume Docker nominato, al primo avvio, si inizializza copiando il
+# contenuto gia' presente nell'immagine in quel path — per questo l'ordine
+# delle istruzioni conta: l'installazione delle dipendenze deve avvenire
+# PRIMA che il volume venga dichiarato in docker-compose.yml).
+FROM deps AS dev
+# --host: senza, il dev server di Vite ascolta solo su localhost DENTRO il
+# container, irraggiungibile dall'host anche con la porta pubblicata.
+CMD ["npm", "run", "dev", "--workspace=@gym-tracker/web", "--", "--host", "0.0.0.0"]
 
 # --- Stage 2: build (shared prima, poi la webapp) ---
 FROM base AS build
