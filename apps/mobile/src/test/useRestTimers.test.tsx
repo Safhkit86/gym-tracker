@@ -8,8 +8,9 @@ jest.mock("expo-haptics", () => ({
 }));
 
 const mockPlay = jest.fn();
+const mockPause = jest.fn();
 const mockSeekTo = jest.fn(async () => {});
-const mockPlayer = { play: mockPlay, seekTo: mockSeekTo };
+const mockPlayer = { play: mockPlay, pause: mockPause, seekTo: mockSeekTo };
 jest.mock("expo-audio", () => ({
   useAudioPlayer: () => mockPlayer,
   useAudioPlayerStatus: () => ({
@@ -28,6 +29,7 @@ describe("useRestTimers", () => {
     jest.useFakeTimers();
     mockNotificationAsync.mockClear();
     mockPlay.mockClear();
+    mockPause.mockClear();
     mockSeekTo.mockClear();
   });
 
@@ -88,6 +90,27 @@ describe("useRestTimers", () => {
     });
     expect(mockNotificationAsync).not.toHaveBeenCalled();
     expect(mockPlay).not.toHaveBeenCalled();
+  });
+
+  it("snoozeTimer/cancelTimer fermano anche l'impulso sonoro in corso, non solo quelli futuri", async () => {
+    // Bug segnalato dall'utente: fermando il timer a meta' di un impulso, il
+    // clip in corso continuava a suonare invece di interrompersi subito.
+    const { result } = renderHook(() => useRestTimers(true));
+
+    act(() => {
+      result.current.startTimer(1, "Test");
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+    expect(mockPlay).toHaveBeenCalledTimes(1);
+    expect(mockPause).not.toHaveBeenCalled();
+
+    act(() => {
+      result.current.snoozeTimer(result.current.timers[0]!.id);
+    });
+
+    expect(mockPause).toHaveBeenCalledTimes(1);
   });
 
   it("non avvia un secondo timer mentre uno e' gia' attivo", () => {
