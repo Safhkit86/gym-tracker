@@ -71,6 +71,7 @@ jest.mock("expo-localization", () => ({
 jest.mock("expo-audio", () => ({
   useAudioPlayer: () => ({
     play: jest.fn(),
+    pause: jest.fn(),
     seekTo: jest.fn(async () => {}),
   }),
   useAudioPlayerStatus: () => ({
