@@ -69,14 +69,26 @@ export function useRestTimers(soundEnabled: boolean): UseRestTimersResult {
     }
   }, [player]);
 
-  const stopRinging = useCallback((id: string) => {
-    const interval = ringingIntervalById.current.get(id);
-    if (interval !== undefined) {
-      clearInterval(interval);
-      ringingIntervalById.current.delete(id);
-    }
-    alertedIds.current.delete(id);
-  }, []);
+  const stopRinging = useCallback(
+    (id: string) => {
+      const interval = ringingIntervalById.current.get(id);
+      if (interval !== undefined) {
+        clearInterval(interval);
+        ringingIntervalById.current.delete(id);
+      }
+      alertedIds.current.delete(id);
+      // Ferma anche l'impulso in corso, non solo quelli futuri: senza questo
+      // (bug segnalato dall'utente) un tocco su "Elimina"/"Interrompi
+      // sveglia" a metà di un impulso lasciava il clip da 0.36s finire di
+      // suonare per conto suo — su alcuni dispositivi Android il player
+      // sottostante ha anche impiegato piu' del previsto a fermarsi senza
+      // una pause() esplicita, dando l'impressione che suono/vibrazione
+      // "restassero" invece di interrompersi subito. pause() e' sincrono e
+      // innocuo se il player e' gia' fermo (nessun impulso in corso).
+      player.pause();
+    },
+    [player]
+  );
 
   const cancelTimer = useCallback(
     (id: string) => {
