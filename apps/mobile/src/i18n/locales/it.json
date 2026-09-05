@@ -1,7 +1,12 @@
 {
   "common": {
     "loading": "Caricamento…",
-    "errorUnexpected": "Errore imprevisto. Riprova."
+    "errorUnexpected": "Errore imprevisto. Riprova.",
+    "pagination": {
+      "previous": "← Precedente",
+      "next": "Successiva →",
+      "status": "Pagina {{page}} di {{totalPages}}"
+    }
   },
   "auth": {
     "login": {
@@ -97,6 +102,8 @@
       "moveUp": "Sposta su",
       "moveDown": "Sposta giù",
       "exercise": "Esercizio",
+      "searchExercise": "Cerca esercizio…",
+      "noExerciseFound": "Nessun esercizio trovato.",
       "maxEffort": "Max sforzo (AMRAP)",
       "minReps": "Rep minime",
       "maxReps": "Rep massime (opzionale)",
@@ -163,6 +170,16 @@
       "armCm": "Braccia",
       "waistCm": "Vita",
       "legCm": "Gamba"
+    },
+    "noSessionsInPeriod": "Nessuna sessione registrata in questo periodo.",
+    "noMeasurementsInPeriod": "Nessuna misurazione registrata in questo periodo.",
+    "quickFilter": {
+      "oneMonth": "1M",
+      "threeMonths": "3M",
+      "oneYear": "1Y",
+      "fiveYears": "5Y",
+      "all": "Tutto",
+      "accessibilityLabel": "Filtro periodo"
     }
   },
   "dashboard": {

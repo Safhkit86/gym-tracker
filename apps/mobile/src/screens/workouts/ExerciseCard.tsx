@@ -1,8 +1,8 @@
 import { StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { Picker } from "@react-native-picker/picker";
 import { useTranslation } from "react-i18next";
 import type { Exercise } from "@gym-tracker/shared";
 import { colors, radius, spacing } from "../../theme/theme";
+import { ExerciseCombobox } from "./ExerciseCombobox";
 import {
   setMaxRepsHasError,
   setMinRepsHasError,
@@ -84,20 +84,12 @@ export function ExerciseCard({
       </View>
 
       <Text style={styles.label}>{t("workouts.create.exercise")}</Text>
-      <View style={styles.pickerWrapper}>
-        <Picker
-          selectedValue={exercise.exerciseId}
-          onValueChange={(value: string) => onUpdateExercise({ exerciseId: value })}
-          style={styles.picker}
-          dropdownIconColor={colors.text}
-        >
-          {groupedCatalog.map(([muscleGroup, items]) =>
-            items.map((item) => (
-              <Picker.Item key={item.id} label={`${muscleGroup} — ${item.name}`} value={item.id} />
-            ))
-          )}
-        </Picker>
-      </View>
+      <ExerciseCombobox
+        value={exercise.exerciseId}
+        selected={selected}
+        groupedCatalog={groupedCatalog}
+        onChange={(exerciseId) => onUpdateExercise({ exerciseId })}
+      />
 
       {selected?.description && <Text style={styles.description}>{selected.description}</Text>}
 
@@ -292,17 +284,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
     marginBottom: spacing.xs,
-  },
-  pickerWrapper: {
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    marginBottom: spacing.md,
-    overflow: "hidden",
-  },
-  picker: {
-    color: colors.text,
   },
   description: {
     color: colors.textMuted,

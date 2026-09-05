@@ -2,12 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
-import type { Notification, ProgressionDefault } from "@gym-tracker/shared";
+import type { Notification, Paginated, ProgressionDefault } from "@gym-tracker/shared";
 import { useAuth } from "../../auth/useAuth";
 import { useUnreadCount } from "../../notifications/useUnreadCount";
 import {
   acceptNotification,
   listNotifications,
+  listNotificationsPage,
   markAllNotificationsRead,
   markNotificationRead,
 } from "../../api/notifications";
@@ -19,15 +20,26 @@ import { centeredContentStyle } from "../../theme/layout";
 import { useSafeAreaHorizontalPadding } from "../../hooks/useResponsiveLayout";
 import { useRefreshOnFocus } from "../../hooks/useRefreshOnFocus";
 import type { NotificationsStackParamList } from "../../navigation/NotificationsNavigator";
+import { Pagination } from "../../components/Pagination";
 
 type Props = NativeStackScreenProps<NotificationsStackParamList, "NotificationsHome">;
+
+/** Stesso valore del default lato server — vedi il commento analogo in
+ *  HistoryScreen.tsx/apps/web/src/pages/NotificationsPage.tsx. */
+const NOTIFICATIONS_PAGE_SIZE = 20;
 
 export function NotificationsScreen({ navigation }: Props) {
   const { t, i18n } = useTranslation();
   const { token } = useAuth();
   const { refreshUnreadCount } = useUnreadCount();
   const safeAreaPadding = useSafeAreaHorizontalPadding();
+  // Elenco completo, non paginato: serve SOLO per "Accetta tutte le
+  // progressioni" (deve considerare ogni notifica non letta dell'utente, non
+  // solo quelle della pagina visibile) e per "hasUnread" sotto. L'elenco
+  // mostrato a schermo viene invece da notificationsPage (paginato).
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
+  const [notificationsPage, setNotificationsPage] = useState<Paginated<Notification> | null>(null);
+  const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async (): Promise<void> => {
@@ -35,12 +47,16 @@ export function NotificationsScreen({ navigation }: Props) {
       return;
     }
     try {
-      const result = await listNotifications(token);
-      setNotifications(result);
+      const [full, paged] = await Promise.all([
+        listNotifications(token),
+        listNotificationsPage(token, { page, pageSize: NOTIFICATIONS_PAGE_SIZE }),
+      ]);
+      setNotifications(full);
+      setNotificationsPage(paged);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("common.errorUnexpected"));
     }
-  }, [token, t]);
+  }, [token, page, t]);
 
   useEffect(() => {
     void refresh();
@@ -155,7 +171,7 @@ export function NotificationsScreen({ navigation }: Props) {
         </View>
       )}
 
-      {notifications?.map((notification) => {
+      {notificationsPage?.items?.map((notification) => {
         const isUnread = notification.readAt === null;
         const delta = formatSuggestionDelta(notification, t("dashboard.suggestions.repsUnit"));
         return (
@@ -189,6 +205,15 @@ export function NotificationsScreen({ navigation }: Props) {
           </View>
         );
       })}
+
+      {notificationsPage && (
+        <Pagination
+          page={notificationsPage.page}
+          pageSize={notificationsPage.pageSize}
+          total={notificationsPage.total}
+          onPageChange={setPage}
+        />
+      )}
     </ScrollView>
   );
 }
