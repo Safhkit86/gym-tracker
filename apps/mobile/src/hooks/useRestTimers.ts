@@ -80,6 +80,12 @@ export function useRestTimers(soundEnabled: boolean): UseRestTimersResult {
   // ogni tick del countdown (timers cambia ogni secondo).
   const hasActiveTimerRef = useRef(false);
   hasActiveTimerRef.current = timers.length > 0;
+  // Id dei timer per cui stopRinging() e' gia' stato chiamato: aggiornato in
+  // modo sincrono e immediato dentro stopRinging stesso (non durante un
+  // render, a differenza di un ref tipo `timersRef.current = timers`) — vedi
+  // il commento sull'effetto di "ringing" piu' sotto per il perche' questa
+  // distinzione e' essenziale per il caso limite scoperto dall'utente.
+  const cancelledIdsRef = useRef(new Set<string>());
 
   // Al montaggio, ferma subito un eventuale impulso globale rimasto attivo
   // da un'istanza precedente di questo hook (orfano, vedi il commento su
@@ -111,6 +117,7 @@ export function useRestTimers(soundEnabled: boolean): UseRestTimersResult {
 
   const stopRinging = useCallback(
     (id: string) => {
+      cancelledIdsRef.current.add(id);
       stopGlobalRinging();
       alertedIds.current.delete(id);
       // Ferma anche l'impulso in corso, non solo quelli futuri: senza questo
@@ -170,13 +177,14 @@ export function useRestTimers(soundEnabled: boolean): UseRestTimersResult {
             return timer;
           }
           const remaining = Math.max(0, Math.round((endAt - Date.now()) / 1000));
-          return remaining === timer.remainingSeconds
-            ? timer
-            : {
-                ...timer,
-                remainingSeconds: remaining,
-                status: remaining === 0 ? "ringing" : "running",
-              };
+          if (remaining === timer.remainingSeconds) {
+            return timer;
+          }
+          return {
+            ...timer,
+            remainingSeconds: remaining,
+            status: remaining === 0 ? "ringing" : "running",
+          };
         })
       );
     }, 1000);
@@ -186,9 +194,36 @@ export function useRestTimers(soundEnabled: boolean): UseRestTimersResult {
   // Effetti collaterali (vibrazione/suono) per i timer appena diventati
   // "ringing": separati dal calcolo dello stato sopra, per non innescarli
   // dentro l'updater di setState.
+  //
+  // Caso limite segnalato dall'utente e confermato con log dal vivo sul
+  // dispositivo: toccando "Elimina"/"Interrompi sveglia" nell'istante esatto
+  // in cui il timer passa a "ringing", questo effetto può eseguire DOPO che
+  // stopRinging() e' già stato chiamato dal tocco dell'utente — gli effetti
+  // sono differiti rispetto al render a cui appartengono, e un secondo
+  // render (quello scatenato da cancelTimer) può non aver ancora aggiornato
+  // lo STATO osservabile da un render quando questo effetto "in ritardo"
+  // esegue. Un tentativo precedente controllava un ref aggiornato ad ogni
+  // render (`timersRef.current = timers`), ma i log hanno mostrato che
+  // anche quel ref risultava ancora "non aggiornato" nel momento in cui
+  // l'effetto in ritardo eseguiva — la causa e' la stessa differita natura
+  // dei render, non solo degli effetti. `cancelledIdsRef` risolve il
+  // problema perché e' una mutazione SINCRONA e IMMEDIATA dentro
+  // stopRinging stesso, non legata in alcun modo al ciclo di render/commit
+  // di React: appena l'utente tocca il pulsante, l'id risulta cancellato
+  // per qualunque effetto lo controlli in seguito, indipendentemente da
+  // quale render li ha generati o da quando vengono effettivamente
+  // eseguiti. Nessun test automatico per questo caso specifico: act() di
+  // React Testing Library flusha sempre tutti gli effetti pendenti prima di
+  // restituire il controllo, quindi non è possibile forzare in un test la
+  // stessa sequenza osservata nell'app reale — verificato manualmente sul
+  // dispositivo dall'utente.
   useEffect(() => {
     for (const timer of timers) {
-      if (timer.status === "ringing" && !alertedIds.current.has(timer.id)) {
+      if (
+        timer.status === "ringing" &&
+        !alertedIds.current.has(timer.id) &&
+        !cancelledIdsRef.current.has(timer.id)
+      ) {
         alertedIds.current.add(timer.id);
         stopGlobalRinging(); // rete di sicurezza: mai due impulsi sovrapposti
         triggerAlarmPulse();
