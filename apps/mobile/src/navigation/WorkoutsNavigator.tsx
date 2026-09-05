@@ -57,6 +57,15 @@ export function WorkoutsNavigator() {
       <Stack.Screen
         name="WorkoutDetail"
         component={WorkoutDetailScreen}
+        // getId come su "LogSession" sotto: nessun percorso attuale espone
+        // questa schermata allo stesso bug (si raggiunge sempre tornando
+        // prima a WorkoutsList, che rimuove l'istanza precedente dallo
+        // stack), ma e' la pratica raccomandata da React Navigation per
+        // ogni schermata identificata da un id — protezione preventiva se
+        // in futuro si aggiunge un collegamento diretto verso una scheda
+        // specifica (es. da una notifica), senza dover ricordare la stessa
+        // indagine.
+        getId={({ params }) => params.id}
         options={{ title: t("workouts.detail.title") }}
       />
       <Stack.Screen
@@ -67,6 +76,7 @@ export function WorkoutsNavigator() {
       <Stack.Screen
         name="EditWorkout"
         component={EditWorkoutScreen}
+        getId={({ params }) => params.id} // stesso motivo di WorkoutDetail sopra
         options={{ title: t("workouts.edit.title") }}
       />
       <Stack.Screen
