@@ -26,6 +26,20 @@ export function computeDelta(previous: number | null, current: number | null): n
   return diff !== 0 ? diff : null;
 }
 
+/** Entry cronologicamente precedente (per il delta mostrato in
+ *  MeasurementEntryCard): cercata nello storico completo, non nella sola
+ *  pagina mostrata a schermo — altrimenti la prima entry di ogni pagina
+ *  (tranne la prima) perderebbe il confronto con quella immediatamente
+ *  precedente, rimasta sulla pagina precedente. Stessa logica di
+ *  findPreviousMeasurement in apps/web/src/pages/SessionHistoryPage.tsx. */
+export function findPreviousMeasurement(
+  all: MeasurementEntry[],
+  current: MeasurementEntry
+): MeasurementEntry | null {
+  const index = all.findIndex((entry) => entry.id === current.id);
+  return index === -1 ? null : (all[index + 1] ?? null);
+}
+
 export interface MeasureTileData {
   field: (typeof MEASUREMENT_FIELDS)[number];
   values: number[];

@@ -1,5 +1,10 @@
 {
   "common": {
+    "pagination": {
+      "previous": "← Previous",
+      "next": "Next →",
+      "status": "Page {{page}} of {{totalPages}}"
+    },
     "loading": "Loading…",
     "errorUnexpected": "Unexpected error. Please try again."
   },
@@ -97,6 +102,8 @@
       "moveUp": "Move up",
       "moveDown": "Move down",
       "exercise": "Exercise",
+      "searchExercise": "Search exercise…",
+      "noExerciseFound": "No exercise found.",
       "maxEffort": "Max effort (AMRAP)",
       "minReps": "Min reps",
       "maxReps": "Max reps (optional)",
@@ -163,6 +170,16 @@
       "armCm": "Arm",
       "waistCm": "Waist",
       "legCm": "Leg"
+    },
+    "noSessionsInPeriod": "No session logged in this period.",
+    "noMeasurementsInPeriod": "No measurement recorded in this period.",
+    "quickFilter": {
+      "oneMonth": "1M",
+      "threeMonths": "3M",
+      "oneYear": "1Y",
+      "fiveYears": "5Y",
+      "all": "All",
+      "accessibilityLabel": "Time period filter"
     }
   },
   "dashboard": {

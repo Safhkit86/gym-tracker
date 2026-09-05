@@ -59,6 +59,11 @@ function baseHandlers(allNotifications: unknown[]) {
         (n): n is { readAt: null } => (n as { readAt: string | null }).readAt === null
       ),
     },
+    // GET paginata (card mostrate a schermo) — vedi NotificationsScreen.tsx.
+    {
+      match: (u: string, m: string) => u.includes("/notifications?page=") && m === "GET",
+      body: { items: allNotifications, total: allNotifications.length, page: 1, pageSize: 20 },
+    },
   ];
 }
 
@@ -99,6 +104,43 @@ describe("NotificationsScreen", () => {
     });
   });
 
+  it("mostra i controlli di paginazione e richiede la pagina successiva al tocco", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
+      {
+        match: (u, m) => u.endsWith("/notifications") && !u.includes("unread") && m === "GET",
+        body: [unreadNotification],
+      },
+      {
+        match: (u, m) => u.includes("/notifications") && u.includes("unread=true") && m === "GET",
+        body: [unreadNotification],
+      },
+      {
+        match: (u, m) => u.includes("/notifications?page=2") && m === "GET",
+        body: { items: [], total: 21, page: 2, pageSize: 20 },
+      },
+      {
+        match: (u, m) => u.includes("/notifications?page=") && m === "GET",
+        body: { items: [unreadNotification], total: 21, page: 1, pageSize: 20 },
+      },
+    ]);
+
+    const screen = await renderWithProviders(
+      <NotificationsScreen navigation={mockNavigation()} route={{} as Props["route"]} />
+    );
+
+    await screen.findByText("Pagina 1 di 2");
+
+    fireEvent.press(screen.getByRole("button", { name: "Successiva →" }));
+
+    await screen.findByText("Pagina 2 di 2");
+    expect(
+      fetchMock.mock.calls.some(([url]) =>
+        (url as string).toString().includes("/notifications?page=2")
+      )
+    ).toBe(true);
+  });
+
   it("mostra un errore se il caricamento fallisce", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
@@ -110,6 +152,11 @@ describe("NotificationsScreen", () => {
       {
         match: (u, m) => u.includes("/notifications") && u.includes("unread=true") && m === "GET",
         body: [],
+      },
+      {
+        match: (u, m) => u.includes("/notifications?page=") && m === "GET",
+        status: 500,
+        body: { code: "INTERNAL_ERROR", message: "Errore imprevisto. Riprova." },
       },
     ]);
 
