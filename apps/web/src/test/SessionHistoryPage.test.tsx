@@ -17,6 +17,31 @@ function stubNarrowViewport(matches: boolean): void {
   );
 }
 
+/** La pagina fa ora DUE GET a "/sessions": quella semplice (storico completo,
+ *  per settimane/export) e quella paginata "?page=&pageSize=..." (card
+ *  mostrate a schermo) — vedi SessionHistoryPage.tsx. Un solo handler con
+ *  `body: items` non basta piu': serve anche la forma { items, total, page,
+ *  pageSize } per la seconda. Stesso schema per "/measurements" sotto. */
+function sessionsHandlers(items: unknown[]) {
+  return [
+    { match: (u: string, m: string) => u.endsWith("/sessions") && m === "GET", body: items },
+    {
+      match: (u: string, m: string) => u.includes("/sessions?") && m === "GET",
+      body: { items, total: items.length, page: 1, pageSize: 20 },
+    },
+  ];
+}
+
+function measurementsHandlers(items: unknown[]) {
+  return [
+    { match: (u: string, m: string) => u.endsWith("/measurements") && m === "GET", body: items },
+    {
+      match: (u: string, m: string) => u.includes("/measurements?") && m === "GET",
+      body: { items, total: items.length, page: 1, pageSize: 20 },
+    },
+  ];
+}
+
 const SESSION_OLDER = {
   id: "sess1",
   workoutId: "w1",
@@ -78,7 +103,7 @@ describe("SessionHistoryPage", () => {
   it("mostra un messaggio quando non ci sono sessioni", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      ...sessionsHandlers([]),
     ]);
 
     renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
@@ -89,10 +114,7 @@ describe("SessionHistoryPage", () => {
   it("mostra i dettagli di ogni sessione gia' espansi, dal piu' recente", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-      {
-        match: (u, m) => u.endsWith("/sessions") && m === "GET",
-        body: [SESSION_NEWER, SESSION_OLDER],
-      },
+      ...sessionsHandlers([SESSION_NEWER, SESSION_OLDER]),
     ]);
 
     renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
@@ -117,9 +139,16 @@ describe("SessionHistoryPage", () => {
   it("il pulsante di ordinamento inverte l'ordine mostrato", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [SESSION_NEWER, SESSION_OLDER] },
+      // La pagina paginata rispetta "order": due handler distinti invece del
+      // solito sessionsHandlers() generico, che risponderebbe sempre uguale.
       {
-        match: (u, m) => u.endsWith("/sessions") && m === "GET",
-        body: [SESSION_NEWER, SESSION_OLDER],
+        match: (u, m) => u.includes("/sessions?") && u.includes("order=asc") && m === "GET",
+        body: { items: [SESSION_OLDER, SESSION_NEWER], total: 2, page: 1, pageSize: 20 },
+      },
+      {
+        match: (u, m) => u.includes("/sessions?") && m === "GET",
+        body: { items: [SESSION_NEWER, SESSION_OLDER], total: 2, page: 1, pageSize: 20 },
       },
     ]);
 
@@ -128,9 +157,60 @@ describe("SessionHistoryPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /piu' recenti prima/i }));
 
-    const dates = screen.getAllByText(/2026/).map((el) => el.textContent);
-    expect(dates[0]).toMatch(/01/);
-    expect(dates[1]).toMatch(/08/);
+    // Il toggle non inverte piu' in locale un array gia' caricato: rifa' la
+    // fetch paginata con order=asc, quindi l'aggiornamento e' asincrono.
+    await waitFor(() => {
+      const dates = screen.getAllByText(/2026/).map((el) => el.textContent);
+      expect(dates[0]).toMatch(/01/);
+      expect(dates[1]).toMatch(/08/);
+    });
+  });
+
+  it("mostra i controlli di paginazione e richiede la pagina successiva al click", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [SESSION_NEWER, SESSION_OLDER] },
+      {
+        match: (u, m) => u.includes("/sessions?") && u.includes("page=2") && m === "GET",
+        body: { items: [SESSION_OLDER], total: 3, page: 2, pageSize: 2 },
+      },
+      {
+        match: (u, m) => u.includes("/sessions?") && m === "GET",
+        body: { items: [SESSION_NEWER, SESSION_NEWER], total: 3, page: 1, pageSize: 2 },
+      },
+    ]);
+
+    renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+    await screen.findByText("Pagina 1 di 2");
+
+    fireEvent.click(screen.getByRole("button", { name: /successiva/i }));
+
+    await screen.findByText("Pagina 2 di 2");
+    expect(
+      fetchMock.mock.calls.some(([url]) =>
+        (url as string).toString().includes("/sessions?page=2")
+      )
+    ).toBe(true);
+  });
+
+  it("un filtro rapido periodo richiede la lista con il parametro since", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      ...sessionsHandlers([SESSION_NEWER, SESSION_OLDER]),
+    ]);
+
+    renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+    await screen.findAllByText("Panca piana");
+
+    fireEvent.click(screen.getByRole("button", { name: "1M" }));
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.some(([url]) =>
+          (url as string).toString().includes("/sessions?") && (url as string).includes("since=")
+        )
+      ).toBe(true);
+    });
   });
 
   it("mostra un separatore di settimana quando ricomincia dalla scheda 1", async () => {
@@ -161,10 +241,7 @@ describe("SessionHistoryPage", () => {
 
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-      {
-        match: (u, m) => u.endsWith("/sessions") && m === "GET",
-        body: [week2Tuesday, week2Monday, week1Tuesday, week1Monday],
-      },
+      ...sessionsHandlers([week2Tuesday, week2Monday, week1Tuesday, week1Monday]),
     ]);
 
     renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
@@ -178,7 +255,7 @@ describe("SessionHistoryPage", () => {
     stubNarrowViewport(true);
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [SESSION_OLDER] },
+      ...sessionsHandlers([SESSION_OLDER]),
     ]);
 
     renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
@@ -208,7 +285,7 @@ describe("SessionHistoryPage", () => {
     };
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [sessionWithDifferentRest] },
+      ...sessionsHandlers([sessionWithDifferentRest]),
     ]);
 
     renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
@@ -220,7 +297,7 @@ describe("SessionHistoryPage", () => {
   it("elimina una sessione dopo conferma", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [SESSION_OLDER] },
+      ...sessionsHandlers([SESSION_OLDER]),
       { match: (u, m) => u.endsWith("/sessions/sess1") && m === "DELETE", status: 204 },
     ]);
 
@@ -247,7 +324,7 @@ describe("SessionHistoryPage", () => {
     it("esporta lo storico in un file CSV al click su 'Esporta storico'", async () => {
       mockFetchResponses([
         { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [SESSION_OLDER] },
+        ...sessionsHandlers([SESSION_OLDER]),
       ]);
 
       const createObjectURL = vi.fn((_blob: Blob) => "blob:fake-url");
@@ -281,7 +358,7 @@ describe("SessionHistoryPage", () => {
     it("mostra un errore se il file importato non ha le colonne obbligatorie", async () => {
       mockFetchResponses([
         { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+        ...sessionsHandlers([]),
       ]);
 
       renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
@@ -300,7 +377,7 @@ describe("SessionHistoryPage", () => {
       ].join("\r\n");
       const fetchMock = mockFetchResponses([
         { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [SESSION_OLDER] },
+        ...sessionsHandlers([SESSION_OLDER]),
         {
           match: (u, m) => u.endsWith("/workouts") && m === "GET",
           body: [
@@ -363,7 +440,7 @@ describe("SessionHistoryPage", () => {
       const CREATED_WORKOUT = { id: "w-new", name: "Gambe pesanti" };
       const fetchMock = mockFetchResponses([
         { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+        ...sessionsHandlers([]),
         { match: (u, m) => u.endsWith("/workouts") && m === "GET", body: [] },
         { match: (u, m) => u.endsWith("/exercises") && m === "GET", body: [] },
         {
@@ -443,8 +520,8 @@ describe("SessionHistoryPage", () => {
     it("mostra un messaggio quando non ci sono misurazioni", async () => {
       mockFetchResponses([
         { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
-        { match: (u, m) => u.endsWith("/measurements") && m === "GET", body: [] },
+        ...sessionsHandlers([]),
+        ...measurementsHandlers([]),
       ]);
 
       renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
@@ -460,11 +537,8 @@ describe("SessionHistoryPage", () => {
     it("elenca le misurazioni con le frecce di variazione mostrate sulla voce piu' nuova", async () => {
       mockFetchResponses([
         { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
-        {
-          match: (u, m) => u.endsWith("/measurements") && m === "GET",
-          body: [ENTRY_NEWER, ENTRY_OLDER],
-        },
+        ...sessionsHandlers([]),
+        ...measurementsHandlers([ENTRY_NEWER, ENTRY_OLDER]),
       ]);
 
       renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
@@ -488,8 +562,8 @@ describe("SessionHistoryPage", () => {
     it("elimina una misurazione dopo conferma", async () => {
       mockFetchResponses([
         { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-        { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
-        { match: (u, m) => u.endsWith("/measurements") && m === "GET", body: [ENTRY_OLDER] },
+        ...sessionsHandlers([]),
+        ...measurementsHandlers([ENTRY_OLDER]),
         { match: (u, m) => u.endsWith("/measurements/m1") && m === "DELETE", status: 204 },
       ]);
 
@@ -515,8 +589,8 @@ describe("SessionHistoryPage", () => {
       it("esporta le misure in un file CSV al click su 'Esporta misure'", async () => {
         mockFetchResponses([
           { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-          { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
-          { match: (u, m) => u.endsWith("/measurements") && m === "GET", body: [ENTRY_OLDER] },
+          ...sessionsHandlers([]),
+          ...measurementsHandlers([ENTRY_OLDER]),
         ]);
 
         const createObjectURL = vi.fn((_blob: Blob) => "blob:fake-url");
@@ -553,8 +627,8 @@ describe("SessionHistoryPage", () => {
       it("mostra un errore se il file importato non ha la colonna obbligatoria data", async () => {
         mockFetchResponses([
           { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-          { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
-          { match: (u, m) => u.endsWith("/measurements") && m === "GET", body: [] },
+          ...sessionsHandlers([]),
+          ...measurementsHandlers([]),
         ]);
 
         renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
@@ -574,7 +648,7 @@ describe("SessionHistoryPage", () => {
         );
         const fetchMock = mockFetchResponses([
           { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-          { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+          ...sessionsHandlers([]),
           // Handler di "/me/measurements" PRIMA di quello generico
           // "/measurements": endsWith("/measurements") matcherebbe anche
           // "/me/measurements" (find() prende il primo handler che risponde
@@ -594,7 +668,7 @@ describe("SessionHistoryPage", () => {
             match: (u, m) => u.endsWith("/me/measurements") && m === "PUT",
             body: {},
           },
-          { match: (u, m) => u.endsWith("/measurements") && m === "GET", body: [ENTRY_OLDER] },
+          ...measurementsHandlers([ENTRY_OLDER]),
         ]);
 
         renderWithProviders(<SessionHistoryPage />, ["/sessions"]);

@@ -1,23 +1,35 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Notification, ProgressionDefault } from "@gym-tracker/shared";
+import type { Notification, Paginated, ProgressionDefault } from "@gym-tracker/shared";
 import { useAuth } from "../auth/useAuth";
 import { useUnreadCount } from "../notifications/useUnreadCount";
 import {
   acceptNotification,
   listNotifications,
+  listNotificationsPage,
   markAllNotificationsRead,
   markNotificationRead,
 } from "../api/notifications";
 import { acceptProgressionDefaults } from "../api/profile";
 import { ApiRequestError } from "../api/client";
 import { IconButton } from "../components/IconButton";
+import { Pagination } from "../components/Pagination";
 import { CheckIcon, TrendingUpIcon } from "../components/icons";
 import { formatSuggestionDelta, toOverride } from "../notifications/suggestion-format";
+
+/** Stesso valore del default lato server (vedi il commento analogo in
+ *  SessionHistoryPage.tsx sul perche' non e' importato da @gym-tracker/shared). */
+const NOTIFICATIONS_PAGE_SIZE = 20;
 
 export function NotificationsPage() {
   const { token } = useAuth();
   const { refreshUnreadCount } = useUnreadCount();
+  // Elenco completo, non paginato: serve SOLO per "Accetta tutte le
+  // progressioni" (deve considerare ogni notifica non letta dell'utente, non
+  // solo quelle della pagina visibile) e per il badge "hasUnread" sotto. La
+  // lista mostrata a schermo viene invece da notificationsPage (paginata).
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
+  const [notificationsPage, setNotificationsPage] = useState<Paginated<Notification> | null>(null);
+  const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async (): Promise<void> => {
@@ -25,12 +37,16 @@ export function NotificationsPage() {
       return;
     }
     try {
-      const result = await listNotifications(token);
-      setNotifications(result);
+      const [full, paged] = await Promise.all([
+        listNotifications(token),
+        listNotificationsPage(token, { page, pageSize: NOTIFICATIONS_PAGE_SIZE }),
+      ]);
+      setNotifications(full);
+      setNotificationsPage(paged);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : "Errore imprevisto. Riprova.");
     }
-  }, [token]);
+  }, [token, page]);
 
   useEffect(() => {
     void refresh();
@@ -139,7 +155,7 @@ export function NotificationsPage() {
       )}
       {notifications && notifications.length > 0 && (
         <ul className="workout-list">
-          {notifications.map((notification) => (
+          {notificationsPage?.items?.map((notification) => (
             <li
               key={notification.id}
               className={
@@ -175,6 +191,14 @@ export function NotificationsPage() {
             </li>
           ))}
         </ul>
+      )}
+      {notificationsPage && (
+        <Pagination
+          page={notificationsPage.page}
+          pageSize={notificationsPage.pageSize}
+          total={notificationsPage.total}
+          onPageChange={setPage}
+        />
       )}
     </main>
   );
