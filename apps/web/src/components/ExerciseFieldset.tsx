@@ -1,6 +1,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Exercise } from "@gym-tracker/shared";
+import { ExerciseCombobox } from "./ExerciseCombobox";
 import { GripIcon } from "./icons";
 import {
   setMaxRepsHasError,
@@ -75,29 +76,21 @@ export function ExerciseFieldset({
       >
         <GripIcon />
       </button>
-      {/* Il <select> NON e' annidato nel <label> (a differenza degli
-          altri campi): il nome accessibile di un <label> include il
-          testo di tutti i suoi discendenti, quindi annidare un select
-          con decine di <option> lo renderebbe "Esercizio Affondi Hack
-          squat ..." per uno screen reader. Associazione esplicita via
-          htmlFor/id, con i due come fratelli. */}
+      {/* Il campo di ricerca NON e' annidato nel <label> (a differenza degli
+          altri campi): il nome accessibile di un <label> include il testo
+          di tutti i suoi discendenti, quindi annidarci la lista a comparsa
+          con decine di opzioni lo renderebbe "Esercizio Affondi Hack squat
+          ..." per uno screen reader. Associazione esplicita via htmlFor/id,
+          con i due come fratelli. */}
       <div className="field">
         <label htmlFor={`exercise-select-${exerciseIndex}`}>Esercizio</label>
-        <select
+        <ExerciseCombobox
           id={`exercise-select-${exerciseIndex}`}
           value={exercise.exerciseId}
-          onChange={(event) => onUpdateExercise({ exerciseId: event.target.value })}
-        >
-          {groupedCatalog.map(([muscleGroup, items]) => (
-            <optgroup key={muscleGroup} label={muscleGroup}>
-              {items.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
+          selected={selected}
+          groupedCatalog={groupedCatalog}
+          onChange={(exerciseId) => onUpdateExercise({ exerciseId })}
+        />
       </div>
 
       {selected?.description && (

@@ -207,10 +207,38 @@ describe("CreateWorkoutPage", () => {
 
     renderWithProviders(<CreateWorkoutPage />, ["/workouts/new"]);
 
-    await screen.findByLabelText("Esercizio");
+    const exerciseField = await screen.findByLabelText("Esercizio");
     expect(screen.getByText(/spingi il bilanciere/i)).toBeInTheDocument();
+
+    // I gruppi per muscolo sono nella lista a comparsa: visibili solo dopo
+    // aver aperto il campo di ricerca (vedi ExerciseCombobox).
+    fireEvent.focus(exerciseField);
     expect(screen.getByRole("group", { name: "Petto" })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Gambe" })).toBeInTheDocument();
+  });
+
+  it("filtra il catalogo per nome nel campo di ricerca esercizio e permette di scegliere un risultato", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      {
+        match: (u, m) => u.endsWith("/exercises") && m === "GET",
+        body: [FAKE_EXERCISE, FAKE_EXERCISE_2],
+      },
+    ]);
+
+    renderWithProviders(<CreateWorkoutPage />, ["/workouts/new"]);
+
+    const exerciseField = await screen.findByLabelText("Esercizio");
+    fireEvent.focus(exerciseField);
+    fireEvent.change(exerciseField, { target: { value: "squat" } });
+
+    expect(screen.getByRole("option", { name: "Squat" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Panca piana" })).not.toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByRole("option", { name: "Squat" }));
+
+    expect(exerciseField).toHaveValue("Squat");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 
   it("duplica l'ultimo set con gli stessi valori", async () => {

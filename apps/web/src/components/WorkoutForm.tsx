@@ -65,8 +65,8 @@ export function WorkoutForm({
   }
 
   /** Dopo "Aggiungi esercizio", porta in vista il nuovo riquadro (in fondo
-   *  alla pagina) e mette il fuoco sul suo select esercizio, cosi' si puo'
-   *  iniziare a compilarlo subito senza scorrere manualmente. */
+   *  alla pagina) e mette il fuoco sul suo campo di ricerca esercizio, cosi'
+   *  si puo' iniziare a compilarlo subito senza scorrere manualmente. */
   useEffect(() => {
     if (!scrollToFormId) {
       return;
@@ -77,7 +77,7 @@ export function WorkoutForm({
     if (typeof fieldset?.scrollIntoView === "function") {
       fieldset.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-    fieldset?.querySelector("select")?.focus();
+    fieldset?.querySelector<HTMLInputElement>('[role="combobox"]')?.focus();
     setScrollToFormId(null);
   }, [scrollToFormId]);
 
