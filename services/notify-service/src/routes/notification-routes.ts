@@ -1,5 +1,5 @@
 import { Router } from "express";
-import type { AccessTokenService } from "@gym-tracker/shared";
+import { parsePaginationQuery, type AccessTokenService } from "@gym-tracker/shared";
 import { authenticate } from "../middleware/authenticate.js";
 import { UnauthorizedError } from "../errors.js";
 import type { NotificationService } from "../domain/notification-service.js";
@@ -20,9 +20,18 @@ export function createNotificationRoutes(
     return id;
   }
 
+  // Stessa doppia modalita' di GET /sessions in history-service: con
+  // "?page="/"?pageSize=" risponde paginato (pagina Notifiche), senza
+  // resta l'array intero come prima (badge non lette, altri usi interni).
   router.get("/notifications", async (req, res, next) => {
     try {
       const unreadOnly = req.query.unread === "true";
+      if (req.query.page !== undefined || req.query.pageSize !== undefined) {
+        const { page, pageSize } = parsePaginationQuery(req.query);
+        const result = await notifications.listPage(userId(req), { page, pageSize, unreadOnly });
+        res.status(200).json(result);
+        return;
+      }
       const list = await notifications.list(userId(req), unreadOnly);
       res.status(200).json(list);
     } catch (err) {
