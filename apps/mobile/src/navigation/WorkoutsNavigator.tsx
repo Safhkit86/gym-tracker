@@ -72,6 +72,17 @@ export function WorkoutsNavigator() {
       <Stack.Screen
         name="LogSession"
         component={LogSessionScreen}
+        // Senza getId, navigare di nuovo su "LogSession" con un id diverso
+        // (es. da Dashboard, scheda del giorno dopo) riusa l'istanza già
+        // presente nello stack invece di crearne una nuova: lo stato locale
+        // della schermata precedente (es. "sessione registrata" dopo un
+        // invio) restava visibile finché non lo si toccava — bug segnalato
+        // dall'utente ("avvio la sessione di venerdì, mi riporta su quella
+        // di giovedì già inviata"). getId dice a React Navigation di
+        // trattare id diversi come schermate diverse (una nuova istanza),
+        // coerente con com'è già la webapp, dove ogni /sessions/log/:id è
+        // una pagina distinta.
+        getId={({ params }) => params.id}
         options={{ title: t("session.title") }}
       />
       <Stack.Screen
