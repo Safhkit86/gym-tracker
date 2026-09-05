@@ -1,9 +1,28 @@
-import type { Notification } from "@gym-tracker/shared";
+import type { Notification, Paginated } from "@gym-tracker/shared";
 import { apiRequest } from "./client";
 
 export function listNotifications(token: string, unreadOnly = false): Promise<Notification[]> {
   const query = unreadOnly ? "?unread=true" : "";
   return apiRequest<Notification[]>(`/notifications${query}`, { token });
+}
+
+export interface ListNotificationsPageOptions {
+  page: number;
+  pageSize: number;
+  unreadOnly?: boolean;
+}
+
+/** Pagina di notifiche per la schermata Notifiche — vedi listNotifications
+ *  per la versione non paginata (badge non lette, "Accetta tutte"). */
+export function listNotificationsPage(
+  token: string,
+  options: ListNotificationsPageOptions
+): Promise<Paginated<Notification>> {
+  let query = `?page=${options.page}&pageSize=${options.pageSize}`;
+  if (options.unreadOnly) {
+    query += "&unread=true";
+  }
+  return apiRequest<Paginated<Notification>>(`/notifications${query}`, { token });
 }
 
 export function markNotificationRead(token: string, id: string): Promise<void> {
