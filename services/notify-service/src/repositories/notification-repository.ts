@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { type Kysely, sql } from "kysely";
-import type { Notification, ProgressionSuggestionType } from "@gym-tracker/shared";
+import type { Notification, Paginated, ProgressionSuggestionType } from "@gym-tracker/shared";
 import type { Database } from "../db/types.js";
 
 export interface NewNotification {
@@ -24,6 +24,12 @@ export interface NotificationRepository {
   /** null se gia' esistente (stesso owner+progressionEventId): nessun duplicato creato. */
   create(input: NewNotification): Promise<Notification | null>;
   listByOwner(userId: string, opts?: ListOptions): Promise<Notification[]>;
+  /** Pagina di notifiche per la UI (stesso ruolo di SessionRepository.listPage
+   *  in history-service — vedi quel commento). */
+  listPage(
+    userId: string,
+    options: ListOptions & { page: number; pageSize: number }
+  ): Promise<Paginated<Notification>>;
   /** true se la notifica esiste ed e' dell'owner (letta o meno). */
   markRead(userId: string, id: string): Promise<boolean>;
   /**
@@ -70,6 +76,32 @@ export class KyselyNotificationRepository implements NotificationRepository {
     }
     const rows = await query.orderBy("created_at", "desc").execute();
     return rows.map(toDto);
+  }
+
+  async listPage(
+    userId: string,
+    options: ListOptions & { page: number; pageSize: number }
+  ): Promise<Paginated<Notification>> {
+    const { page, pageSize, unreadOnly } = options;
+
+    const totalRow = await this.db
+      .selectFrom("notifications")
+      .select((eb) => eb.fn.countAll<string>().as("count"))
+      .where("user_id", "=", userId)
+      .$if(!!unreadOnly, (qb) => qb.where("read_at", "is", null))
+      .executeTakeFirstOrThrow();
+
+    const rows = await this.db
+      .selectFrom("notifications")
+      .selectAll()
+      .where("user_id", "=", userId)
+      .$if(!!unreadOnly, (qb) => qb.where("read_at", "is", null))
+      .orderBy("created_at", "desc")
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
+      .execute();
+
+    return { items: rows.map(toDto), total: Number(totalRow.count), page, pageSize };
   }
 
   async markRead(userId: string, id: string): Promise<boolean> {
@@ -200,6 +232,24 @@ export class InMemoryNotificationRepository implements NotificationRepository {
       .filter((n) => !opts.unreadOnly || n.readAt === null)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .map(toStoredDto);
+  }
+
+  async listPage(
+    userId: string,
+    options: ListOptions & { page: number; pageSize: number }
+  ): Promise<Paginated<Notification>> {
+    const { page, pageSize, unreadOnly } = options;
+    const sorted = [...this.byId.values()]
+      .filter((n) => n.userId === userId)
+      .filter((n) => !unreadOnly || n.readAt === null)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const start = (page - 1) * pageSize;
+    return {
+      items: sorted.slice(start, start + pageSize).map(toStoredDto),
+      total: sorted.length,
+      page,
+      pageSize,
+    };
   }
 
   async markRead(userId: string, id: string): Promise<boolean> {

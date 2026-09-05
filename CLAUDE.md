@@ -88,6 +88,16 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   o un dominio statico) lo chiama via fetch da browser: senza CORS le
   richieste vengono bloccate lato client. Nessun altro servizio ne ha bisogno,
   la webapp non li chiama mai direttamente.
+- Da `apps/web` (e allo stesso modo da `apps/mobile`), importa da
+  `@gym-tracker/shared` **solo** con `import type` per i tipi: un `import`
+  "value" (una funzione/costante usata a runtime, es.
+  `parsePaginationQuery`/`DEFAULT_PAGE_SIZE`) trascina l'intero barrel
+  `packages/shared/src/index.ts`, che re-esporta anche moduli solo-Node come
+  `amqp-connection.ts`/`mailer.ts` (dipendenze `amqplib`/`nodemailer`) — su
+  Vite questo raddoppia la dimensione del bundle prodotto (visto in pratica:
+  da ~390KB a ~750KB) invece di segnalare un errore. Se un valore condiviso
+  serve anche lato client, copialo localmente nel file che lo usa (con un
+  commento che rimanda all'originale) invece di importarlo dal barrel.
 - `apps/mobile` (React Native/Expo) usa **Jest**, non Vitest: l'ecosistema
   React Native richiede il preset `jest-expo`, che Vitest non supporta.
   Test con `@testing-library/react-native` — usa la **v13** (`^13.3.3`),
@@ -178,6 +188,21 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   in contesa sullo stesso builder `buildx`, senza produrre alcun output, finché
   non si riavvia Docker Desktop. Se serve costruire più immagini, farlo in
   sequenza, una alla volta.
+- Nello stack Docker Compose di **dev**, solo `apps/web` monta il codice
+  sorgente come bind mount (hot reload via Vite, vedi sopra): tutti i servizi
+  backend (`account-service`, `history-service`, ecc.) hanno invece solo
+  `build:` nel loro blocco in `docker-compose.yml`, senza `volumes:` — un
+  container backend gia' in esecuzione continua a servire l'immagine
+  costruita l'ultima volta, **non** legge le modifiche fatte sull'host. Dopo
+  una modifica al codice di un servizio backend, per vederla riflessa sullo
+  stack dev serve `docker compose build <servizio>` seguito da
+  `docker compose up -d <servizio>` (mai in parallelo su piu' servizi, vedi
+  punto sopra) — un semplice `docker compose restart <servizio>` riavvia lo
+  stesso binario compilato in precedenza e non basta. Stesso discorso per
+  `apps/web` quando invece il problema è il file-watcher di Vite che non
+  vede un salvataggio recente attraverso il bind mount Windows→Docker (capita
+  in pratica): li' basta un `docker compose restart web`, senza rebuild,
+  perché il codice è comunque letto dal bind mount ad ogni richiesta.
 - Esiste un secondo stack Docker Compose di produzione, isolato da quello
   di sviluppo (vedi README.md, "Produzione (locale)"): va **sempre**
   avviato con `docker compose -f docker-compose.prod.yml --env-file

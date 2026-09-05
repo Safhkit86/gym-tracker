@@ -61,6 +61,54 @@ describe("GET /notifications", () => {
     const all = await request(app).get("/notifications").set("Authorization", `Bearer ${token}`);
     expect(all.body).toHaveLength(1);
   });
+
+  it("con page/pageSize risponde in forma paginata invece del semplice array", async () => {
+    const { app, deps } = buildTestApp();
+    await deps.notifications.create(
+      notificationInput({ progressionEventId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" })
+    );
+    await deps.notifications.create(
+      notificationInput({ progressionEventId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" })
+    );
+    await deps.notifications.create(
+      notificationInput({ progressionEventId: "cccccccc-cccc-cccc-cccc-cccccccccccc" })
+    );
+    const token = await bearerFor(OWNER_A);
+
+    const firstPage = await request(app)
+      .get("/notifications?page=1&pageSize=2")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(firstPage.status).toBe(200);
+    expect(firstPage.body).toMatchObject({ total: 3, page: 1, pageSize: 2 });
+    expect(firstPage.body.items).toHaveLength(2);
+
+    const secondPage = await request(app)
+      .get("/notifications?page=2&pageSize=2")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(secondPage.body.items).toHaveLength(1);
+  });
+
+  it("combina page/pageSize con ?unread=true", async () => {
+    const { app, deps } = buildTestApp();
+    const read = await deps.notifications.create(
+      notificationInput({ progressionEventId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" })
+    );
+    await deps.notifications.markRead(OWNER_A, read!.id);
+    await deps.notifications.create(
+      notificationInput({ progressionEventId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" })
+    );
+    const token = await bearerFor(OWNER_A);
+
+    const response = await request(app)
+      .get("/notifications?page=1&pageSize=20&unread=true")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.body.total).toBe(1);
+    expect(response.body.items).toHaveLength(1);
+    expect(response.body.items[0].readAt).toBeNull();
+  });
 });
 
 describe("PATCH /notifications/:id/read", () => {

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Kysely } from "kysely";
-import type { SessionDetail, SessionExercise, SessionSet } from "@gym-tracker/shared";
+import type { Paginated, SessionDetail, SessionExercise, SessionSet } from "@gym-tracker/shared";
 import type { Database } from "../db/types.js";
 
 // --- Input normalizzato dal domain (owner gia' noto, nessuna validazione DB) ---
@@ -58,6 +58,19 @@ export interface SessionRepository {
    *  `limit` opzionale (es. la Dashboard vuole solo l'ultima sessione, non
    *  tutto lo storico) non cambia il comportamento di chi non lo passa. */
   listByOwner(userId: string, limit?: number): Promise<SessionDetail[]>;
+  /** Pagina di storico per la UI di Storico (a differenza di `listByOwner`,
+   *  usata anche per gli aggregati di Statistiche/Dashboard — quella resta
+   *  invariata, sempre senza pagina, per non alterarne i calcoli). `since`
+   *  opzionale (filtro rapido periodo, es. "ultimo anno") si applica su
+   *  `performed_at`. `order` (default "desc") decide se pagina 1 parte dalla
+   *  sessione piu' recente o dalla piu' vecchia — serve perche' con la
+   *  paginazione lato server il toggle "piu' recenti/meno recenti prima"
+   *  della UI non puo' piu' limitarsi a invertire in locale l'array gia'
+   *  caricato (ogni pagina e' una fetta diversa). */
+  listPage(
+    userId: string,
+    options: { page: number; pageSize: number; since?: string; order?: "asc" | "desc" }
+  ): Promise<Paginated<SessionDetail>>;
   findDetail(userId: string, id: string): Promise<SessionDetail | null>;
   delete(userId: string, id: string): Promise<boolean>;
   /**
@@ -206,6 +219,99 @@ export class KyselySessionRepository implements SessionRepository {
       exercises: [...(exercisesBySession.get(session.id)?.values() ?? [])],
       createdAt: session.created_at.toISOString(),
     }));
+  }
+
+  async listPage(
+    userId: string,
+    options: { page: number; pageSize: number; since?: string; order?: "asc" | "desc" }
+  ): Promise<Paginated<SessionDetail>> {
+    const { page, pageSize, since, order = "desc" } = options;
+    // performed_at e' un ColumnType<Date, Date | string, ...>: il tipo
+    // atteso da un confronto (>=) e' quello "selezionato" (Date), non lo
+    // string ISO ricevuto dalla query — stessa conversione di stats-repository.ts.
+    const sinceDate = since !== undefined ? new Date(since) : undefined;
+
+    const totalRow = await this.db
+      .selectFrom("workout_sessions")
+      .select((eb) => eb.fn.countAll<string>().as("count"))
+      .where("user_id", "=", userId)
+      .$if(sinceDate !== undefined, (qb) => qb.where("performed_at", ">=", sinceDate as Date))
+      .executeTakeFirstOrThrow();
+    const total = Number(totalRow.count);
+
+    const sessions = await this.db
+      .selectFrom("workout_sessions")
+      .selectAll()
+      .where("user_id", "=", userId)
+      .$if(sinceDate !== undefined, (qb) => qb.where("performed_at", ">=", sinceDate as Date))
+      .orderBy("performed_at", order)
+      .orderBy("created_at", order)
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
+      .execute();
+
+    if (sessions.length === 0) {
+      return { items: [], total, page, pageSize };
+    }
+
+    const setRows = await this.db
+      .selectFrom("session_sets")
+      .selectAll()
+      .where(
+        "session_id",
+        "in",
+        sessions.map((s) => s.id)
+      )
+      .orderBy("position")
+      .orderBy("set_number")
+      .execute();
+
+    const exercisesBySession = new Map<string, Map<string, SessionExercise>>();
+    for (const s of setRows) {
+      let exercisesByExerciseId = exercisesBySession.get(s.session_id);
+      if (!exercisesByExerciseId) {
+        exercisesByExerciseId = new Map();
+        exercisesBySession.set(s.session_id, exercisesByExerciseId);
+      }
+      let exercise = exercisesByExerciseId.get(s.exercise_id);
+      if (!exercise) {
+        exercise = {
+          exerciseId: s.exercise_id,
+          exerciseName: s.exercise_name,
+          workoutExerciseId: s.workout_exercise_id,
+          progressionIncrement:
+            s.progression_increment === null ? null : Number(s.progression_increment),
+          restSeconds: s.rest_seconds,
+          sets: [],
+        };
+        exercisesByExerciseId.set(s.exercise_id, exercise);
+      }
+      exercise.sets.push({
+        id: s.id,
+        setNumber: s.set_number,
+        targetMinReps: s.target_min_reps,
+        targetMaxReps: s.target_max_reps,
+        actualReps: s.actual_reps,
+        actualWeight: s.actual_weight === null ? null : Number(s.actual_weight),
+        actualRpe: s.actual_rpe,
+        targetRestMinSeconds: s.target_rest_min_seconds,
+        targetRestMaxSeconds: s.target_rest_max_seconds,
+        actualRestSeconds: s.actual_rest_seconds,
+      });
+    }
+
+    const items = sessions.map((session) => ({
+      id: session.id,
+      workoutId: session.workout_id,
+      workoutName: session.workout_name,
+      workoutNotes: session.workout_notes,
+      performedAt: session.performed_at.toISOString(),
+      notes: session.notes,
+      exercises: [...(exercisesBySession.get(session.id)?.values() ?? [])],
+      createdAt: session.created_at.toISOString(),
+    }));
+
+    return { items, total, page, pageSize };
   }
 
   async findDetail(userId: string, id: string): Promise<SessionDetail | null> {
@@ -414,6 +520,28 @@ export class InMemorySessionRepository implements SessionRepository {
         return byPerformed !== 0 ? byPerformed : b.createdAt.getTime() - a.createdAt.getTime();
       });
     return (limit !== undefined ? sorted.slice(0, limit) : sorted).map(toDetail);
+  }
+
+  async listPage(
+    userId: string,
+    options: { page: number; pageSize: number; since?: string; order?: "asc" | "desc" }
+  ): Promise<Paginated<SessionDetail>> {
+    const { page, pageSize, since, order = "desc" } = options;
+    const direction = order === "asc" ? 1 : -1;
+    const sorted = [...this.byId.values()]
+      .filter((s) => s.userId === userId)
+      .filter((s) => since === undefined || s.performedAt >= since)
+      .sort((a, b) => {
+        const byPerformed = direction * a.performedAt.localeCompare(b.performedAt);
+        return byPerformed !== 0 ? byPerformed : direction * (a.createdAt.getTime() - b.createdAt.getTime());
+      });
+    const start = (page - 1) * pageSize;
+    return {
+      items: sorted.slice(start, start + pageSize).map(toDetail),
+      total: sorted.length,
+      page,
+      pageSize,
+    };
   }
 
   async findDetail(userId: string, id: string): Promise<SessionDetail | null> {
