@@ -1,4 +1,4 @@
-import type { Notification, ProgressionEventMessage } from "@gym-tracker/shared";
+import type { Notification, Paginated, ProgressionEventMessage } from "@gym-tracker/shared";
 import { NotFoundError } from "../errors.js";
 import type { NotificationRepository } from "../repositories/notification-repository.js";
 
@@ -12,6 +12,15 @@ export class NotificationService {
 
   async list(userId: string, unreadOnly = false): Promise<Notification[]> {
     return this.notifications.listByOwner(userId, { unreadOnly });
+  }
+
+  /** Pagina di notifiche per la UI — vedi il commento su
+   *  NotificationRepository.listPage. */
+  async listPage(
+    userId: string,
+    options: { page: number; pageSize: number; unreadOnly?: boolean }
+  ): Promise<Paginated<Notification>> {
+    return this.notifications.listPage(userId, options);
   }
 
   async markRead(userId: string, id: string): Promise<void> {

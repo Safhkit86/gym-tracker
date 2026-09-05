@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Kysely } from "kysely";
-import type { MeasurementEntry } from "@gym-tracker/shared";
+import type { MeasurementEntry, Paginated } from "@gym-tracker/shared";
 import type { Database } from "../db/types.js";
 
 export interface MeasurementValues {
@@ -17,6 +17,13 @@ export interface MeasurementEntryRepository {
   upsert(userId: string, measuredOn: string, values: MeasurementValues): Promise<MeasurementEntry>;
   /** Piu' recenti prima. */
   listByOwner(userId: string): Promise<MeasurementEntry[]>;
+  /** Pagina di storico misure per la UI di Storico (stesso ruolo di
+   *  SessionRepository.listPage — vedi quel commento). `since` opzionale
+   *  (filtro rapido periodo) si applica su `measured_on`. */
+  listPage(
+    userId: string,
+    options: { page: number; pageSize: number; since?: string }
+  ): Promise<Paginated<MeasurementEntry>>;
   delete(userId: string, id: string): Promise<boolean>;
 }
 
@@ -81,6 +88,36 @@ export class KyselyMeasurementEntryRepository implements MeasurementEntryReposit
     return rows.map(toEntry);
   }
 
+  async listPage(
+    userId: string,
+    options: { page: number; pageSize: number; since?: string }
+  ): Promise<Paginated<MeasurementEntry>> {
+    const { page, pageSize, since } = options;
+    // measured_on e' un ColumnType<Date, Date | string, ...>: il tipo atteso
+    // da un confronto (>=) e' quello "selezionato" (Date), non lo string
+    // ISO ricevuto dalla query — stessa conversione di stats-repository.ts.
+    const sinceDate = since !== undefined ? new Date(since) : undefined;
+
+    const totalRow = await this.db
+      .selectFrom("measurement_entries")
+      .select((eb) => eb.fn.countAll<string>().as("count"))
+      .where("user_id", "=", userId)
+      .$if(sinceDate !== undefined, (qb) => qb.where("measured_on", ">=", sinceDate as Date))
+      .executeTakeFirstOrThrow();
+
+    const rows = await this.db
+      .selectFrom("measurement_entries")
+      .selectAll()
+      .where("user_id", "=", userId)
+      .$if(sinceDate !== undefined, (qb) => qb.where("measured_on", ">=", sinceDate as Date))
+      .orderBy("measured_on", "desc")
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
+      .execute();
+
+    return { items: rows.map(toEntry), total: Number(totalRow.count), page, pageSize };
+  }
+
   async delete(userId: string, id: string): Promise<boolean> {
     const result = await this.db
       .deleteFrom("measurement_entries")
@@ -125,6 +162,24 @@ export class InMemoryMeasurementEntryRepository implements MeasurementEntryRepos
       .filter((e) => e.userId === userId)
       .sort((a, b) => b.measuredOn.localeCompare(a.measuredOn))
       .map(stripUserId);
+  }
+
+  async listPage(
+    userId: string,
+    options: { page: number; pageSize: number; since?: string }
+  ): Promise<Paginated<MeasurementEntry>> {
+    const { page, pageSize, since } = options;
+    const sorted = [...this.byId.values()]
+      .filter((e) => e.userId === userId)
+      .filter((e) => since === undefined || e.measuredOn >= since)
+      .sort((a, b) => b.measuredOn.localeCompare(a.measuredOn));
+    const start = (page - 1) * pageSize;
+    return {
+      items: sorted.slice(start, start + pageSize).map(stripUserId),
+      total: sorted.length,
+      page,
+      pageSize,
+    };
   }
 
   async delete(userId: string, id: string): Promise<boolean> {

@@ -1,6 +1,7 @@
 import type {
   ExerciseHistoryPoint,
   Logger,
+  Paginated,
   SessionDetail,
   SessionInput,
 } from "@gym-tracker/shared";
@@ -55,6 +56,16 @@ export class SessionService {
 
   async list(userId: string, limit?: number): Promise<SessionDetail[]> {
     return this.sessions.listByOwner(userId, limit);
+  }
+
+  /** Pagina di storico per la UI di Storico — vedi il commento su
+   *  SessionRepository.listPage: non tocca `list()` sopra, usata da
+   *  Statistiche/Dashboard per gli aggregati sull'intero storico. */
+  async listPage(
+    userId: string,
+    options: { page: number; pageSize: number; since?: string; order?: "asc" | "desc" }
+  ): Promise<Paginated<SessionDetail>> {
+    return this.sessions.listPage(userId, options);
   }
 
   /** Storico per il grafico "Progressioni per esercizio" della Dashboard:

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { AccessTokenService } from "@gym-tracker/shared";
+import { parsePaginationQuery, type AccessTokenService } from "@gym-tracker/shared";
 import { authenticate } from "../middleware/authenticate.js";
 import { BadRequestError, UnauthorizedError } from "../errors.js";
 import type { SessionService } from "../domain/session-service.js";
@@ -88,8 +88,29 @@ export function createSessionRoutes(sessions: SessionService, tokens: AccessToke
     }
   });
 
+  // Due modalita' sullo stesso endpoint, per non rompere chi chiama gia'
+  // /sessions senza sapere di pagina/pageSize (Dashboard, LogSessionPage):
+  // - "?page=&pageSize=" (nuovo, usato da Storico): risponde con
+  //   { items, total, page, pageSize }, opzionalmente filtrato da "?since="
+  //   (data ISO, i filtri rapidi 1M/3M/1Y/5Y) su performed_at e ordinato da
+  //   "?order=asc|desc" (default desc — pagina 1 e' la piu' vecchia con
+  //   "asc", cosi' il toggle ordine della UI resta corretto pagina per pagina).
+  // - senza quei parametri: comportamento invariato, un array (tutto o
+  //   "?limit=" ultime N, come prima) — Statistiche/Dashboard non
+  //   diventano paginati.
   router.get("/sessions", async (req, res, next) => {
     try {
+      if (req.query.page !== undefined || req.query.pageSize !== undefined) {
+        const { page, pageSize } = parsePaginationQuery(req.query);
+        const since =
+          typeof req.query.since === "string" && req.query.since.trim() !== ""
+            ? req.query.since
+            : undefined;
+        const order = req.query.order === "asc" ? "asc" : "desc";
+        const result = await sessions.listPage(userId(req), { page, pageSize, since, order });
+        res.status(200).json(result);
+        return;
+      }
       const limit =
         typeof req.query.limit === "string" && req.query.limit.trim() !== ""
           ? Number(req.query.limit)

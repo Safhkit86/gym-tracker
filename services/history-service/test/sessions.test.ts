@@ -154,6 +154,91 @@ describe("GET /sessions", () => {
 
     expect(response.body).toHaveLength(1);
   });
+
+  it("con page/pageSize risponde in forma paginata invece del semplice array (Storico > Sessioni)", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+
+    for (const performedAt of [
+      "2026-07-01T10:00:00.000Z",
+      "2026-07-08T10:00:00.000Z",
+      "2026-07-15T10:00:00.000Z",
+    ]) {
+      await request(app)
+        .post("/sessions")
+        .set("Authorization", `Bearer ${token}`)
+        .send(sessionPayload({ performedAt }));
+    }
+
+    const firstPage = await request(app)
+      .get("/sessions?page=1&pageSize=2")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(firstPage.status).toBe(200);
+    expect(firstPage.body).toMatchObject({ total: 3, page: 1, pageSize: 2 });
+    expect(firstPage.body.items).toHaveLength(2);
+    expect(firstPage.body.items[0].performedAt).toBe("2026-07-15T10:00:00.000Z");
+
+    const secondPage = await request(app)
+      .get("/sessions?page=2&pageSize=2")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(secondPage.body.items).toHaveLength(1);
+    expect(secondPage.body.items[0].performedAt).toBe("2026-07-01T10:00:00.000Z");
+  });
+
+  it("con order=asc parte dalla sessione piu' vecchia, pagina per pagina", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+
+    for (const performedAt of [
+      "2026-07-01T10:00:00.000Z",
+      "2026-07-08T10:00:00.000Z",
+      "2026-07-15T10:00:00.000Z",
+    ]) {
+      await request(app)
+        .post("/sessions")
+        .set("Authorization", `Bearer ${token}`)
+        .send(sessionPayload({ performedAt }));
+    }
+
+    const firstPage = await request(app)
+      .get("/sessions?page=1&pageSize=2&order=asc")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(firstPage.body.items).toHaveLength(2);
+    expect(firstPage.body.items[0].performedAt).toBe("2026-07-01T10:00:00.000Z");
+    expect(firstPage.body.items[1].performedAt).toBe("2026-07-08T10:00:00.000Z");
+
+    const secondPage = await request(app)
+      .get("/sessions?page=2&pageSize=2&order=asc")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(secondPage.body.items).toHaveLength(1);
+    expect(secondPage.body.items[0].performedAt).toBe("2026-07-15T10:00:00.000Z");
+  });
+
+  it("con since filtra le sessioni piu' vecchie della data indicata (filtri rapidi periodo)", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+
+    await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(sessionPayload({ performedAt: "2026-01-01T10:00:00.000Z" }));
+    await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(sessionPayload({ performedAt: "2026-07-08T10:00:00.000Z" }));
+
+    const response = await request(app)
+      .get("/sessions?page=1&pageSize=20&since=2026-06-01")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.body.total).toBe(1);
+    expect(response.body.items).toHaveLength(1);
+    expect(response.body.items[0].performedAt).toBe("2026-07-08T10:00:00.000Z");
+  });
 });
 
 describe("GET /sessions/:id", () => {
