@@ -150,6 +150,31 @@ describe("useRestTimers", () => {
     expect(mockPlay).toHaveBeenCalledTimes(1);
   });
 
+  it("al montaggio ferma un impulso orfano anche senza che l'istanza nuova avvii un proprio timer", async () => {
+    // Variante del bug sopra dove la nuova istanza non arriva mai ad avere
+    // un timer proprio "ringing" (es. l'utente non ne avvia uno nuovo su
+    // quella schermata): l'impulso orfano non sarebbe raggiungibile da
+    // nessun pulsante (il tray si mostra solo se questa istanza ha
+    // timers.length > 0) e continuerebbe a suonare per sempre. Deve fermarsi
+    // già al montaggio della nuova istanza, non solo quando ne parte una nuova.
+    const first = renderHook(() => useRestTimers(true));
+    act(() => {
+      first.result.current.startTimer(1, "Vecchio");
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+    expect(mockPlay).toHaveBeenCalledTimes(1);
+
+    mockPlay.mockClear();
+    renderHook(() => useRestTimers(true)); // mai avviato nessun timer proprio
+
+    await act(async () => {
+      jest.advanceTimersByTime(3000);
+    });
+    expect(mockPlay).not.toHaveBeenCalled();
+  });
+
   it("non avvia un secondo timer mentre uno e' gia' attivo", () => {
     const { result } = renderHook(() => useRestTimers(false));
 
