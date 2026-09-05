@@ -81,6 +81,21 @@ export function useRestTimers(soundEnabled: boolean): UseRestTimersResult {
   const hasActiveTimerRef = useRef(false);
   hasActiveTimerRef.current = timers.length > 0;
 
+  // Al montaggio, ferma subito un eventuale impulso globale rimasto attivo
+  // da un'istanza precedente di questo hook (orfano, vedi il commento su
+  // globalRingingInterval sopra) — non solo quando ne parte uno nuovo, come
+  // fa la rete di sicurezza nell'effetto di "ringing" più sotto. Senza
+  // questo, se questa istanza non arriva mai ad avere un proprio timer
+  // "ringing" (perché l'utente non ne avvia uno nuovo), quell'impulso
+  // orfano non è raggiungibile da nessun pulsante di questa schermata — il
+  // tray si mostra solo se `timers.length > 0` per QUESTA istanza — e
+  // continua a suonare per sempre (bug segnalato dall'utente sul timer
+  // "tra esercizi": nessun riquadro di stop visibile, l'allarme resta
+  // attivo comunque).
+  useEffect(() => {
+    stopGlobalRinging();
+  }, []);
+
   const triggerAlarmPulse = useCallback(() => {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     if (soundEnabledRef.current) {
