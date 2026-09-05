@@ -113,6 +113,43 @@ describe("useRestTimers", () => {
     expect(mockPause).toHaveBeenCalledTimes(1);
   });
 
+  it("un impulso rimasto orfano (es. schermata ricreata senza smontaggio pulito) non suona piu' una volta partito un nuovo timer", async () => {
+    // Bug segnalato dall'utente: se il telefono va in background mentre il
+    // timer conta e Android ricrea la schermata al ritorno in foreground,
+    // il hook puo' essere ricreato da capo senza che il vecchio passi da un
+    // vero smontaggio (nessuna chiamata a cancelTimer/snoozeTimer) — qui
+    // simulato non smontando affatto la prima istanza. Con un ref locale
+    // per l'intervallo, la nuova istanza partirebbe con un riferimento
+    // vuoto e l'impulso "fantasma" della vecchia continuerebbe a suonare
+    // per sempre, non fermabile da nessun pulsante della UI nuova.
+    const first = renderHook(() => useRestTimers(true));
+    act(() => {
+      first.result.current.startTimer(1, "Vecchio");
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(1000); // scade e inizia a suonare
+    });
+    expect(mockPlay).toHaveBeenCalledTimes(1);
+
+    // Nuova istanza del hook, la vecchia MAI smontata: simula la schermata
+    // ricreata senza un vero cleanup.
+    mockPlay.mockClear();
+    const second = renderHook(() => useRestTimers(true));
+    act(() => {
+      second.result.current.startTimer(1, "Nuovo");
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(1000); // anche il nuovo scade e suona
+    });
+
+    mockPlay.mockClear();
+    await act(async () => {
+      jest.advanceTimersByTime(1500); // una finestra di impulso
+    });
+    // Un solo impulso, non due sovrapposti (quello vecchio orfano + quello nuovo).
+    expect(mockPlay).toHaveBeenCalledTimes(1);
+  });
+
   it("non avvia un secondo timer mentre uno e' gia' attivo", () => {
     const { result } = renderHook(() => useRestTimers(false));
 

@@ -22,6 +22,32 @@ interface UseRestTimersResult {
 }
 
 /**
+ * Intervallo dell'impulso sonoro/vibrazione a scadenza: a livello di MODULO,
+ * non un ref del hook. Un ref si azzera ogni volta che il hook viene
+ * ri-creato da capo — cosa che può succedere senza che l'app venga chiusa
+ * (es. Android ricrea la Activity/lo screen dopo che l'app è stata in
+ * background e la memoria è stata reclamata) — mentre l'intervallo JS
+ * sottostante (`setInterval`) continua a esistere ed a suonare a
+ * prescindere dal componente React che l'ha creato, perché non è legato al
+ * suo ciclo di vita. Con un ref, la nuova istanza del hook parte con una Map
+ * vuota e perde per sempre il riferimento a quell'intervallo "fantasma":
+ * nessun pulsante della UI può più fermarlo (bug segnalato dall'utente:
+ * "anche se apro ed elimino un nuovo timer, quello di prima resta attivo").
+ * Un solo slot globale (non una Map per id) perché per design è attivo un
+ * solo timer di recupero alla volta in tutta l'app (vedi hasActiveTimerRef
+ * sotto) — a ogni avvio di un nuovo impulso si cancella comunque prima
+ * quello eventualmente già presente, come rete di sicurezza ulteriore.
+ */
+let globalRingingInterval: ReturnType<typeof setInterval> | null = null;
+
+function stopGlobalRinging(): void {
+  if (globalRingingInterval !== null) {
+    clearInterval(globalRingingInterval);
+    globalRingingInterval = null;
+  }
+}
+
+/**
  * Timer di recupero per Registra sessione, stesso ruolo di
  * apps/web/src/hooks/useRestTimers.ts: vibrazione sempre (expo-haptics),
  * suono solo se `soundEnabled` (preferenza `timerSoundEnabled`
@@ -38,7 +64,6 @@ interface UseRestTimersResult {
 export function useRestTimers(soundEnabled: boolean): UseRestTimersResult {
   const [timers, setTimers] = useState<RestTimer[]>([]);
   const endAtById = useRef(new Map<string, number>());
-  const ringingIntervalById = useRef(new Map<string, ReturnType<typeof setInterval>>());
   const alertedIds = useRef(new Set<string>());
   const player = useAudioPlayer(alarmSoundSource);
   // Sottoscrizione allo stato del player: senza questo hook le proprieta'
@@ -71,11 +96,7 @@ export function useRestTimers(soundEnabled: boolean): UseRestTimersResult {
 
   const stopRinging = useCallback(
     (id: string) => {
-      const interval = ringingIntervalById.current.get(id);
-      if (interval !== undefined) {
-        clearInterval(interval);
-        ringingIntervalById.current.delete(id);
-      }
+      stopGlobalRinging();
       alertedIds.current.delete(id);
       // Ferma anche l'impulso in corso, non solo quelli futuri: senza questo
       // (bug segnalato dall'utente) un tocco su "Elimina"/"Interrompi
@@ -154,19 +175,20 @@ export function useRestTimers(soundEnabled: boolean): UseRestTimersResult {
     for (const timer of timers) {
       if (timer.status === "ringing" && !alertedIds.current.has(timer.id)) {
         alertedIds.current.add(timer.id);
+        stopGlobalRinging(); // rete di sicurezza: mai due impulsi sovrapposti
         triggerAlarmPulse();
-        const interval = setInterval(triggerAlarmPulse, 1500);
-        ringingIntervalById.current.set(timer.id, interval);
+        globalRingingInterval = setInterval(triggerAlarmPulse, 1500);
       }
     }
   }, [timers, triggerAlarmPulse]);
 
-  // Pulizia totale allo smontaggio della schermata.
+  // Pulizia allo smontaggio della schermata: normale "utente naviga altrove
+  // mentre il timer suona", non copre il caso del bug sopra (schermata
+  // ricreata senza un vero smontaggio pulito) — per quello serve lo slot
+  // globale, non questo effetto.
   useEffect(() => {
-    const intervals = ringingIntervalById.current;
     return () => {
-      intervals.forEach((interval) => clearInterval(interval));
-      intervals.clear();
+      stopGlobalRinging();
     };
   }, []);
 
