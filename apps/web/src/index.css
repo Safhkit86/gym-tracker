@@ -511,6 +511,19 @@ button.secondary:hover:not(:disabled) {
   justify-content: flex-end;
 }
 
+/* Precedente/Successiva + "Pagina X di Y" (Storico, Notifiche): stesso
+   .toolbar delle altre righe di pulsanti, solo centrato verticalmente con
+   lo stato testuale in mezzo. */
+.pagination {
+  align-items: center;
+}
+
+.pagination__status {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .icon-btn {
   position: relative;
   display: inline-flex;
@@ -1030,6 +1043,84 @@ button.secondary:hover:not(:disabled) {
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+/* Combobox di ricerca esercizio (sostituisce il vecchio <select> semplice):
+   lista posizionata in assoluto sotto il campo, cosi' non sposta il resto
+   del form quando si apre. */
+.exercise-combobox {
+  position: relative;
+}
+
+.exercise-combobox__listbox {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: var(--space-2) 0;
+  list-style: none;
+  max-height: 16rem;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.exercise-combobox__group {
+  padding: 0;
+  margin: 0;
+}
+
+.exercise-combobox__group-label {
+  display: block;
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.exercise-combobox__options {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.exercise-combobox__option {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+}
+
+.exercise-combobox__option:hover,
+.exercise-combobox__option--active {
+  background: var(--color-surface-2);
+  outline: none;
+  box-shadow: none;
+}
+
+.exercise-combobox__option[aria-selected="true"] {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.exercise-combobox__empty {
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  font-style: italic;
 }
 
 .exercise-description {

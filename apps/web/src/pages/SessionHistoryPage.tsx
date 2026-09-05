@@ -1,14 +1,17 @@
 import { Fragment, useEffect, useRef, useState, type ChangeEvent } from "react";
-import type { MeasurementEntry, SessionDetail } from "@gym-tracker/shared";
+import type { MeasurementEntry, Paginated, SessionDetail } from "@gym-tracker/shared";
 import { useAuth } from "../auth/useAuth";
-import { deleteSession, listSessions } from "../api/sessions";
-import { deleteMeasurement, listMeasurements } from "../api/measurements";
+import { deleteSession, listSessions, listSessionsPage } from "../api/sessions";
+import { deleteMeasurement, listMeasurements, listMeasurementsPage } from "../api/measurements";
 import { ApiRequestError } from "../api/client";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { IconButton } from "../components/IconButton";
+import { Pagination } from "../components/Pagination";
+import { QuickFilterChips } from "../components/QuickFilterChips";
 import { DownloadIcon, TrashIcon, UploadIcon } from "../components/icons";
 import { NARROW_TABLE_LAYOUT_QUERY, useIsNarrowViewport } from "../hooks/useIsNarrowViewport";
 import { MEASUREMENT_FIELDS, computeDelta } from "../utils/measurements";
+import { sinceForQuickFilter, type QuickFilterPreset } from "../utils/quick-filters";
 import { SessionImportReviewDialog } from "../components/SessionImportReviewDialog";
 import {
   analyzeSessionImport,
@@ -70,17 +73,59 @@ function computeWeekNumbers(sessions: SessionDetail[]): Map<string, number> {
   return weekBySessionId;
 }
 
+/** Entry cronologicamente precedente (per il calcolo del delta mostrato
+ *  accanto a ogni valore): cercata nello storico misure completo, non nella
+ *  sola pagina mostrata a schermo — altrimenti la prima entry di ogni
+ *  pagina (tranne la prima) perderebbe il confronto con quella immediatamente
+ *  precedente, rimasta sulla pagina precedente. */
+function findPreviousMeasurement(
+  all: MeasurementEntry[],
+  current: MeasurementEntry
+): MeasurementEntry | null {
+  const index = all.findIndex((entry) => entry.id === current.id);
+  return index === -1 ? null : (all[index + 1] ?? null);
+}
+
+/** Dimensione di pagina per le liste paginate di questa vista (sessioni e
+ *  misure): stesso valore del default lato server (DEFAULT_PAGE_SIZE in
+ *  @gym-tracker/shared/pagination.ts) copiato qui invece che importato:
+ *  un import "value" (non "type") da @gym-tracker/shared trascinerebbe nel
+ *  bundle browser l'intero barrel del pacchetto, incluse le dipendenze
+ *  solo-Node di altri moduli condivisi (amqplib, nodemailer) — vedi
+ *  amqp-connection.ts/mailer.ts, mai usati da apps/web. */
+const HISTORY_PAGE_SIZE = 20;
+
 export function SessionHistoryPage() {
   const { token } = useAuth();
   const [tab, setTab] = useState<HistoryTab>("sessions");
+  // Storico completo, non paginato: serve SOLO per numerare le settimane
+  // (richiede l'ordine cronologico intero, non la sola pagina visibile) e
+  // per "Esporta storico" (deve restare un CSV con tutta la cronologia,
+  // indipendente da pagina/filtro rapido correnti). Le card mostrate a
+  // schermo vengono invece da sessionsPage sotto (fetch paginato lato server).
   const [sessions, setSessions] = useState<SessionDetail[] | null>(null);
+  const [sessionsPage, setSessionsPage] = useState<Paginated<SessionDetail> | null>(null);
+  const [page, setPage] = useState(1);
+  const [quickFilter, setQuickFilter] = useState<QuickFilterPreset>("all");
+  // Forza un refetch della pagina corrente (stessi page/sortOrder/quickFilter)
+  // dopo un'importazione: un cambio di stato "vuoto" non farebbe ripartire
+  // l'effetto sotto, che dipende solo da page/sortOrder/quickFilter/token.
+  const [sessionsRefreshTick, setSessionsRefreshTick] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const isNarrow = useIsNarrowViewport(NARROW_TABLE_LAYOUT_QUERY);
 
+  // Stesso schema delle sessioni: measurements e' il totale non paginato
+  // (per "Esporta misure"), measurementsPage la fetta mostrata a schermo.
   const [measurements, setMeasurements] = useState<MeasurementEntry[] | null>(null);
+  const [measurementsPage, setMeasurementsPage] = useState<Paginated<MeasurementEntry> | null>(
+    null
+  );
+  const [measurementsPageNumber, setMeasurementsPageNumber] = useState(1);
+  const [measurementsQuickFilter, setMeasurementsQuickFilter] = useState<QuickFilterPreset>("all");
+  const [measurementsRefreshTick, setMeasurementsRefreshTick] = useState(0);
   const [measurementsError, setMeasurementsError] = useState<string | null>(null);
   const [deletingMeasurementId, setDeletingMeasurementId] = useState<string | null>(null);
   const [confirmDeleteMeasurementId, setConfirmDeleteMeasurementId] = useState<string | null>(null);
@@ -128,6 +173,36 @@ export function SessionHistoryPage() {
     };
   }, [token]);
 
+  // Pagina di sessioni mostrata a schermo (lato server): rifatta ad ogni
+  // cambio di pagina/ordinamento/filtro rapido, oltre che dopo un import
+  // (sessionsRefreshTick) o un'eliminazione che non richiede di tornare
+  // alla pagina precedente (vedi handleDelete).
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+    let cancelled = false;
+    listSessionsPage(token, {
+      page,
+      pageSize: HISTORY_PAGE_SIZE,
+      since: sinceForQuickFilter(quickFilter),
+      order: sortOrder,
+    })
+      .then((result) => {
+        if (!cancelled) {
+          setSessionsPage(result);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setError(err instanceof ApiRequestError ? err.message : "Errore imprevisto. Riprova.");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, page, sortOrder, quickFilter, sessionsRefreshTick]);
+
   // Caricamento lazy: solo quando l'utente apre la vista Misure, non insieme
   // alle sessioni (schede diverse, evita una chiamata inutile al primo giro).
   useEffect(() => {
@@ -152,6 +227,35 @@ export function SessionHistoryPage() {
       cancelled = true;
     };
   }, [token, tab, measurements]);
+
+  // Pagina di misure mostrata a schermo (lato server), stesso schema di
+  // sessionsPage sopra: caricata solo quando la vista Misure e' aperta.
+  useEffect(() => {
+    if (!token || tab !== "measurements") {
+      return;
+    }
+    let cancelled = false;
+    listMeasurementsPage(token, {
+      page: measurementsPageNumber,
+      pageSize: HISTORY_PAGE_SIZE,
+      since: sinceForQuickFilter(measurementsQuickFilter),
+    })
+      .then((result) => {
+        if (!cancelled) {
+          setMeasurementsPage(result);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setMeasurementsError(
+            err instanceof ApiRequestError ? err.message : "Errore imprevisto. Riprova."
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, tab, measurementsPageNumber, measurementsQuickFilter, measurementsRefreshTick]);
 
   async function handleExportAll(): Promise<void> {
     if (!token || !sessions || sessions.length === 0) {
@@ -213,6 +317,10 @@ export function SessionHistoryPage() {
     try {
       const result = await importSessionsWithResolutions(token, analysis, resolutions);
       setSessions(await listSessions(token));
+      // Non si torna a pagina 1: la pagina paginata mostrata a schermo viene
+      // solo ricaricata sul posto (le sessioni importate possono avere
+      // qualunque data, non necessariamente le piu' recenti).
+      setSessionsRefreshTick((tick) => tick + 1);
       const parts: string[] = [];
       if (result.createdSessions.length > 0) {
         parts.push(
@@ -312,6 +420,7 @@ export function SessionHistoryPage() {
     try {
       const result = await importMeasurementsFromFile(token, entries);
       setMeasurements(await listMeasurements(token));
+      setMeasurementsRefreshTick((tick) => tick + 1);
       const parts: string[] = [];
       if (result.imported > 0) {
         parts.push(
@@ -343,6 +452,13 @@ export function SessionHistoryPage() {
     try {
       await deleteMeasurement(token, id);
       setMeasurements((current) => current?.filter((entry) => entry.id !== id) ?? current);
+      // Se era l'unica entry della pagina corrente (e non e' la prima),
+      // torna a quella precedente invece di lasciare la vista vuota.
+      if (measurementsPage?.items?.length === 1 && measurementsPageNumber > 1) {
+        setMeasurementsPageNumber((current) => current - 1);
+      } else {
+        setMeasurementsRefreshTick((tick) => tick + 1);
+      }
     } catch (err) {
       setMeasurementsError(
         err instanceof ApiRequestError ? err.message : "Impossibile eliminare la misurazione."
@@ -362,6 +478,14 @@ export function SessionHistoryPage() {
     try {
       await deleteSession(token, id);
       setSessions((current) => current?.filter((session) => session.id !== id) ?? current);
+      // Se era l'unica sessione della pagina corrente (e non e' la prima),
+      // torna a quella precedente invece di lasciare la vista vuota con
+      // "Successiva" disabilitato.
+      if (sessionsPage?.items?.length === 1 && page > 1) {
+        setPage((current) => current - 1);
+      } else {
+        setSessionsRefreshTick((tick) => tick + 1);
+      }
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : "Impossibile eliminare la sessione.");
     } finally {
@@ -369,9 +493,6 @@ export function SessionHistoryPage() {
     }
   }
 
-  // Il backend restituisce gia' dal piu' recente: per "asc" basta invertire
-  // in locale, senza un'altra chiamata.
-  const orderedSessions = sessions && sortOrder === "asc" ? [...sessions].reverse() : sessions;
   const weekBySessionId = sessions ? computeWeekNumbers(sessions) : null;
   // Stesso numero di colonne "Set N" su ogni card (non solo per-sessione):
   // altrimenti Kg/Recupero cadrebbero a un'ascissa diversa da card a card.
@@ -429,25 +550,40 @@ export function SessionHistoryPage() {
             </p>
           )}
           {importResult && <p role="status">{importResult}</p>}
-          {sessions === null && !error && <p>Caricamento…</p>}
+          {sessions === null && sessionsPage === null && !error && <p>Caricamento…</p>}
           {sessions?.length === 0 && <p>Non hai ancora registrato nessuna sessione.</p>}
 
-          {orderedSessions && orderedSessions.length > 0 && (
+          {sessions && sessions.length > 0 && (
             <>
               <div className="toolbar toolbar--end">
                 <button
                   type="button"
                   className="secondary"
-                  onClick={() => setSortOrder((current) => (current === "desc" ? "asc" : "desc"))}
+                  onClick={() => {
+                    setSortOrder((current) => (current === "desc" ? "asc" : "desc"));
+                    setPage(1);
+                  }}
                 >
                   {sortOrder === "desc" ? "↓ Piu' recenti prima" : "↑ Meno recenti prima"}
                 </button>
               </div>
 
-              {orderedSessions.map((session, index) => {
+              <QuickFilterChips
+                value={quickFilter}
+                onChange={(preset) => {
+                  setQuickFilter(preset);
+                  setPage(1);
+                }}
+              />
+
+              {sessionsPage?.items?.length === 0 && (
+                <p>Nessuna sessione registrata in questo periodo.</p>
+              )}
+
+              {sessionsPage?.items?.map((session, index) => {
                 const week = weekBySessionId?.get(session.id);
                 const previousWeek =
-                  index > 0 ? weekBySessionId?.get(orderedSessions[index - 1].id) : undefined;
+                  index > 0 ? weekBySessionId?.get(sessionsPage.items[index - 1].id) : undefined;
                 const isNewWeek = week !== undefined && week !== previousWeek;
                 return (
                   <Fragment key={session.id}>
@@ -536,6 +672,15 @@ export function SessionHistoryPage() {
                   </Fragment>
                 );
               })}
+
+              {sessionsPage && (
+                <Pagination
+                  page={sessionsPage.page}
+                  pageSize={sessionsPage.pageSize}
+                  total={sessionsPage.total}
+                  onPageChange={setPage}
+                />
+              )}
             </>
           )}
 
@@ -597,18 +742,32 @@ export function SessionHistoryPage() {
             </p>
           )}
           {measurementImportResult && <p role="status">{measurementImportResult}</p>}
-          {measurements === null && !measurementsError && <p>Caricamento…</p>}
+          {measurements === null && measurementsPage === null && !measurementsError && (
+            <p>Caricamento…</p>
+          )}
           {measurements?.length === 0 && <p>Non hai ancora registrato nessuna misurazione.</p>}
 
           {measurements && measurements.length > 0 && (
             <>
+              <QuickFilterChips
+                value={measurementsQuickFilter}
+                onChange={(preset) => {
+                  setMeasurementsQuickFilter(preset);
+                  setMeasurementsPageNumber(1);
+                }}
+              />
+
+              {measurementsPage?.items?.length === 0 && (
+                <p>Nessuna misurazione registrata in questo periodo.</p>
+              )}
+
               <section className="card">
-                {measurements.map((entry, index) => {
+                {measurementsPage?.items?.map((entry) => {
                   // La misurazione precedente e' quella cronologicamente
                   // prima (indice successivo, l'array e' piu' recenti
                   // prima): la freccia va sulla misurazione nuova, non su
                   // quella vecchia.
-                  const previous = measurements[index + 1] ?? null;
+                  const previous = measurements ? findPreviousMeasurement(measurements, entry) : null;
                   return (
                     <div className="measurement-entry" key={entry.id}>
                       <div className="session-card__header">
@@ -655,6 +814,15 @@ export function SessionHistoryPage() {
                 Più recenti prima. La freccia accanto a un valore lo confronta con la misurazione
                 precedente.
               </p>
+
+              {measurementsPage && (
+                <Pagination
+                  page={measurementsPage.page}
+                  pageSize={measurementsPage.pageSize}
+                  total={measurementsPage.total}
+                  onPageChange={setMeasurementsPageNumber}
+                />
+              )}
             </>
           )}
 
