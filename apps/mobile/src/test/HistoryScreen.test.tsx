@@ -15,6 +15,30 @@ function mockRoute(): HistoryScreenProps["route"] {
   return {} as HistoryScreenProps["route"];
 }
 
+/** La schermata fa ora anche una GET paginata "/sessions?page=&pageSize=..."
+ *  (card mostrate a schermo), oltre a quella semplice (numerazione
+ *  settimane) — vedi HistoryScreen.tsx e sessionsHandlers in
+ *  SessionHistoryPage.test.tsx (webapp) per lo stesso schema. */
+function sessionsHandlers(items: unknown[]) {
+  return [
+    { match: (u: string, m: string) => u.endsWith("/sessions") && m === "GET", body: items },
+    {
+      match: (u: string, m: string) => u.includes("/sessions?") && m === "GET",
+      body: { items, total: items.length, page: 1, pageSize: 20 },
+    },
+  ];
+}
+
+function measurementsHandlers(items: unknown[]) {
+  return [
+    { match: (u: string, m: string) => u.endsWith("/measurements") && m === "GET", body: items },
+    {
+      match: (u: string, m: string) => u.includes("/measurements?") && m === "GET",
+      body: { items, total: items.length, page: 1, pageSize: 20 },
+    },
+  ];
+}
+
 const fakeUser = { id: "u1", email: "a@b.com", createdAt: new Date().toISOString() };
 
 const session = {
@@ -87,7 +111,7 @@ describe("HistoryScreen", () => {
   it("su tablet mostra la sessione in tabella (Esercizio · Set · Kg · Recupero)", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
-      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [session] },
+      ...sessionsHandlers([session]),
     ]);
 
     setDeviceDimensions("tabletLandscape");
@@ -107,11 +131,38 @@ describe("HistoryScreen", () => {
       buttons?.find((b) => b.style === "destructive")?.onPress?.();
     });
 
-    const fetchMock = mockFetchResponses([
-      { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
-      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [session] },
-      { match: (u, m) => u.endsWith("/sessions/sess1") && m === "DELETE", body: undefined },
-    ]);
+    // Mock manuale (non mockFetchResponses) perche' qui serve stato: dopo la
+    // DELETE, il refetch paginato che segue l'eliminazione (loadSessionsPage)
+    // deve riflettere la lista vuota, non la sessione "cancellata" di un
+    // mock statico — stesso motivo del mock manuale in
+    // NotificationsPage.test.tsx (webapp).
+    let deleted = false;
+    const fetchMock = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      const method = (init?.method ?? "GET").toUpperCase();
+      const jsonResponse = (body: unknown, status = 200) => ({
+        ok: status < 300,
+        status,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => body,
+      });
+      if (url.endsWith("/me") && method === "GET") {
+        return jsonResponse(fakeUser);
+      }
+      if (url.endsWith("/sessions/sess1") && method === "DELETE") {
+        deleted = true;
+        return jsonResponse(undefined, 204);
+      }
+      if (url.includes("/sessions?") && method === "GET") {
+        const items = deleted ? [] : [session];
+        return jsonResponse({ items, total: items.length, page: 1, pageSize: 20 });
+      }
+      if (url.endsWith("/sessions") && method === "GET") {
+        return jsonResponse(deleted ? [] : [session]);
+      }
+      throw new Error(`Nessun handler mockato per ${method} ${url}`);
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
 
     const screen = await renderWithProviders(
       <HistoryScreen navigation={mockNavigation()} route={mockRoute()} />
@@ -139,7 +190,7 @@ describe("HistoryScreen", () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
       {
-        match: (u, m) => u.endsWith("/sessions") && m === "GET",
+        match: (u, m) => u.includes("/sessions") && m === "GET",
         status: 500,
         body: { code: "INTERNAL_ERROR", message: "Errore imprevisto. Riprova." },
       },
@@ -155,11 +206,8 @@ describe("HistoryScreen", () => {
   it("carica le misure solo al primo tocco sul tab e mostra il delta", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
-      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
-      {
-        match: (u, m) => u.endsWith("/measurements") && m === "GET",
-        body: [measurementNew, measurementOld],
-      },
+      ...sessionsHandlers([]),
+      ...measurementsHandlers([measurementNew, measurementOld]),
     ]);
 
     const screen = await renderWithProviders(
@@ -171,5 +219,57 @@ describe("HistoryScreen", () => {
 
     expect(await screen.findByText("79 kg")).toBeTruthy();
     expect(screen.getByText("▼ 1")).toBeTruthy();
+  });
+
+  it("mostra i controlli di paginazione e richiede la pagina successiva al tocco", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [session] },
+      {
+        match: (u, m) => u.includes("/sessions?") && u.includes("page=2") && m === "GET",
+        body: { items: [], total: 21, page: 2, pageSize: 20 },
+      },
+      {
+        match: (u, m) => u.includes("/sessions?") && m === "GET",
+        body: { items: [session], total: 21, page: 1, pageSize: 20 },
+      },
+    ]);
+
+    const screen = await renderWithProviders(
+      <HistoryScreen navigation={mockNavigation()} route={mockRoute()} />
+    );
+
+    await screen.findByText("Pagina 1 di 2");
+
+    fireEvent.press(screen.getByRole("button", { name: "Successiva →" }));
+
+    await screen.findByText("Pagina 2 di 2");
+    expect(
+      fetchMock.mock.calls.some(([url]) => (url as string).toString().includes("/sessions?page=2"))
+    ).toBe(true);
+  });
+
+  it("un filtro rapido periodo richiede la lista con il parametro since", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
+      ...sessionsHandlers([session]),
+    ]);
+
+    const screen = await renderWithProviders(
+      <HistoryScreen navigation={mockNavigation()} route={mockRoute()} />
+    );
+
+    await screen.findByText("Spinta");
+    fireEvent.press(screen.getByRole("button", { name: "1M" }));
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.some(
+          ([url]) =>
+            (url as string).toString().includes("/sessions?") &&
+            (url as string).toString().includes("since=")
+        )
+      ).toBe(true);
+    });
   });
 });
