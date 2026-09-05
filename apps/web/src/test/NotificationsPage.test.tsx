@@ -7,6 +7,20 @@ import { Layout } from "../components/Layout";
 
 const FAKE_USER = { id: "u1", email: "test@example.com", createdAt: new Date().toISOString() };
 
+/** La pagina fa ora anche una GET paginata "/notifications?page=&pageSize="
+ *  (lista mostrata a schermo), oltre a quella semplice (badge, "Accetta
+ *  tutte") — vedi NotificationsPage.tsx e sessionsHandlers in
+ *  SessionHistoryPage.test.tsx per lo stesso schema. */
+function notificationsHandlers(items: unknown[]) {
+  return [
+    { match: (u: string, m: string) => u.endsWith("/notifications") && m === "GET", body: items },
+    {
+      match: (u: string, m: string) => u.includes("/notifications?page=") && m === "GET",
+      body: { items, total: items.length, page: 1, pageSize: 20 },
+    },
+  ];
+}
+
 const NOTIFICATION_UNREAD = {
   id: "n1",
   exerciseId: "e1",
@@ -31,10 +45,37 @@ describe("NotificationsPage", () => {
     vi.unstubAllGlobals();
   });
 
+  it("mostra i controlli di paginazione e richiede la pagina successiva al click", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/notifications") && m === "GET", body: [NOTIFICATION_UNREAD] },
+      {
+        match: (u, m) => u.includes("/notifications?page=2") && m === "GET",
+        body: { items: [], total: 21, page: 2, pageSize: 20 },
+      },
+      {
+        match: (u, m) => u.includes("/notifications?page=") && m === "GET",
+        body: { items: [NOTIFICATION_UNREAD], total: 21, page: 1, pageSize: 20 },
+      },
+    ]);
+
+    renderWithProviders(<NotificationsPage />, ["/notifications"]);
+    await screen.findByText("Pagina 1 di 2");
+
+    fireEvent.click(screen.getByRole("button", { name: /successiva/i }));
+
+    await screen.findByText("Pagina 2 di 2");
+    expect(
+      fetchMock.mock.calls.some(([url]) =>
+        (url as string).toString().includes("/notifications?page=2")
+      )
+    ).toBe(true);
+  });
+
   it("mostra un messaggio quando non ci sono notifiche", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-      { match: (u, m) => u.endsWith("/notifications") && m === "GET", body: [] },
+      ...notificationsHandlers([]),
     ]);
 
     renderWithProviders(<NotificationsPage />, ["/notifications"]);
@@ -45,10 +86,7 @@ describe("NotificationsPage", () => {
   it("elenca le notifiche e mostra il pulsante segna tutte come lette quando ce ne sono di non lette", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-      {
-        match: (u, m) => u.endsWith("/notifications") && m === "GET",
-        body: [NOTIFICATION_UNREAD],
-      },
+      ...notificationsHandlers([NOTIFICATION_UNREAD]),
     ]);
 
     renderWithProviders(<NotificationsPage />, ["/notifications"]);
@@ -62,10 +100,7 @@ describe("NotificationsPage", () => {
   it("segna una notifica come letta e aggiorna l'elenco", async () => {
     const fetchMock = mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-      {
-        match: (u, m) => u.endsWith("/notifications") && m === "GET",
-        body: [{ ...NOTIFICATION_UNREAD, readAt: null }],
-      },
+      ...notificationsHandlers([{ ...NOTIFICATION_UNREAD, readAt: null }]),
       {
         match: (u, m) => u.endsWith("/notifications/n1/read") && m === "PATCH",
         status: 204,
@@ -85,10 +120,7 @@ describe("NotificationsPage", () => {
   it("segna tutte le notifiche come lette", async () => {
     const fetchMock = mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-      {
-        match: (u, m) => u.endsWith("/notifications") && m === "GET",
-        body: [NOTIFICATION_UNREAD],
-      },
+      ...notificationsHandlers([NOTIFICATION_UNREAD]),
       {
         match: (u, m) => u.endsWith("/notifications/read-all") && m === "POST",
         body: { count: 1 },
@@ -108,10 +140,7 @@ describe("NotificationsPage", () => {
   it("mostra il delta 'da -> a' per un suggerimento di aumento peso", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-      {
-        match: (u, m) => u.endsWith("/notifications") && m === "GET",
-        body: [NOTIFICATION_UNREAD],
-      },
+      ...notificationsHandlers([NOTIFICATION_UNREAD]),
     ]);
 
     renderWithProviders(<NotificationsPage />, ["/notifications"]);
@@ -122,17 +151,14 @@ describe("NotificationsPage", () => {
   it("mostra il delta in ripetizioni per un suggerimento a corpo libero", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-      {
-        match: (u, m) => u.endsWith("/notifications") && m === "GET",
-        body: [
-          {
-            ...NOTIFICATION_UNREAD,
-            suggestionType: "increase_reps",
-            previousValue: 10,
-            suggestedValue: 11,
-          },
-        ],
-      },
+      ...notificationsHandlers([
+        {
+          ...NOTIFICATION_UNREAD,
+          suggestionType: "increase_reps",
+          previousValue: 10,
+          suggestedValue: 11,
+        },
+      ]),
     ]);
 
     renderWithProviders(<NotificationsPage />, ["/notifications"]);
@@ -143,10 +169,7 @@ describe("NotificationsPage", () => {
   it("accetta una progressione: salva l'override e segna la notifica come letta", async () => {
     const fetchMock = mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-      {
-        match: (u, m) => u.endsWith("/notifications") && m === "GET",
-        body: [NOTIFICATION_UNREAD],
-      },
+      ...notificationsHandlers([NOTIFICATION_UNREAD]),
       {
         match: (u, m) => u.endsWith("/me/progression-defaults") && m === "POST",
         status: 204,
@@ -189,10 +212,7 @@ describe("NotificationsPage", () => {
     };
     const fetchMock = mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
-      {
-        match: (u, m) => u.endsWith("/notifications") && m === "GET",
-        body: [NOTIFICATION_UNREAD, secondNotification],
-      },
+      ...notificationsHandlers([NOTIFICATION_UNREAD, secondNotification]),
       {
         match: (u, m) => u.endsWith("/me/progression-defaults") && m === "POST",
         status: 204,
@@ -256,6 +276,12 @@ describe("NotificationsPage", () => {
       }
       if (url.includes("/notifications?unread=true") && method === "GET") {
         return jsonResponse(isRead ? [] : [{ ...NOTIFICATION_UNREAD, readAt: null }]);
+      }
+      if (url.includes("/notifications?page=") && method === "GET") {
+        const items = [
+          { ...NOTIFICATION_UNREAD, readAt: isRead ? new Date().toISOString() : null },
+        ];
+        return jsonResponse({ items, total: items.length, page: 1, pageSize: 20 });
       }
       if (url.endsWith("/notifications") && method === "GET") {
         return jsonResponse([
