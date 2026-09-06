@@ -511,6 +511,15 @@ button.secondary:hover:not(:disabled) {
   justify-content: flex-end;
 }
 
+/* Storico: il pulsante di ordinamento e i filtri rapidi periodo sono due
+   controlli concettualmente distinti (ordina vs filtra), non due varianti
+   dello stesso gruppo — un margine più ampio del solito margin-bottom di
+   .toolbar (che si limiterebbe a "collassare" con questo, restando
+   invariato) li separa visivamente. */
+.toolbar--end + .toolbar {
+  margin-top: var(--space-6);
+}
+
 /* Precedente/Successiva + "Pagina X di Y" (Storico, Notifiche): stesso
    .toolbar delle altre righe di pulsanti, solo centrato verticalmente con
    lo stato testuale in mezzo. */
