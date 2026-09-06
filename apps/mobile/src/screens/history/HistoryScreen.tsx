@@ -482,6 +482,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
+    // Ordinamento e filtri rapidi periodo sono due controlli distinti
+    // (ordina vs filtra): senza questo restavano attaccati, nessun'altra
+    // spaziatura li separa (QuickFilterChips non ha margine proprio sopra).
+    marginBottom: spacing.xl,
   },
   sortButtonText: {
     color: colors.text,
