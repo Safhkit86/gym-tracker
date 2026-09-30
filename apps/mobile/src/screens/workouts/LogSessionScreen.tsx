@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -100,16 +100,36 @@ export function LogSessionScreen({ navigation, route }: Props) {
   // login perdendo i dati inseriti. Vedi useSlidingSession.
   useSlidingSession(refreshToken);
 
+  // Il caricamento iniziale (workout/storico/preferenze/bozza) deve avvenire
+  // una volta sola per questa schermata, non ripetersi ogni volta che
+  // useSlidingSession rinnova il token (ogni 20 min, quindi praticamente
+  // certo su una sessione lunga con un timer di recupero in mezzo — vedi
+  // "token" sotto letto da un ref invece che da una dipendenza diretta): un
+  // secondo giro ripeterebbe "const draft = await loadSessionDraft(...)" e
+  // sovrascriverebbe con setExercises(draft.exercises) qualunque modifica
+  // fatta dall'utente dopo l'ultimo salvataggio della bozza — bug segnalato
+  // dall'utente ("con un timer attivo, la sessione in corso salvata come
+  // bozza svuota i controlli degli esercizi finche' non si scarta la
+  // bozza"). hasLoadedRef garantisce un solo giro reale per montaggio
+  // (un id diverso e' comunque una nuova istanza della schermata, vedi
+  // getId in WorkoutsNavigator) — resettato solo in caso di errore, per
+  // poter ritentare se il primissimo tentativo fallisce.
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
+  const hasLoadedRef = useRef(false);
+
   useEffect(() => {
-    if (!token) {
+    if (!tokenRef.current || hasLoadedRef.current) {
       return;
     }
+    hasLoadedRef.current = true;
+    const currentToken = tokenRef.current;
     let cancelled = false;
     Promise.all([
-      getWorkout(token, id),
-      listSessions(token),
-      getAccountPreferences(token),
-      getProgressionDefaults(token),
+      getWorkout(currentToken, id),
+      listSessions(currentToken),
+      getAccountPreferences(currentToken),
+      getProgressionDefaults(currentToken),
     ])
       .then(async ([detail, previousSessions, preferences, progressionDefaults]) => {
         if (cancelled) {
@@ -142,6 +162,7 @@ export function LogSessionScreen({ navigation, route }: Props) {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
+          hasLoadedRef.current = false;
           setError(err instanceof ApiRequestError ? err.message : t("session.loadError"));
         }
       });

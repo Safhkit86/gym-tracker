@@ -1,6 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { fireEvent, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, waitFor } from "@testing-library/react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { renderWithProviders, mockFetchResponses, setDeviceDimensions } from "./helpers";
 import { LogSessionScreen } from "../screens/workouts/LogSessionScreen";
@@ -340,6 +340,87 @@ describe("LogSessionScreen", () => {
       await waitFor(async () => {
         expect(await AsyncStorage.getItem(DRAFT_KEY)).toBeNull();
       });
+    });
+
+    it("il rinnovo periodico del token (useSlidingSession) non ricarica la schermata ne' sovrascrive le modifiche in corso", async () => {
+      // Regressione: con un timer di recupero attivo (quindi una sessione
+      // lunga abbastanza da attraversare il rinnovo ogni 20 minuti) il
+      // vecchio effetto di caricamento dipendeva da "token" e ripartiva ad
+      // ogni rinnovo, ricaricando la bozza salvata sopra lo stato corrente
+      // — riportato dall'utente come "i controlli degli esercizi
+      // spariscono, bisogna scartare la bozza per farli tornare".
+      //
+      // jest.useFakeTimers() va chiamato PRIMA del render: il setInterval di
+      // useSlidingSession si registra al mount, quindi con i timer finti
+      // attivati dopo (come in un tentativo precedente di questo test)
+      // resterebbe un intervallo reale, mai avanzato da
+      // advanceTimersByTimeAsync sotto — nessun rinnovo osservabile entro i
+      // tempi del test.
+      jest.useFakeTimers();
+      try {
+        const refreshedUser = { ...fakeUser, id: "u1" };
+        const fetchMock = mockFetchResponses([
+          { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
+          { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: workout },
+          { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+          {
+            match: (u, m) => u.endsWith("/me/account-preferences") && m === "GET",
+            body: accountPreferences,
+          },
+          { match: (u, m) => u.endsWith("/me/progression-defaults") && m === "GET", body: [] },
+          {
+            match: (u, m) => u.endsWith("/me/token/refresh") && m === "POST",
+            body: { token: "renewed-token", user: refreshedUser },
+          },
+        ]);
+
+        const screen = await renderWithProviders(
+          <LogSessionScreen navigation={mockNavigation()} route={mockRoute("w1")} />
+        );
+        // Lascia risolvere il Promise.all del caricamento iniziale: sotto
+        // fake timers le promise si risolvono comunque normalmente (solo
+        // setTimeout/setInterval sono "finti"), basta far girare la coda dei
+        // microtask con un avanzamento di 0ms dentro act().
+        await act(async () => {
+          await jest.advanceTimersByTimeAsync(0);
+        });
+
+        const repsInput = screen.getByLabelText("Panca piana set 1 rep effettive");
+        fireEvent.changeText(repsInput, "9");
+        await act(async () => {
+          await jest.advanceTimersByTimeAsync(0);
+        });
+        const draftRaw = await AsyncStorage.getItem(DRAFT_KEY);
+        expect(JSON.parse(draftRaw as string).exercises[0].sets[0].actualReps).toBe("9");
+
+        const workoutCallsBefore = fetchMock.mock.calls.filter(([u]) =>
+          (u as string).toString().endsWith("/workouts/w1")
+        ).length;
+        expect(workoutCallsBefore).toBe(1);
+
+        // useSlidingSession rinnova ogni 20 minuti finche' la schermata resta
+        // aperta (vedi hooks/useSlidingSession.ts): questo fa scattare
+        // AuthProvider.refreshToken, che cambia il valore di "token".
+        await act(async () => {
+          await jest.advanceTimersByTimeAsync(20 * 60 * 1000);
+        });
+
+        expect(
+          fetchMock.mock.calls.some(([u]) => (u as string).toString().endsWith("/me/token/refresh"))
+        ).toBe(true);
+
+        // Il rinnovo e' avvenuto, ma il form non deve essere stato ricaricato:
+        // stesso numero di chiamate a /workouts/w1 di prima, e il valore
+        // appena digitato resta quello inserito dall'utente, non quello (piu'
+        // vecchio) dell'ultima bozza salvata prima di questa modifica.
+        const workoutCallsAfter = fetchMock.mock.calls.filter(([u]) =>
+          (u as string).toString().endsWith("/workouts/w1")
+        ).length;
+        expect(workoutCallsAfter).toBe(workoutCallsBefore);
+        expect(screen.getByLabelText("Panca piana set 1 rep effettive").props.value).toBe("9");
+      } finally {
+        jest.useRealTimers();
+      }
     });
 
     it("svuota la bozza dopo aver registrato la sessione con successo", async () => {
