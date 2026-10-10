@@ -24,6 +24,7 @@ interface ExerciseCardProps {
   onMoveUp: () => void;
   onMoveDown: () => void;
   onUpdateExercise: (patch: Partial<ExerciseForm>) => void;
+  onComboboxOpenChange: (isOpen: boolean) => void;
   onAddSet: () => void;
   onDuplicateSet: () => void;
   onRemoveSet: (setIndex: number) => void;
@@ -43,6 +44,7 @@ export function ExerciseCard({
   onMoveUp,
   onMoveDown,
   onUpdateExercise,
+  onComboboxOpenChange,
   onAddSet,
   onDuplicateSet,
   onRemoveSet,
@@ -89,6 +91,7 @@ export function ExerciseCard({
         selected={selected}
         groupedCatalog={groupedCatalog}
         onChange={(exerciseId) => onUpdateExercise({ exerciseId })}
+        onOpenChange={onComboboxOpenChange}
       />
 
       {selected?.description && <Text style={styles.description}>{selected.description}</Text>}
