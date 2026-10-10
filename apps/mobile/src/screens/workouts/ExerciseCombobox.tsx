@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { Exercise } from "@gym-tracker/shared";
@@ -9,6 +9,11 @@ interface ExerciseComboboxProps {
   selected: Exercise | undefined;
   groupedCatalog: Array<[string, Exercise[]]>;
   onChange: (exerciseId: string) => void;
+  // Il chiamante (WorkoutForm, tramite ExerciseCard) deve sapere quando la
+  // tendina e' aperta per alzare lo zIndex/elevation della card nella
+  // FlatList: vedi il commento su CellRendererComponent in WorkoutForm.tsx
+  // per il bug che questo risolve (tendina coperta dalla card successiva).
+  onOpenChange: (isOpen: boolean) => void;
 }
 
 interface Row {
@@ -42,6 +47,7 @@ export function ExerciseCombobox({
   selected,
   groupedCatalog,
   onChange,
+  onOpenChange,
 }: ExerciseComboboxProps) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
@@ -51,6 +57,13 @@ export function ExerciseCombobox({
   // sulla chiusura lascia il tempo a selectItem di annullarla, invece di far
   // sparire la lista prima che il tap venga gestito.
   const closeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Un solo useEffect copre tutti i punti in cui isOpen cambia (open(),
+  // scheduleClose ritardato, selectItem immediato) invece di richiamare
+  // onOpenChange a mano in ognuno di essi.
+  useEffect(() => {
+    onOpenChange(isOpen);
+  }, [isOpen, onOpenChange]);
 
   const rows = buildRows(groupedCatalog, isOpen ? query : "");
 
