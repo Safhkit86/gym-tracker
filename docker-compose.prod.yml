@@ -200,8 +200,15 @@ services:
       HISTORY_SERVICE_URL: http://history-service:4005
       NOTIFY_SERVICE_URL: http://notify-service:4004
       WEB_APP_URL: ${WEB_APP_URL:-http://localhost:8080}
+      # Vedi commento nello stesso punto di docker-compose.yml.
+      HTTPS_PORT: 4443
+      HTTPS_CERT_PATH: /certs/localhost-cert.pem
+      HTTPS_KEY_PATH: /certs/localhost-key.pem
+    volumes:
+      - ./infra/certs:/certs:ro
     ports:
       - "${API_GATEWAY_PORT:-5000}:4000"
+      - "${API_GATEWAY_HTTPS_PORT:-5443}:4443"
     depends_on:
       - account-service
       - workout-service
@@ -220,9 +227,11 @@ services:
         # Indirizzo raggiungibile dal BROWSER (fuori da Docker), non
         # l'hostname interno "api-gateway": e' cotto nel bundle in build
         # time (env Vite), non letto a runtime dal container. Attenzione:
-        # se cambi API_GATEWAY_PORT in .env.production devi ricostruire
+        # se cambi API_GATEWAY_HTTPS_PORT in .env.production devi ricostruire
         # l'immagine web (questo valore e' fissato al build, non a runtime).
-        VITE_API_BASE_URL: http://localhost:${API_GATEWAY_PORT:-5000}
+        # HTTPS (non la porta HTTP usata dall'app mobile): vedi commento su
+        # HTTPS_PORT del servizio api-gateway sopra.
+        VITE_API_BASE_URL: https://localhost:${API_GATEWAY_HTTPS_PORT:-5443}
     restart: unless-stopped
     ports:
       - "${WEB_PORT:-8080}:80"
