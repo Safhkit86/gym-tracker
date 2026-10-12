@@ -13,6 +13,8 @@ export interface ProgressionDefaultsRepository {
   upsertMany(userId: string, overrides: ProgressionDefaultRecord[]): Promise<void>;
   /** No-op se non esiste una riga pendente per quell'esercizio. */
   consume(userId: string, exerciseId: string): Promise<void>;
+  /** Usato dal consumer di user-deleted-progress (cancellazione account, GDPR). */
+  deleteAllForUser(userId: string): Promise<void>;
 }
 
 /** Implementazione su Postgres via Kysely. */
@@ -60,6 +62,10 @@ export class KyselyProgressionDefaultsRepository implements ProgressionDefaultsR
       .where("exercise_id", "=", exerciseId)
       .execute();
   }
+
+  async deleteAllForUser(userId: string): Promise<void> {
+    await this.db.deleteFrom("progression_defaults").where("user_id", "=", userId).execute();
+  }
 }
 
 /** Implementazione in memoria: usata nei test per evitare un DB reale. */
@@ -84,5 +90,13 @@ export class InMemoryProgressionDefaultsRepository implements ProgressionDefault
 
   async consume(userId: string, exerciseId: string): Promise<void> {
     this.byOwnerAndExercise.delete(this.key(userId, exerciseId));
+  }
+
+  async deleteAllForUser(userId: string): Promise<void> {
+    for (const key of this.byOwnerAndExercise.keys()) {
+      if (key.startsWith(`${userId}:`)) {
+        this.byOwnerAndExercise.delete(key);
+      }
+    }
   }
 }

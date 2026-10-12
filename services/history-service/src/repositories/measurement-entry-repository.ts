@@ -25,6 +25,8 @@ export interface MeasurementEntryRepository {
     options: { page: number; pageSize: number; since?: string }
   ): Promise<Paginated<MeasurementEntry>>;
   delete(userId: string, id: string): Promise<boolean>;
+  /** Usato dal consumer di user-deleted-history (cancellazione account, GDPR). */
+  deleteAllForUser(userId: string): Promise<void>;
 }
 
 function toEntry(row: {
@@ -126,6 +128,10 @@ export class KyselyMeasurementEntryRepository implements MeasurementEntryReposit
       .execute();
     return (result[0]?.numDeletedRows ?? 0n) > 0n;
   }
+
+  async deleteAllForUser(userId: string): Promise<void> {
+    await this.db.deleteFrom("measurement_entries").where("user_id", "=", userId).execute();
+  }
 }
 
 /** Implementazione in memoria: usata nei test per evitare un DB reale. */
@@ -189,6 +195,14 @@ export class InMemoryMeasurementEntryRepository implements MeasurementEntryRepos
     }
     this.byId.delete(id);
     return true;
+  }
+
+  async deleteAllForUser(userId: string): Promise<void> {
+    for (const [id, entry] of this.byId) {
+      if (entry.userId === userId) {
+        this.byId.delete(id);
+      }
+    }
   }
 }
 

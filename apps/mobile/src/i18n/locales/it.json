@@ -276,7 +276,11 @@
       "otpSubmitting": "Conferma in corso…",
       "cancel": "Annulla",
       "logout": "Esci",
-      "logoutConfirmTitle": "Vuoi uscire dall'account?"
+      "logoutConfirmTitle": "Vuoi uscire dall'account?",
+      "deleteAccount": "Elimina il mio account",
+      "deleting": "Cancellazione…",
+      "deleteAccountConfirmTitle": "Sei sicuro di voler eliminare definitivamente il tuo account?",
+      "deleteAccountConfirmMessage": "Schede, sessioni, misure e notifiche verranno cancellate e non potranno essere recuperate."
     },
     "measurements": {
       "loadError": "Impossibile caricare le misure.",
@@ -310,6 +314,7 @@
   },
   "errors": {
     "INVALID_CREDENTIALS": "Email o password non validi.",
+    "ACCOUNT_LOCKED": "Account temporaneamente bloccato per troppi tentativi falliti. Riprova più tardi.",
     "EMAIL_ALREADY_IN_USE": "Esiste già un utente con questa email.",
     "VALIDATION_ERROR": "Dati non validi. Controlla i campi e riprova.",
     "UNKNOWN_ERROR": "Errore imprevisto. Riprova.",

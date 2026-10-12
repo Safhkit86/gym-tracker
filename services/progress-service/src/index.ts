@@ -4,6 +4,7 @@ import { loadConfig } from "./config.js";
 import { createDb } from "./db/client.js";
 import { AmqpProgressionEventPublisher } from "./events/publisher.js";
 import { startSessionEventsConsumer } from "./events/session-events-consumer.js";
+import { startUserDeletedConsumer } from "./events/user-deleted-consumer.js";
 import { KyselyProgressionEventRepository } from "./repositories/progression-event-repository.js";
 import { KyselyProgressionPreferencesRepository } from "./repositories/progression-preferences-repository.js";
 import { KyselyProgressionDefaultsRepository } from "./repositories/progression-defaults-repository.js";
@@ -32,6 +33,15 @@ const sessionEventsConsumer = await startSessionEventsConsumer({
   processedSessions,
   publisher,
 });
+const userDeletedConsumer = await startUserDeletedConsumer({
+  connectionUrl: config.RABBITMQ_URL,
+  logger,
+  progressionEvents,
+  progressionPreferences,
+  progressionDefaults,
+  exerciseHistoryCache,
+  processedSessions,
+});
 
 const app = createApp({
   progressionEvents,
@@ -54,6 +64,7 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
       void db.destroy();
       void publisher.close?.();
       void sessionEventsConsumer.close();
+      void userDeletedConsumer.close();
     });
   });
 }

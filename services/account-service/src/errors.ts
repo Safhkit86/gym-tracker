@@ -28,6 +28,24 @@ export class InvalidCredentialsError extends AppError {
   }
 }
 
+// 423 Locked (non 401/429): distinto sia da credenziali sbagliate che dal
+// rate limit per IP del gateway, cosi' il client puo' mostrare un messaggio
+// diverso ("riprova piu' tardi" vs "controlla email/password"). Rivela che
+// l'account esiste (solo un account esistente puo' bloccarsi) — tradeoff
+// accettato anche da provider come GitHub/Google, l'alternativa (un errore
+// sempre uguale) peggiora l'esperienza senza impedire nulla a un attaccante
+// che ha gia' ottenuto lo stesso risultato (sa di aver esaurito i tentativi).
+export class AccountLockedError extends AppError {
+  constructor(lockedUntil: Date) {
+    super(
+      423,
+      "ACCOUNT_LOCKED",
+      "Account temporaneamente bloccato per troppi tentativi falliti. Riprova più tardi.",
+      { lockedUntil: lockedUntil.toISOString() }
+    );
+  }
+}
+
 export class UnauthorizedError extends AppError {
   constructor(message = "Autenticazione richiesta.") {
     super(401, "UNAUTHORIZED", message);

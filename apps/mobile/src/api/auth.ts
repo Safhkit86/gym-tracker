@@ -59,3 +59,14 @@ export function confirmPasswordChange(
     token,
   });
 }
+
+/** Diritto all'oblio (GDPR): cancella l'account e, lato server, pubblica
+ *  (best-effort) la pulizia cross-servizio — vedi AccountDeletionService in
+ *  account-service. 204 No Content, apiRequest torna undefined. Nessun
+ *  export dati lato mobile per ora (solo web, vedi
+ *  apps/web/src/export/export-account-data.ts): salvare un file sul
+ *  dispositivo richiederebbe expo-file-system/expo-sharing, non ancora
+ *  una dipendenza di questo workspace. */
+export function deleteAccount(token: string): Promise<undefined> {
+  return apiRequest<undefined>("/me", { method: "DELETE", token });
+}

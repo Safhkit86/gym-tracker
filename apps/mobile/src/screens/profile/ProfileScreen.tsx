@@ -14,7 +14,7 @@ import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import type { AccountPreferences, ProgressionPreferences } from "@gym-tracker/shared";
 import { useAuth } from "../../auth/useAuth";
-import { confirmPasswordChange, requestPasswordChange } from "../../api/auth";
+import { confirmPasswordChange, deleteAccount, requestPasswordChange } from "../../api/auth";
 import {
   getAccountPreferences,
   getMeasurements,
@@ -67,6 +67,7 @@ export function ProfileScreen() {
   const [accountError, setAccountError] = useState<string | null>(null);
   const [accountMessage, setAccountMessage] = useState<string | null>(null);
   const [isSavingAccount, setIsSavingAccount] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const [heightCm, setHeightCm] = useState("");
   const [weightKg, setWeightKg] = useState("");
@@ -271,6 +272,41 @@ export function ProfileScreen() {
     ]);
   }
 
+  // Diritto all'oblio (GDPR): stesso pattern Alert.alert di requestLogout
+  // sopra. A differenza del web (vedi ProfilePage.tsx), nessun export dati
+  // qui — vedi commento su deleteAccount in api/auth.ts.
+  function requestDeleteAccount(): void {
+    Alert.alert(
+      t("profile.account.deleteAccountConfirmTitle"),
+      t("profile.account.deleteAccountConfirmMessage"),
+      [
+        { text: t("workouts.create.cancel"), style: "cancel" },
+        {
+          text: t("profile.account.deleteAccount"),
+          style: "destructive",
+          onPress: () => {
+            void handleDeleteAccount();
+          },
+        },
+      ]
+    );
+  }
+
+  async function handleDeleteAccount(): Promise<void> {
+    setAccountError(null);
+    if (!token) {
+      return;
+    }
+    setIsDeletingAccount(true);
+    try {
+      await deleteAccount(token);
+      logout();
+    } catch (err) {
+      setAccountError(translateError(err, t));
+      setIsDeletingAccount(false);
+    }
+  }
+
   return (
     <ScrollView style={[styles.container, safeAreaPadding]} contentContainerStyle={styles.content}>
       <View style={styles.tabRow}>
@@ -441,6 +477,20 @@ export function ProfileScreen() {
             accessibilityLabel={t("profile.account.logout")}
           >
             <Text style={styles.logoutButtonText}>{t("profile.account.logout")}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={requestDeleteAccount}
+            disabled={isDeletingAccount}
+            accessibilityRole="button"
+            accessibilityLabel={t("profile.account.deleteAccount")}
+          >
+            <Text style={styles.logoutButtonText}>
+              {isDeletingAccount
+                ? t("profile.account.deleting")
+                : t("profile.account.deleteAccount")}
+            </Text>
           </TouchableOpacity>
         </View>
       )}

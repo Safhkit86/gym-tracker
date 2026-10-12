@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { AccountPreferences, ProgressionPreferences } from "@gym-tracker/shared";
 import { useAuth } from "../auth/useAuth";
-import { confirmPasswordChange, requestPasswordChange } from "../api/auth";
+import { confirmPasswordChange, deleteAccount, requestPasswordChange } from "../api/auth";
 import {
   getAccountPreferences,
   getMeasurements,
@@ -11,6 +11,8 @@ import {
   updateProgressionPreferences,
 } from "../api/profile";
 import { ApiRequestError } from "../api/client";
+import { downloadFullAccountDataExport } from "../export/export-account-data";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 
 type ProfileSection = "account" | "measurements" | "preferences";
 
@@ -31,7 +33,7 @@ function today(): string {
 }
 
 export function ProfilePage() {
-  const { user, token } = useAuth();
+  const { user, token, logout } = useAuth();
   const [activeSection, setActiveSection] = useState<ProfileSection>("account");
 
   const [currentPassword, setCurrentPassword] = useState("");
@@ -42,6 +44,11 @@ export function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [heightCm, setHeightCm] = useState("");
   const [weightKg, setWeightKg] = useState("");
@@ -238,6 +245,41 @@ export function ProfilePage() {
     }
   }
 
+  async function handleExportData(): Promise<void> {
+    setExportError(null);
+    if (!token) {
+      return;
+    }
+    setIsExporting(true);
+    try {
+      await downloadFullAccountDataExport(token);
+    } catch (err) {
+      setExportError(
+        err instanceof ApiRequestError ? err.message : "Impossibile esportare i dati. Riprova."
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  async function handleDeleteAccount(): Promise<void> {
+    setConfirmingDelete(false);
+    setDeleteError(null);
+    if (!token) {
+      return;
+    }
+    setIsDeletingAccount(true);
+    try {
+      await deleteAccount(token);
+      logout();
+    } catch (err) {
+      setDeleteError(
+        err instanceof ApiRequestError ? err.message : "Impossibile cancellare l'account. Riprova."
+      );
+      setIsDeletingAccount(false);
+    }
+  }
+
   if (!user) {
     return (
       <main>
@@ -363,6 +405,48 @@ export function ProfilePage() {
 
             {message && !awaitingOtp && <p role="status">{message}</p>}
           </section>
+
+          <section className="card">
+            <h2>Dati e account</h2>
+            <p>
+              Scarica una copia dei tuoi dati, o cancella definitivamente il tuo account e tutti i
+              dati associati (schede, sessioni, misure, notifiche).
+            </p>
+            <div className="exercise-form__actions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={handleExportData}
+                disabled={isExporting}
+              >
+                {isExporting ? "Esportazione…" : "Esporta i miei dati"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmingDelete(true)}
+                disabled={isDeletingAccount}
+              >
+                {isDeletingAccount ? "Cancellazione…" : "Elimina il mio account"}
+              </button>
+            </div>
+            {exportError && (
+              <p role="alert" className="form-error">
+                {exportError}
+              </p>
+            )}
+            {deleteError && (
+              <p role="alert" className="form-error">
+                {deleteError}
+              </p>
+            )}
+          </section>
+
+          <ConfirmDialog
+            open={confirmingDelete}
+            message="Sei sicuro di voler eliminare definitivamente il tuo account? Schede, sessioni, misure e notifiche verranno cancellate e non potranno essere recuperate."
+            onConfirm={handleDeleteAccount}
+            onCancel={() => setConfirmingDelete(false)}
+          />
         </>
       )}
 

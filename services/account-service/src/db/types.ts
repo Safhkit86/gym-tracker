@@ -14,6 +14,8 @@ export interface UsersTable {
   // Scrivibile su update, ma con default a livello DB in insert.
   updated_at: ColumnType<Date, Date | undefined, Date>;
   password_changed_at: ColumnType<Date | null, Date | null | undefined, Date | null>;
+  failed_login_attempts: Generated<number>;
+  locked_until: ColumnType<Date | null, Date | null | undefined, Date | null>;
 }
 
 export type PasswordActionPurpose = "reset" | "change";

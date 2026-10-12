@@ -17,7 +17,12 @@ loadDotenv({ path: fileURLToPath(new URL("../../../.env", import.meta.url)) });
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4002),
   DATABASE_URL: z.string().url(),
-  JWT_SECRET: z.string().min(1, "JWT_SECRET non puo' essere vuoto"),
+  // min(32): vedi commento nello stesso punto di api-gateway/src/config.ts.
+  JWT_SECRET: z.string().min(32, "JWT_SECRET deve essere lungo almeno 32 caratteri"),
+  // Per consumare user-deleted-workout (cancellazione account, vedi
+  // AccountDeletionService in account-service): prima workout-service non
+  // aveva ancora nessun consumer RabbitMQ.
+  RABBITMQ_URL: z.string().url(),
 });
 
 export type Config = z.infer<typeof envSchema>;

@@ -26,6 +26,8 @@ export interface AppDeps {
   notifyServiceUrl: string;
   tokens: AccessTokenService;
   rateLimits?: RateLimitConfig;
+  /** Origine esatta della webapp, per l'allowlist CORS (vedi sotto). */
+  webAppUrl: string;
   logger: Logger;
 }
 
@@ -81,10 +83,14 @@ export function createApp(deps: AppDeps): Express {
   // La webapp (altra origine: Vite dev su :5173, o un dominio statico in
   // produzione) chiama il gateway via fetch da browser: senza CORS le
   // richieste vengono bloccate lato client prima ancora di arrivare qui.
-  // Nessun cookie in gioco (auth via Bearer token), quindi riflettere
-  // l'origin e' sicuro; un allowlist esplicito resta un possibile
-  // affinamento futuro, non necessario per l'hardening di questa fase.
-  app.use(cors());
+  // Allowlist sulla sola origine configurata (deps.webAppUrl), non piu'
+  // cors() a briglia sciolta: nessun cookie in gioco (auth via Bearer
+  // token), quindi riflettere qualunque origin non espone a CSRF, ma un
+  // sito arbitrario non ha comunque motivo di poter leggere le risposte
+  // del gateway via fetch da browser — difesa in profondita', non una
+  // falla attivamente sfruttabile con l'auth attuale. Il client mobile non
+  // e' toccato: le richieste native non passano dal CORS del browser.
+  app.use(cors({ origin: deps.webAppUrl }));
 
   // Endpoint di health check: verificato dalla pipeline CI e da Docker Compose.
   // Non proxato/non limitato/non autenticato: e' del gateway stesso, non di

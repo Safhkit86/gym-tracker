@@ -11,6 +11,7 @@ const app = createApp({
   progressServiceUrl: config.PROGRESS_SERVICE_URL,
   historyServiceUrl: config.HISTORY_SERVICE_URL,
   notifyServiceUrl: config.NOTIFY_SERVICE_URL,
+  webAppUrl: config.WEB_APP_URL,
   tokens: createAccessTokenService(config.JWT_SECRET),
   rateLimits: {
     windowMs: config.RATE_LIMIT_WINDOW_MS,

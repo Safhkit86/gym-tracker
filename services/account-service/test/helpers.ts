@@ -9,6 +9,7 @@ import { InMemoryUserMeasurementsRepository } from "../src/repositories/user-mea
 import { InMemoryAccountPreferencesRepository } from "../src/repositories/account-preferences-repository.js";
 import { InMemoryMeasurementCacheRepository } from "../src/repositories/measurement-cache-repository.js";
 import { InMemoryMeasurementEventPublisher } from "../src/events/measurement-events-publisher.js";
+import { InMemoryAccountDeletionEventPublisher } from "../src/events/account-deletion-publisher.js";
 
 /**
  * Hasher finto, deterministico e veloce: evita di pagare il costo (voluto) di
@@ -65,9 +66,11 @@ export function buildTestApp(): {
   deps: AppDeps;
   mailer: FakeMailer;
   measurementEventPublisher: InMemoryMeasurementEventPublisher;
+  accountDeletionEventPublisher: InMemoryAccountDeletionEventPublisher;
 } {
   const mailer = createFakeMailer();
   const measurementEventPublisher = new InMemoryMeasurementEventPublisher();
+  const accountDeletionEventPublisher = new InMemoryAccountDeletionEventPublisher();
   const deps: AppDeps = {
     users: new InMemoryUserRepository(),
     passwordActionTokens: new InMemoryPasswordActionTokenRepository(),
@@ -75,11 +78,12 @@ export function buildTestApp(): {
     measurementCache: new InMemoryMeasurementCacheRepository(),
     measurementEventPublisher,
     accountPreferences: new InMemoryAccountPreferencesRepository(),
+    accountDeletionEventPublisher,
     passwords: fakeHasher,
     tokens: createAccessTokenService(TEST_JWT_SECRET),
     mailer,
     webAppUrl: TEST_WEB_APP_URL,
     logger: createLogger("account-service", { level: "silent" }),
   };
-  return { app: createApp(deps), deps, mailer, measurementEventPublisher };
+  return { app: createApp(deps), deps, mailer, measurementEventPublisher, accountDeletionEventPublisher };
 }

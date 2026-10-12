@@ -5,6 +5,7 @@ import { createDb } from "./db/client.js";
 import { AmqpSessionEventPublisher } from "./events/publisher.js";
 import { AmqpMeasurementEventPublisher } from "./events/measurement-events-publisher.js";
 import { startMeasurementEventsConsumer } from "./events/measurement-events-consumer.js";
+import { startUserDeletedConsumer } from "./events/user-deleted-consumer.js";
 import { KyselySessionRepository } from "./repositories/session-repository.js";
 import { KyselyStatsRepository } from "./repositories/stats-repository.js";
 import { KyselyMeasurementEntryRepository } from "./repositories/measurement-entry-repository.js";
@@ -19,15 +20,22 @@ const measurementPublisher = await AmqpMeasurementEventPublisher.connect(
   logger
 );
 const measurementEntries = new KyselyMeasurementEntryRepository(db);
+const sessions = new KyselySessionRepository(db);
 const measurementEventsConsumer = await startMeasurementEventsConsumer({
   connectionUrl: config.RABBITMQ_URL,
   logger,
   measurementEntries,
   publisher: measurementPublisher,
 });
+const userDeletedConsumer = await startUserDeletedConsumer({
+  connectionUrl: config.RABBITMQ_URL,
+  logger,
+  sessions,
+  measurementEntries,
+});
 
 const app = createApp({
-  sessions: new KyselySessionRepository(db),
+  sessions,
   stats: new KyselyStatsRepository(db),
   measurementEntries,
   publisher,
@@ -47,6 +55,7 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
       void publisher.close?.();
       void measurementPublisher.close?.();
       void measurementEventsConsumer.close();
+      void userDeletedConsumer.close();
     });
   });
 }
