@@ -44,6 +44,15 @@ const envSchema = z.object({
   RATE_LIMIT_GLOBAL_MAX: z.coerce.number().int().positive().default(300),
   RATE_LIMIT_AUTH_MAX: z.coerce.number().int().positive().default(10),
   RATE_LIMIT_SENSITIVE_MAX: z.coerce.number().int().positive().default(20),
+  // Ascolto HTTPS aggiuntivo (non in sostituzione di PORT sopra, che resta
+  // HTTP invariato per l'app mobile — vedi commento in index.ts): il
+  // cookie httpOnly del login web richiede Secure, che richiede HTTPS.
+  // Tutti e tre opzionali e legati insieme: se anche uno manca, il
+  // servizio parte comunque ma senza il listener HTTPS (es. in CI/test,
+  // dove non esiste nessun certificato).
+  HTTPS_PORT: z.coerce.number().int().positive().optional(),
+  HTTPS_CERT_PATH: z.string().min(1).optional(),
+  HTTPS_KEY_PATH: z.string().min(1).optional(),
 });
 
 export type Config = z.infer<typeof envSchema>;

@@ -44,4 +44,13 @@ describe("CORS", () => {
       "https://sito-non-fidato.example"
     );
   });
+
+  it("manda Access-Control-Allow-Credentials: true (necessario per il cookie httpOnly della webapp)", async () => {
+    const ctx = await buildTestApp();
+    closeAll = ctx.closeAll;
+
+    const response = await request(ctx.app).get("/health").set("Origin", TEST_WEB_APP_URL);
+
+    expect(response.headers["access-control-allow-credentials"]).toBe("true");
+  });
 });
