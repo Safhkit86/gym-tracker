@@ -25,7 +25,11 @@ function buildDeps(): UserDeletedConsumerDeps & {
 describe("handleUserDeleted", () => {
   it("cancella tutte le schede e gli esercizi custom dell'utente", async () => {
     const deps = buildDeps();
-    const exercise = await deps.exercises.create({ userId: USER_A, name: "Squat mio", muscleGroup: null });
+    const exercise = await deps.exercises.create({
+      userId: USER_A,
+      name: "Squat mio",
+      muscleGroup: null,
+    });
     await deps.workouts.create(USER_A, {
       name: "Scheda A",
       notes: null,

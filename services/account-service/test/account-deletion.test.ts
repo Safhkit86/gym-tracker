@@ -43,9 +43,7 @@ describe("DELETE /me", () => {
     const { app } = buildTestApp();
     const { token } = await registerAndLogin(app);
 
-    const deleteResponse = await request(app)
-      .delete("/me")
-      .set("Authorization", `Bearer ${token}`);
+    const deleteResponse = await request(app).delete("/me").set("Authorization", `Bearer ${token}`);
     expect(deleteResponse.status).toBe(204);
 
     const afterDelete = await request(app).get("/me").set("Authorization", `Bearer ${token}`);

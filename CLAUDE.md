@@ -192,7 +192,7 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   resta coerente con lo stile esistente (1 coda = 1 consumatore) invece di
   introdurre un pattern nuovo. Un nuovo servizio con dati per-utente deve
   aggiungere la propria coda + consumer seguendo lo stesso schema. `GET
-  /me/export` (diritto alla portabilità) copre solo i dati di
+/me/export` (diritto alla portabilità) copre solo i dati di
   account-service: un export cross-servizio completo è aggregato lato
   client dalle rotte REST già esistenti (vedi
   `apps/web/src/export/export-account-data.ts`), non un nuovo endpoint

@@ -85,5 +85,11 @@ export function buildTestApp(): {
     webAppUrl: TEST_WEB_APP_URL,
     logger: createLogger("account-service", { level: "silent" }),
   };
-  return { app: createApp(deps), deps, mailer, measurementEventPublisher, accountDeletionEventPublisher };
+  return {
+    app: createApp(deps),
+    deps,
+    mailer,
+    measurementEventPublisher,
+    accountDeletionEventPublisher,
+  };
 }

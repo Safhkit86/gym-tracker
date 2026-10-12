@@ -32,10 +32,7 @@ function buildDeps(): UserDeletedConsumerDeps & {
   };
 }
 
-async function seedUser(
-  deps: ReturnType<typeof buildDeps>,
-  userId: string
-): Promise<void> {
+async function seedUser(deps: ReturnType<typeof buildDeps>, userId: string): Promise<void> {
   await deps.progressionEvents.create({
     userId,
     exerciseId: EXERCISE_ID,
