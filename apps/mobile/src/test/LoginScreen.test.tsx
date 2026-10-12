@@ -39,6 +39,36 @@ describe("LoginScreen", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Email o password non validi.");
   });
 
+  it("mostra il messaggio TRADOTTO (non quello del backend) quando l'account e' bloccato (423)", async () => {
+    // Messaggio del backend deliberatamente diverso dalla traduzione IT:
+    // se la lookup su errors.ACCOUNT_LOCKED (it.json) fallisse e
+    // translateError ricadesse sul fallback (err.message), questo test lo
+    // scoprirebbe mostrando questo testo invece di quello tradotto.
+    mockFetchResponses([
+      {
+        match: (u, m) => u.endsWith("/auth/login") && m === "POST",
+        status: 423,
+        body: {
+          code: "ACCOUNT_LOCKED",
+          message: "__fallback_non_tradotto__",
+          details: { lockedUntil: new Date(Date.now() + 15 * 60 * 1000).toISOString() },
+        },
+      },
+    ]);
+
+    const screen = await renderWithProviders(
+      <LoginScreen navigation={mockNavigation()} route={emptyRoute} />
+    );
+
+    fireEvent.changeText(screen.getByLabelText("Email"), "a@b.com");
+    fireEvent.changeText(screen.getByLabelText("Password"), "sbagliata1");
+    fireEvent.press(screen.getByRole("button", { name: "Accedi" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Account temporaneamente bloccato per troppi tentativi falliti. Riprova più tardi."
+    );
+  });
+
   it("naviga a Register quando si tocca 'Registrati'", async () => {
     const navigation = mockNavigation();
     const screen = await renderWithProviders(

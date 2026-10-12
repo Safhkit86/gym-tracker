@@ -398,4 +398,102 @@ describe("ProfilePage", () => {
       timerSoundEnabled: true,
     });
   });
+
+  it("esporta i dati: chiama tutte le rotte 'lista completa' e avvia il download", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      measurementsHandler(),
+      preferencesHandler(),
+      accountPreferencesHandler(),
+      {
+        match: (u, m) => u.endsWith("/me/export") && m === "GET",
+        body: {
+          profile: FAKE_USER,
+          measurements: EMPTY_MEASUREMENTS,
+          accountPreferences: DEFAULT_ACCOUNT_PREFERENCES,
+        },
+      },
+      { match: (u, m) => u.endsWith("/workouts") && m === "GET", body: [] },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      { match: (u, m) => u.endsWith("/measurements") && m === "GET", body: [] },
+      { match: (u, m) => u.endsWith("/notifications") && m === "GET", body: [] },
+      { match: (u, m) => u.endsWith("/progression") && m === "GET", body: [] },
+    ]);
+    // jsdom non implementa URL.createObjectURL, e tenta di "navigare"
+    // davvero su un <a>.click() con href blob: (rumore in console, non
+    // fallisce il test): questo test verifica le chiamate di rete fatte da
+    // triggerExportDownload, non il download in se' (mai testato nemmeno
+    // per downloadCsvFile, stesso meccanismo in utils/csv.ts).
+    vi.stubGlobal("URL", { ...URL, createObjectURL: () => "blob:fake", revokeObjectURL: () => {} });
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    renderWithProviders(<ProfilePage />, ["/profile"]);
+
+    await screen.findByText(/test@example.com/);
+    fireEvent.click(screen.getByRole("button", { name: /esporta i miei dati/i }));
+
+    // Aspetta che tutta la catena (tutte le fetch + triggerExportDownload)
+    // sia completata, non solo che la prima richiesta sia partita.
+    await waitFor(() => {
+      expect(clickSpy).toHaveBeenCalled();
+    });
+    expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith("/me/export"))).toBe(true);
+    expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith("/workouts"))).toBe(true);
+    expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith("/sessions"))).toBe(true);
+    expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith("/notifications"))).toBe(true);
+    expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith("/progression"))).toBe(true);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("elimina l'account dopo conferma, poi rimuove il token (logout)", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      measurementsHandler(),
+      preferencesHandler(),
+      accountPreferencesHandler(),
+      { match: (u, m) => u.endsWith("/me") && m === "DELETE", status: 204 },
+    ]);
+
+    renderWithProviders(<ProfilePage />, ["/profile"]);
+
+    await screen.findByText(/test@example.com/);
+    fireEvent.click(screen.getByRole("button", { name: /elimina il mio account/i }));
+
+    expect(
+      await screen.findByText(/sei sicuro di voler eliminare definitivamente il tuo account/i)
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Sì" }));
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.some(
+          ([u, init]) => String(u).endsWith("/me") && init?.method === "DELETE"
+        )
+      ).toBe(true);
+    });
+    expect(localStorage.getItem("gym-tracker.token")).toBeNull();
+  });
+
+  it("mostra un errore se la cancellazione dell'account fallisce, senza fare logout", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      measurementsHandler(),
+      preferencesHandler(),
+      accountPreferencesHandler(),
+      {
+        match: (u, m) => u.endsWith("/me") && m === "DELETE",
+        status: 500,
+        body: { code: "INTERNAL_ERROR", message: "Errore interno del server." },
+      },
+    ]);
+
+    renderWithProviders(<ProfilePage />, ["/profile"]);
+
+    await screen.findByText(/test@example.com/);
+    fireEvent.click(screen.getByRole("button", { name: /elimina il mio account/i }));
+    fireEvent.click(await screen.findByRole("button", { name: "Sì" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Errore interno del server.");
+    expect(localStorage.getItem("gym-tracker.token")).not.toBeNull();
+  });
 });

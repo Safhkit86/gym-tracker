@@ -16,6 +16,8 @@ export interface ProcessedSessionsRepository {
    *  l'ownership lato route (questo servizio non ha piu' la tabella delle
    *  sessioni per una join). */
   findStatus(sessionId: string): Promise<ProcessedSessionStatus | null>;
+  /** Usato dal consumer di user-deleted-progress (cancellazione account, GDPR). */
+  deleteAllForUser(userId: string): Promise<void>;
 }
 
 export class KyselyProcessedSessionsRepository implements ProcessedSessionsRepository {
@@ -37,6 +39,10 @@ export class KyselyProcessedSessionsRepository implements ProcessedSessionsRepos
       .executeTakeFirst();
     return row ? { userId: row.user_id, hadSuggestions: row.had_suggestions } : null;
   }
+
+  async deleteAllForUser(userId: string): Promise<void> {
+    await this.db.deleteFrom("processed_sessions").where("user_id", "=", userId).execute();
+  }
 }
 
 /** Implementazione in memoria: usata nei test per evitare un DB reale. */
@@ -49,5 +55,13 @@ export class InMemoryProcessedSessionsRepository implements ProcessedSessionsRep
 
   async findStatus(sessionId: string): Promise<ProcessedSessionStatus | null> {
     return this.byId.get(sessionId) ?? null;
+  }
+
+  async deleteAllForUser(userId: string): Promise<void> {
+    for (const [sessionId, status] of this.byId) {
+      if (status.userId === userId) {
+        this.byId.delete(sessionId);
+      }
+    }
   }
 }

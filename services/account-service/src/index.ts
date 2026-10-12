@@ -15,6 +15,7 @@ import { KyselyAccountPreferencesRepository } from "./repositories/account-prefe
 import { RedisMeasurementCacheRepository } from "./repositories/measurement-cache-repository.js";
 import { AmqpMeasurementEventPublisher } from "./events/measurement-events-publisher.js";
 import { startMeasurementEventsConsumer } from "./events/measurement-events-consumer.js";
+import { AmqpAccountDeletionEventPublisher } from "./events/account-deletion-publisher.js";
 
 const config = loadConfig();
 const logger = createLogger("account-service");
@@ -31,6 +32,10 @@ const measurementEventsConsumer = await startMeasurementEventsConsumer({
   logger,
   measurementCache,
 });
+const accountDeletionEventPublisher = await AmqpAccountDeletionEventPublisher.connect(
+  config.RABBITMQ_URL,
+  logger
+);
 
 const app = createApp({
   users: new KyselyUserRepository(db),
@@ -39,6 +44,7 @@ const app = createApp({
   measurementCache,
   measurementEventPublisher,
   accountPreferences: new KyselyAccountPreferencesRepository(db),
+  accountDeletionEventPublisher,
   passwords: argon2Hasher,
   tokens: createAccessTokenService(config.JWT_SECRET),
   mailer: createNodemailerMailer({
@@ -66,6 +72,7 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
       redis.disconnect();
       void measurementEventPublisher.close?.();
       void measurementEventsConsumer.close();
+      void accountDeletionEventPublisher.close?.();
     });
   });
 }

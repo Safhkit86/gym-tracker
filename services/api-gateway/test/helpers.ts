@@ -65,6 +65,8 @@ export async function startFakeUpstream(
   return state;
 }
 
+export const TEST_WEB_APP_URL = "http://localhost:5173";
+
 /** Costruisce l'app del gateway puntata su cinque fake upstream. */
 export async function buildTestApp(rateLimits?: RateLimitConfig): Promise<{
   app: ReturnType<typeof createApp>;
@@ -86,6 +88,7 @@ export async function buildTestApp(rateLimits?: RateLimitConfig): Promise<{
     progressServiceUrl: progress.url,
     historyServiceUrl: history.url,
     notifyServiceUrl: notify.url,
+    webAppUrl: TEST_WEB_APP_URL,
     tokens: createAccessTokenService(TEST_JWT_SECRET),
     rateLimits,
     logger: createLogger("api-gateway", { level: "silent" }),

@@ -84,10 +84,11 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   c'e' una sola copia di `vitest`, ma il workaround resta comunque corretto
   e non e' stato rimosso (nessun bisogno di toccare l'infrastruttura di test
   funzionante insieme a un fix di sicurezza).
-- `api-gateway` ha `cors()` globale perché la webapp (altra origine: Vite dev
-  o un dominio statico) lo chiama via fetch da browser: senza CORS le
-  richieste vengono bloccate lato client. Nessun altro servizio ne ha bisogno,
-  la webapp non li chiama mai direttamente.
+- `api-gateway` ha `cors()` perché la webapp (altra origine: Vite dev o un
+  dominio statico) lo chiama via fetch da browser: senza CORS le richieste
+  vengono bloccate lato client. Allowlist sulla sola origine configurata
+  (`webAppUrl`), non un `cors()` a briglia sciolta. Nessun altro servizio ne
+  ha bisogno, la webapp non li chiama mai direttamente.
 - Da `apps/web` (e allo stesso modo da `apps/mobile`), importa da
   `@gym-tracker/shared` **solo** con `import type` per i tipi: un `import`
   "value" (una funzione/costante usata a runtime, es.
@@ -164,6 +165,40 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   troppo stretto per queste tabelle) sopra la soglia. Quando aggiungi una
   nuova pagina con una tabella simile, riusa questo stesso hook/classe
   invece di reinventare la soglia o il meccanismo.
+
+## Autenticazione e sicurezza
+
+- `JWT_SECRET` nello schema zod di ogni servizio richiede `min(32)`, non
+  `min(1)`: un secret troppo corto è forzabile per brute-force (vedi
+  commento in `services/api-gateway/src/config.ts`). I fallback deboli nei
+  `docker-compose.*.yml` sono voluti in prod (`CAMBIAMI`, 8 caratteri): se
+  `.env.production` non imposta un secret vero, il servizio deve **non
+  partire**, non avviarsi silenziosamente con un segreto debole — in dev il
+  fallback è invece reso abbastanza lungo da non rompere `docker compose up`
+  "a vuoto".
+- Lockout per account dopo troppi login falliti consecutivi
+  (`MAX_FAILED_LOGIN_ATTEMPTS`/`LOCKOUT_DURATION_MS` in
+  `account-service/src/domain/auth-service.ts`, errore `ACCOUNT_LOCKED`,
+  423): è indipendente dal rate limit per IP del gateway, che da solo non
+  blocca un attacco a bassa frequenza distribuito su molti IP contro un
+  singolo account.
+- Diritto all'oblio (GDPR): `DELETE /me` cancella l'account in
+  account-service (scrittura primaria, deve riuscire) e pubblica
+  (best-effort) `UserDeletedEvent` per far pulire ai servizi a valle la
+  propria quota di dati per-utente — vedi commento su
+  `UserDeletedEvent`/`USER_DELETED_*_QUEUE` in `packages/shared/src/auth.ts`
+  per il perché sono 4 code distinte (una per servizio consumatore) invece
+  di un unico exchange fanout: questo progetto non ne ha mai usato uno,
+  resta coerente con lo stile esistente (1 coda = 1 consumatore) invece di
+  introdurre un pattern nuovo. Un nuovo servizio con dati per-utente deve
+  aggiungere la propria coda + consumer seguendo lo stesso schema. `GET
+/me/export` (diritto alla portabilità) copre solo i dati di
+  account-service: un export cross-servizio completo è aggregato lato
+  client dalle rotte REST già esistenti (vedi
+  `apps/web/src/export/export-account-data.ts`), non un nuovo endpoint
+  backend — account-service non chiama mai altri servizi via HTTP
+  direttamente (solo gateway-verso-servizio o eventi RabbitMQ, vedi "Cosa
+  NON fare").
 
 ## Commit e PR
 

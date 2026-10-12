@@ -103,3 +103,30 @@ export function createAccessTokenService(
     },
   };
 }
+
+// --- Eventi RabbitMQ (account-service -> workout/history/progress/notify-service) ---
+
+/**
+ * Pubblicato da account-service dopo che l'utente ha cancellato il proprio
+ * account (`DELETE /me`): i dati di account-service sono gia' stati
+ * rimossi nella stessa richiesta HTTP — questo evento serve solo a far
+ * rimuovere ai servizi a valle la propria quota di dati per-utente
+ * (diritto all'oblio, GDPR). Best-effort come SessionLoggedEvent/
+ * SessionDeletedEvent (vedi history.ts): un fallimento di publish non fa
+ * fallire la richiesta HTTP (il dato primario in account-service e' comunque
+ * rimosso), degrada solo la pulizia cross-service.
+ *
+ * Pubblicato su 4 code distinte (una per servizio consumatore) invece di
+ * una sola: questo progetto non usa exchange fanout in nessun altro punto
+ * (sempre 1 coda = 1 consumatore, vedi SESSION_LOGGED_QUEUE/
+ * MEASUREMENT_SAVE_REQUESTED_QUEUE), quindi 4 code dedicate restano
+ * coerenti con lo stile esistente invece di introdurre un pattern nuovo.
+ */
+export interface UserDeletedEvent {
+  userId: string;
+}
+
+export const USER_DELETED_WORKOUT_QUEUE = "user-deleted-workout";
+export const USER_DELETED_HISTORY_QUEUE = "user-deleted-history";
+export const USER_DELETED_PROGRESS_QUEUE = "user-deleted-progress";
+export const USER_DELETED_NOTIFY_QUEUE = "user-deleted-notify";
