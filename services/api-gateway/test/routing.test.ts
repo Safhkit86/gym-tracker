@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from "vitest";
 import request from "supertest";
+import { AUTH_COOKIE_NAME } from "@gym-tracker/shared";
 import { bearerFor, buildTestApp } from "./helpers.js";
 
 describe("routing verso gli upstream", () => {
@@ -349,5 +350,18 @@ describe("autenticazione centralizzata", () => {
     const response = await request(ctx.app).get("/health");
 
     expect(response.status).toBe(200);
+  });
+
+  it("accetta anche il token via cookie httpOnly (nessun header Authorization) — sessione webapp", async () => {
+    const ctx = await buildTestApp();
+    closeAll = ctx.closeAll;
+    const token = await bearerFor("u1");
+
+    const response = await request(ctx.app)
+      .get("/workouts")
+      .set("Cookie", `${AUTH_COOKIE_NAME}=${token}`);
+
+    expect(response.status).toBe(200);
+    expect(ctx.workout.lastRequest).not.toBeNull();
   });
 });

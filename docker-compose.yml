@@ -200,8 +200,18 @@ services:
       # tocca .env.production/.env.production.example, che restano sul
       # default di sicurezza.
       RATE_LIMIT_GLOBAL_MAX: ${RATE_LIMIT_GLOBAL_MAX:-5000}
+      # Ascolto HTTPS aggiuntivo (vedi index.ts): la webapp lo usa per il
+      # login, perche' il cookie httpOnly della sessione richiede Secure.
+      # L'app mobile continua a usare PORT sopra (HTTP, invariato) — vedi
+      # infra/certs/README.md per generare i certificati la prima volta.
+      HTTPS_PORT: ${API_GATEWAY_HTTPS_PORT:-4443}
+      HTTPS_CERT_PATH: /certs/localhost-cert.pem
+      HTTPS_KEY_PATH: /certs/localhost-key.pem
+    volumes:
+      - ./infra/certs:/certs:ro
     ports:
       - "${API_GATEWAY_PORT:-4000}:4000"
+      - "${API_GATEWAY_HTTPS_PORT:-4443}:4443"
     depends_on:
       - account-service
       - workout-service
@@ -229,8 +239,11 @@ services:
       # Indirizzo raggiungibile dal BROWSER (fuori da Docker), non
       # l'hostname interno "api-gateway": letta dal dev server di Vite ad
       # ogni richiesta (a differenza del build statico di prod, qui non e'
-      # "cotta" nel bundle una volta per tutte).
-      VITE_API_BASE_URL: http://localhost:${API_GATEWAY_PORT:-4000}
+      # "cotta" nel bundle una volta per tutte). HTTPS (non la porta HTTP
+      # usata dall'app mobile): il cookie httpOnly della sessione web
+      # richiede Secure — vedi HTTPS_PORT sul servizio api-gateway sopra e
+      # infra/certs/README.md.
+      VITE_API_BASE_URL: https://localhost:${API_GATEWAY_HTTPS_PORT:-4443}
     ports:
       - "${WEB_PORT:-5173}:5173"
     volumes:

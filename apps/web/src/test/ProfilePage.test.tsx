@@ -63,6 +63,7 @@ describe("ProfilePage", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it("mostra email e data di iscrizione", async () => {
@@ -445,13 +446,17 @@ describe("ProfilePage", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("elimina l'account dopo conferma, poi rimuove il token (logout)", async () => {
+  it("elimina l'account dopo conferma, poi fa logout (il token viene rimosso)", async () => {
     const fetchMock = mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
       measurementsHandler(),
       preferencesHandler(),
       accountPreferencesHandler(),
       { match: (u, m) => u.endsWith("/me") && m === "DELETE", status: 204 },
+      // AuthProvider.logout() chiama questa rotta per invalidare il cookie
+      // httpOnly lato server (non piu' leggibile/cancellabile da JS, vedi
+      // AuthProvider.tsx) — senza questo handler il mock lancerebbe.
+      { match: (u, m) => u.endsWith("/auth/logout") && m === "POST", status: 204 },
     ]);
 
     renderWithProviders(<ProfilePage />, ["/profile"]);
@@ -471,7 +476,16 @@ describe("ProfilePage", () => {
         )
       ).toBe(true);
     });
-    expect(localStorage.getItem("gym-tracker.token")).toBeNull();
+    // Il cookie httpOnly non e' leggibile da JS (niente piu' localStorage da
+    // controllare, vedi AuthProvider.tsx): il segnale osservabile e' che
+    // logout() ha chiamato POST /auth/logout per invalidarlo lato server.
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.some(
+          ([u, init]) => String(u).endsWith("/auth/logout") && init?.method === "POST"
+        )
+      ).toBe(true);
+    });
   });
 
   it("mostra un errore se la cancellazione dell'account fallisce, senza fare logout", async () => {

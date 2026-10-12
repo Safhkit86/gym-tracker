@@ -87,8 +87,10 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
 - `api-gateway` ha `cors()` perché la webapp (altra origine: Vite dev o un
   dominio statico) lo chiama via fetch da browser: senza CORS le richieste
   vengono bloccate lato client. Allowlist sulla sola origine configurata
-  (`webAppUrl`), non un `cors()` a briglia sciolta. Nessun altro servizio ne
-  ha bisogno, la webapp non li chiama mai direttamente.
+  (`webAppUrl`) + `credentials: true` (necessario per il cookie di sessione
+  web, vedi "Autenticazione e sicurezza"), non un `cors()` a briglia
+  sciolta. Nessun altro servizio ne ha bisogno, la webapp non li chiama mai
+  direttamente.
 - Da `apps/web` (e allo stesso modo da `apps/mobile`), importa da
   `@gym-tracker/shared` **solo** con `import type` per i tipi: un `import`
   "value" (una funzione/costante usata a runtime, es.
@@ -168,6 +170,42 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
 
 ## Autenticazione e sicurezza
 
+- Due meccanismi di sessione diversi per client diverso, entrambi emessi da
+  account-service sullo stesso JWT: l'app **mobile** usa Bearer (token nel
+  body JSON di login/register/refresh, salvato in `SecureStore`); la
+  **webapp** usa un cookie httpOnly (`AUTH_COOKIE_NAME` in
+  `packages/shared/src/auth.ts`, `HttpOnly; Secure; SameSite=None`), per
+  non tenere il JWT in un posto leggibile da JS (localStorage), vulnerabile
+  a un XSS. `extractAuthToken(req)` (stesso file) controlla prima
+  l'header `Authorization: Bearer`, poi il cookie: ogni nuovo
+  `authenticate`/`requireAuth` di servizio/gateway deve usare questa
+  funzione condivisa, non reimplementare l'estrazione a mano (prima di
+  questa convenzione ogni servizio duplicava la stessa funzione
+  `extractBearer`, individualmente). `setAuthCookie`/`clearAuthCookie`
+  (stesso file) vanno chiamati da account-service ad ogni emissione/
+  invalidazione di un token (login/register/refresh/logout) — un cookie
+  httpOnly non è leggibile né cancellabile da JS, quindi un "logout" che
+  si limita a svuotare lo stato React non basta, serve una rotta server
+  (`POST /auth/logout`) che lo invalidi davvero.
+- Perché il cookie funzioni cross-origin su HTTP semplice servirebbe
+  `SameSite=Lax`, ma webapp e gateway restano origini diverse anche in
+  locale (porte diverse): per questo `api-gateway` serve **anche** HTTPS
+  (oltre all'HTTP esistente, invariato, che l'app mobile continua a usare
+  — vedi `index.ts`, due listener sulla stessa istanza Express). Il
+  certificato è generato una volta per macchina di sviluppo con
+  [mkcert](https://github.com/FiloSottile/mkcert) (`infra/certs/README.md`
+  ha i comandi); i file `.pem` non sono versionati. `VITE_API_BASE_URL`
+  punta quindi alla porta HTTPS del gateway (`HTTPS_PORT`), mai alla porta
+  HTTP usata da mobile.
+- `cors()` sul gateway ha sempre `credentials: true` + un'origine esatta
+  (mai `*`, incompatibile con le credenziali): vedi il commento in
+  `services/api-gateway/src/app.ts` sul perché questo non introduce CSRF
+  nonostante il cookie `SameSite=None` (ogni rotta che muta stato richiede
+  `Content-Type: application/json`, fuori dalla safelist CORS delle
+  richieste "semplici" → sempre preflight → origine non autorizzata
+  bloccata prima ancora di partire). Se mai un servizio registrasse
+  `express.urlencoded()`/`multer`, quella protezione implicita non vale
+  più per quella rotta: va riconsiderato un vero CSRF token.
 - `JWT_SECRET` nello schema zod di ogni servizio richiede `min(32)`, non
   `min(1)`: un secret troppo corto è forzabile per brute-force (vedi
   commento in `services/api-gateway/src/config.ts`). I fallback deboli nei

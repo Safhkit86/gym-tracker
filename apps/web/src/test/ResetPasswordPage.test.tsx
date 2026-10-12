@@ -82,8 +82,14 @@ describe("ResetPasswordPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /reimposta password/i }));
 
     expect(await screen.findByText("Pagina di login")).toBeInTheDocument();
-    const [, init] = fetchMock.mock.calls[0];
-    const body = JSON.parse((init?.body as string) ?? "{}");
+    // Non calls[0]: AuthProvider chiama sempre /me al mount (vedi
+    // AuthProvider.tsx, verifica della sessione via cookie httpOnly), che
+    // con questo mock "risponde a tutto allo stesso modo" arriva prima
+    // della POST di reset che il test vuole verificare.
+    const resetCall = fetchMock.mock.calls.find(([url]) =>
+      String(url).endsWith("/auth/reset-password")
+    );
+    const body = JSON.parse((resetCall?.[1]?.body as string) ?? "{}");
     expect(body).toEqual({ token: "abc123", newPassword: "passwordnuova" });
   });
 });

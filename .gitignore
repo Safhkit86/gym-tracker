@@ -10,3 +10,4 @@ coverage/
 *.tsbuildinfo
 .vscode/*
 !.vscode/extensions.json
+infra/certs/*.pem

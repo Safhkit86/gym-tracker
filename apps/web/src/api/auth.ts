@@ -19,15 +19,29 @@ export function login(body: LoginRequest): Promise<AuthResponse> {
   return apiRequest<AuthResponse>("/auth/login", { method: "POST", body });
 }
 
-export function me(token: string): Promise<PublicUser> {
+// `token` opzionale su me/refreshToken: la vera autenticazione e' il cookie
+// httpOnly mandato automaticamente dal browser (vedi apiRequest), non
+// questo parametro — che qui serve solo a distinguere nella risposta un
+// 401 "sessione scaduta" da altri 401 (vedi commento su RequestOptions.token
+// in client.ts). AuthProvider lo chiama senza argomenti all'avvio (nessun
+// marcatore ancora disponibile, il cookie non e' leggibile da JS).
+export function me(token?: string | null): Promise<PublicUser> {
   return apiRequest<PublicUser>("/me", { token });
 }
 
 /** Rinnova il token corrente (stessa scadenza fissa "1h" del token
- *  originale, riemesso da capo): richiede un token ancora valido, va
- *  richiamato PRIMA che scada. Vedi useSlidingSession. */
-export function refreshToken(token: string): Promise<AuthResponse> {
+ *  originale, riemesso da capo): richiede una sessione valida (cookie),
+ *  va richiamato PRIMA che scada. Vedi useSlidingSession. */
+export function refreshToken(token?: string | null): Promise<AuthResponse> {
   return apiRequest<AuthResponse>("/me/token/refresh", { method: "POST", token });
+}
+
+/** Un cookie httpOnly non e' leggibile/cancellabile da JS: questa chiamata
+ *  e' l'unico modo di invalidarlo lato server, "svuotare lo stato React"
+ *  da solo non basterebbe (il cookie resterebbe valido fino alla scadenza
+ *  naturale di un'ora). Vedi AuthProvider.logout. */
+export function logout(): Promise<undefined> {
+  return apiRequest<undefined>("/auth/logout", { method: "POST" });
 }
 
 export function forgotPassword(body: ForgotPasswordRequest): Promise<MessageResponse> {

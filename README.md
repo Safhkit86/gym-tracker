@@ -81,6 +81,12 @@ I servizi caricano `.env` automaticamente (anche quando lanciati sull'host,
 fuori da Docker): il primo passo qui sotto non è solo un promemoria, è
 necessario perché `db:migrate`/`dev` trovino `DATABASE_URL` e `JWT_SECRET`.
 
+Il login della webapp usa un cookie httpOnly che richiede HTTPS
+(`api-gateway` ne serve una copia in più, oltre all'HTTP usato dall'app
+mobile): genera prima un certificato locale con
+[mkcert](https://github.com/FiloSottile/mkcert), vedi `infra/certs/README.md`
+per i comandi — un'unica volta per macchina di sviluppo.
+
 ```bash
 cp .env.example .env
 npm install

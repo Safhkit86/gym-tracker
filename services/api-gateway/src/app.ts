@@ -83,14 +83,30 @@ export function createApp(deps: AppDeps): Express {
   // La webapp (altra origine: Vite dev su :5173, o un dominio statico in
   // produzione) chiama il gateway via fetch da browser: senza CORS le
   // richieste vengono bloccate lato client prima ancora di arrivare qui.
-  // Allowlist sulla sola origine configurata (deps.webAppUrl), non piu'
-  // cors() a briglia sciolta: nessun cookie in gioco (auth via Bearer
-  // token), quindi riflettere qualunque origin non espone a CSRF, ma un
-  // sito arbitrario non ha comunque motivo di poter leggere le risposte
-  // del gateway via fetch da browser — difesa in profondita', non una
-  // falla attivamente sfruttabile con l'auth attuale. Il client mobile non
-  // e' toccato: le richieste native non passano dal CORS del browser.
-  app.use(cors({ origin: deps.webAppUrl }));
+  // Allowlist sulla sola origine configurata (deps.webAppUrl), non cors()
+  // a briglia sciolta. Il client mobile non e' toccato: le richieste
+  // native non passano dal CORS del browser.
+  //
+  // `credentials: true` (+ Access-Control-Allow-Credentials sulle risposte,
+  // gestito da questo stesso middleware): necessario da quando la webapp
+  // usa anche un cookie httpOnly per la sessione (vedi AUTH_COOKIE_NAME in
+  // packages/shared/src/auth.ts) — senza, il browser scarterebbe il
+  // cookie in arrivo E non manderebbe quello in uscita su `fetch` con
+  // `credentials: "include"`. Nota su CSRF: ora che un cookie viaggia
+  // cross-origin con SameSite=None, un sito terzo potrebbe in teoria
+  // provare a far scattare una richiesta usando il cookie della vittima.
+  // Due protezioni, nessuna delle due un vero e proprio CSRF token:
+  // (1) ogni endpoint che muta stato richiede Content-Type: application/json,
+  // che non e' nella safelist CORS delle richieste "semplici" — il browser
+  // fa sempre un preflight, e un'origine diversa da webAppUrl lo vede
+  // rifiutato, quindi fetch/XHR da un sito terzo non arriva mai a
+  // destinazione; (2) un form HTML "semplice" (niente preflight, ammesso
+  // cross-origin) non puo' mandare un body JSON: express.json() lo
+  // ignorerebbe, e la validazione zod a valle fallirebbe prima di
+  // qualunque effetto. Vale solo perche' nessuna rotta registra
+  // express.urlencoded()/multer — se mai ne servisse una, va riconsiderato
+  // un vero CSRF token.
+  app.use(cors({ origin: deps.webAppUrl, credentials: true }));
 
   // Endpoint di health check: verificato dalla pipeline CI e da Docker Compose.
   // Non proxato/non limitato/non autenticato: e' del gateway stesso, non di
