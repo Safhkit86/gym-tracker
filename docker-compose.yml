@@ -77,7 +77,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: ${ACCOUNT_SERVICE_PORT:-4001}
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-min-32-chars}
       DATABASE_URL: postgres://${POSTGRES_USER:-gymtracker}:${POSTGRES_PASSWORD:-gymtracker}@postgres:5432/${POSTGRES_DB:-gymtracker}
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
@@ -104,12 +104,18 @@ services:
     restart: unless-stopped
     environment:
       PORT: ${WORKOUT_SERVICE_PORT:-4002}
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-min-32-chars}
       DATABASE_URL: postgres://${POSTGRES_USER:-gymtracker}:${POSTGRES_PASSWORD:-gymtracker}@postgres:5432/${POSTGRES_DB:-gymtracker}
+      # Aggiunto per consumare user-deleted-workout (cancellazione account,
+      # vedi AccountDeletionService in account-service): prima non serviva,
+      # workout-service non aveva ancora nessun consumer RabbitMQ.
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-gymtracker}:${RABBITMQ_PASSWORD:-gymtracker}@rabbitmq:5672
     ports:
       - "${WORKOUT_SERVICE_PORT:-4002}:4002"
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
 
   progress-service:
@@ -119,7 +125,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: ${PROGRESS_SERVICE_PORT:-4003}
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-min-32-chars}
       DATABASE_URL: postgres://${POSTGRES_USER:-gymtracker}:${POSTGRES_PASSWORD:-gymtracker}@postgres:5432/${POSTGRES_DB:-gymtracker}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-gymtracker}:${RABBITMQ_PASSWORD:-gymtracker}@rabbitmq:5672
     ports:
@@ -137,7 +143,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: ${HISTORY_SERVICE_PORT:-4005}
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-min-32-chars}
       DATABASE_URL: postgres://${POSTGRES_USER:-gymtracker}:${POSTGRES_PASSWORD:-gymtracker}@postgres:5432/${POSTGRES_DB:-gymtracker}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-gymtracker}:${RABBITMQ_PASSWORD:-gymtracker}@rabbitmq:5672
     ports:
@@ -155,7 +161,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: ${NOTIFY_SERVICE_PORT:-4004}
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-min-32-chars}
       DATABASE_URL: postgres://${POSTGRES_USER:-gymtracker}:${POSTGRES_PASSWORD:-gymtracker}@postgres:5432/${POSTGRES_DB:-gymtracker}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-gymtracker}:${RABBITMQ_PASSWORD:-gymtracker}@rabbitmq:5672
       SMTP_HOST: mailpit
@@ -180,12 +186,13 @@ services:
     restart: unless-stopped
     environment:
       PORT: ${API_GATEWAY_PORT:-4000}
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-min-32-chars}
       ACCOUNT_SERVICE_URL: http://account-service:4001
       WORKOUT_SERVICE_URL: http://workout-service:4002
       PROGRESS_SERVICE_URL: http://progress-service:4003
       HISTORY_SERVICE_URL: http://history-service:4005
       NOTIFY_SERVICE_URL: http://notify-service:4004
+      WEB_APP_URL: ${WEB_APP_URL:-http://localhost:5173}
       # Limite globale molto piu' alto che in produzione (default 300/15min,
       # vedi rate-limit.ts): un giro di test manuale sull'emulatore Android,
       # specie con le schermate che rifanno il fetch al cambio tab, genera

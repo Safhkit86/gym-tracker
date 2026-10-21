@@ -5,13 +5,26 @@ import type {
   PublicUser,
   RegisterRequest,
 } from "@gym-tracker/shared";
-import { EmailAlreadyInUseError, InvalidCredentialsError } from "../errors.js";
+import { AccountLockedError, EmailAlreadyInUseError, InvalidCredentialsError } from "../errors.js";
 import type { UserRecord, UserRepository } from "../repositories/user-repository.js";
 import type { PasswordHasher } from "./password.js";
+
+// Lockout per account dopo troppi login falliti consecutivi: il rate limit
+// del gateway e' per IP (vedi services/api-gateway/src/rate-limit.ts), non
+// per account, quindi non basta contro un attacco a bassa frequenza
+// distribuito su molti IP. Soglia/durata in linea con le linee guida OWASP
+// (3-5 tentativi, 15-30 minuti) — non configurabili via env per ora, stesso
+// stile delle costanti di password-reset-service.ts.
+const MAX_FAILED_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 
 /** Normalizza l'email per confronto/unicita' (case-insensitive). */
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+function isLocked(user: UserRecord): boolean {
+  return user.lockedUntil !== null && user.lockedUntil.getTime() > Date.now();
 }
 
 function toPublicUser(user: UserRecord): PublicUser {
@@ -56,11 +69,34 @@ export class AuthService {
       throw new InvalidCredentialsError();
     }
 
+    if (isLocked(user)) {
+      // user.lockedUntil non puo' essere null qui: isLocked() lo richiede.
+      throw new AccountLockedError(user.lockedUntil as Date);
+    }
+
     const ok = await this.passwords.verify(user.passwordHash, password);
     if (!ok) {
+      // Un lockout scaduto (locked_until nel passato, non piu' "attivo" per
+      // isLocked() sopra) non deve far ripartire il contatore da dove era
+      // rimasto: altrimenti un solo tentativo sbagliato dopo la scadenza
+      // riblocherebbe subito l'account per un'altra finestra intera.
+      if (user.lockedUntil !== null) {
+        await this.users.resetFailedLoginAttempts(user.id);
+      }
+      const { lockedUntil } = await this.users.incrementFailedLoginAttempts(
+        user.id,
+        MAX_FAILED_LOGIN_ATTEMPTS,
+        new Date(Date.now() + LOCKOUT_DURATION_MS)
+      );
+      if (lockedUntil !== null) {
+        throw new AccountLockedError(lockedUntil);
+      }
       throw new InvalidCredentialsError();
     }
 
+    if (user.failedLoginAttempts > 0 || user.lockedUntil !== null) {
+      await this.users.resetFailedLoginAttempts(user.id);
+    }
     return this.buildResponse(user);
   }
 

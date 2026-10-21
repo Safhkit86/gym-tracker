@@ -99,6 +99,14 @@ export interface SessionRepository {
     exerciseId: string,
     limit: number
   ): Promise<ExerciseSessionSnapshot[]>;
+  /** Cancella tutte le sessioni dell'utente (cascade a session_sets via FK,
+   *  vedi db/types.ts). A differenza di `delete`, non pubblica
+   *  session-deleted per ogni sessione: progress-service riceve la sua
+   *  stessa pulizia direttamente da user-deleted-progress (vedi
+   *  AccountDeletionService in account-service), pubblicare N eventi
+   *  individuali per un utente con tante sessioni sarebbe ridondante. Usato
+   *  dal consumer di user-deleted-history (cancellazione account, GDPR). */
+  deleteAllForUser(userId: string): Promise<void>;
 }
 
 export class KyselySessionRepository implements SessionRepository {
@@ -459,6 +467,10 @@ export class KyselySessionRepository implements SessionRepository {
     // scope === "exercise" (vedi $if sopra), quindi innocuo qui.
     return this.findRecentSetsForExercise(userId, "", exerciseId, limit, "exercise");
   }
+
+  async deleteAllForUser(userId: string): Promise<void> {
+    await this.db.deleteFrom("workout_sessions").where("user_id", "=", userId).execute();
+  }
 }
 
 // --- Implementazione in memoria per i test ---
@@ -601,6 +613,14 @@ export class InMemorySessionRepository implements SessionRepository {
     limit: number
   ): Promise<ExerciseSessionSnapshot[]> {
     return this.findRecentSetsForExercise(userId, "", exerciseId, limit, "exercise");
+  }
+
+  async deleteAllForUser(userId: string): Promise<void> {
+    for (const [id, session] of this.byId) {
+      if (session.userId === userId) {
+        this.byId.delete(id);
+      }
+    }
   }
 }
 

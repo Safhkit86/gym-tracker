@@ -24,6 +24,13 @@ export interface ExerciseRepository {
   /** Sottoinsieme di `ids` accessibile all'utente (globali o propri). */
   findAccessibleByIds(userId: string, ids: string[]): Promise<ExerciseRecord[]>;
   create(exercise: NewExercise): Promise<ExerciseRecord>;
+  /** Cancella solo gli esercizi CUSTOM dell'utente (user_id = userId, mai i
+   *  globali con user_id null): va chiamato dopo aver cancellato le schede
+   *  dell'utente (ExerciseRepository.exercise_id ha ON DELETE RESTRICT verso
+   *  workout_exercises, vedi migrazione 001 — con le schede gia' sparite
+   *  non ci sono piu' righe a bloccare la cancellazione). Usato dal
+   *  consumer di user-deleted-workout (cancellazione account, GDPR). */
+  deleteAllCustomForUser(userId: string): Promise<void>;
 }
 
 interface ExerciseRow {
@@ -99,6 +106,10 @@ export class KyselyExerciseRepository implements ExerciseRepository {
       throw err;
     }
   }
+
+  async deleteAllCustomForUser(userId: string): Promise<void> {
+    await this.db.deleteFrom("exercises").where("user_id", "=", userId).execute();
+  }
 }
 
 /** Implementazione in memoria per i test. Include il catalogo globale seed. */
@@ -149,5 +160,13 @@ export class InMemoryExerciseRepository implements ExerciseRepository {
     };
     this.byId.set(record.id, record);
     return record;
+  }
+
+  async deleteAllCustomForUser(userId: string): Promise<void> {
+    for (const [id, exercise] of this.byId) {
+      if (exercise.userId === userId) {
+        this.byId.delete(id);
+      }
+    }
   }
 }

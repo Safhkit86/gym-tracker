@@ -67,6 +67,8 @@ export interface ExerciseHistoryCacheRepository {
    *  basso su un'ancora che serve solo a rilevare stallo/abbandono). */
   recordSessionDeleted(userId: string, exerciseId: string, sessionId: string): Promise<void>;
   getStalledExercise(userId: string, now?: Date): Promise<StalledExercise | null>;
+  /** Usato dal consumer di user-deleted-progress (cancellazione account, GDPR). */
+  deleteAllForUser(userId: string): Promise<void>;
 }
 
 /** Filtra/limita la finestra scorrevole per l'input del motore di regole:
@@ -187,6 +189,10 @@ export class KyselyExerciseHistoryCacheRepository implements ExerciseHistoryCach
       })),
       now
     );
+  }
+
+  async deleteAllForUser(userId: string): Promise<void> {
+    await this.db.deleteFrom("exercise_history_cache").where("user_id", "=", userId).execute();
   }
 }
 
@@ -309,5 +315,13 @@ export class InMemoryExerciseHistoryCacheRepository implements ExerciseHistoryCa
       })),
       now
     );
+  }
+
+  async deleteAllForUser(userId: string): Promise<void> {
+    for (const key of this.byKey.keys()) {
+      if (key.startsWith(`${userId}:`)) {
+        this.byKey.delete(key);
+      }
+    }
   }
 }

@@ -216,4 +216,53 @@ describe("ProfileScreen", () => {
       expect(await SecureStore.getItemAsync("gym-tracker.token")).toBeNull();
     });
   });
+
+  it("'Elimina il mio account' chiede conferma, chiama DELETE /me e poi fa logout", async () => {
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation((_title, _msg, buttons) => {
+      buttons?.find((b) => b.style === "destructive")?.onPress?.();
+    });
+    const fetchMock = mockFetchResponses([
+      ...baseHandlers(),
+      { match: (u: string, m: string) => u.endsWith("/me") && m === "DELETE", status: 204 },
+    ]);
+
+    const screen = await renderWithProviders(<ProfileScreen />);
+    await screen.findByDisplayValue("80");
+
+    fireEvent.press(screen.getByRole("button", { name: "Account" }));
+    fireEvent.press(screen.getByRole("button", { name: "Elimina il mio account" }));
+
+    expect(alertSpy).toHaveBeenCalled();
+    await waitFor(async () => {
+      expect(await SecureStore.getItemAsync("gym-tracker.token")).toBeNull();
+    });
+    expect(
+      fetchMock.mock.calls.some(
+        ([u, init]) => String(u).endsWith("/me") && init?.method === "DELETE"
+      )
+    ).toBe(true);
+  });
+
+  it("mostra un errore se la cancellazione dell'account fallisce, senza fare logout", async () => {
+    jest.spyOn(Alert, "alert").mockImplementation((_title, _msg, buttons) => {
+      buttons?.find((b) => b.style === "destructive")?.onPress?.();
+    });
+    mockFetchResponses([
+      ...baseHandlers(),
+      {
+        match: (u: string, m: string) => u.endsWith("/me") && m === "DELETE",
+        status: 500,
+        body: { code: "INTERNAL_ERROR", message: "Errore interno del server." },
+      },
+    ]);
+
+    const screen = await renderWithProviders(<ProfileScreen />);
+    await screen.findByDisplayValue("80");
+
+    fireEvent.press(screen.getByRole("button", { name: "Account" }));
+    fireEvent.press(screen.getByRole("button", { name: "Elimina il mio account" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Errore interno del server.");
+    expect(await SecureStore.getItemAsync("gym-tracker.token")).toBe("fake-token");
+  });
 });

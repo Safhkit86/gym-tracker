@@ -51,6 +51,10 @@ export interface WorkoutRepository {
   /** Riassegna position = index+1 secondo orderedIds. Lancia NotFoundError se
    *  orderedIds non corrisponde esattamente all'insieme delle schede di userId. */
   reorder(userId: string, orderedIds: string[]): Promise<void>;
+  /** Cancella tutte le schede dell'utente (cascade a workout_exercises/
+   *  workout_sets via FK, vedi migrazione 001). Usato dal consumer di
+   *  user-deleted-workout (cancellazione account, diritto all'oblio GDPR). */
+  deleteAllForUser(userId: string): Promise<void>;
 }
 
 export class KyselyWorkoutRepository implements WorkoutRepository {
@@ -234,6 +238,10 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
       }
     });
   }
+
+  async deleteAllForUser(userId: string): Promise<void> {
+    await this.db.deleteFrom("workouts").where("user_id", "=", userId).execute();
+  }
 }
 
 /** Lancia NotFoundError se orderedIds non e' esattamente l'insieme di ownedIds
@@ -382,6 +390,14 @@ export class InMemoryWorkoutRepository implements WorkoutRepository {
         this.byId.set(id, { ...stored, position: index + 1 });
       }
     });
+  }
+
+  async deleteAllForUser(userId: string): Promise<void> {
+    for (const [id, workout] of this.byId) {
+      if (workout.userId === userId) {
+        this.byId.delete(id);
+      }
+    }
   }
 }
 

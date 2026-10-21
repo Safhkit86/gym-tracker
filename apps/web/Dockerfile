@@ -53,7 +53,19 @@ RUN npm run build --workspace=@gym-tracker/web
 
 # --- Stage 3: immagine finale, nginx che serve solo i file statici ---
 FROM nginx:alpine AS runtime
+# Stesso ARG dello stage "build" sopra, re-dichiarato: gli ARG non
+# attraversano automaticamente un nuovo FROM, va ripetuto in ogni stage che
+# lo usa. Serve qui per completare la Content-Security-Policy in
+# nginx.conf (connect-src deve permettere l'origine di api-gateway, non
+# solo 'self': la webapp la chiama cross-origin via fetch, vedi cors() nel
+# gateway) — stesso valore gia' "cotto" nel bundle JS nello stage "build".
+ARG VITE_API_BASE_URL
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+# Placeholder letterale lasciato apposta (niente default silenzioso): se
+# VITE_API_BASE_URL non arrivasse per qualche motivo, la CSP risultante
+# bloccherebbe ogni fetch verso il gateway in modo rumoroso (console del
+# browser), non lascerebbe passare tutto permissivamente.
+RUN sed -i "s|__API_ORIGIN__|${VITE_API_BASE_URL}|g" /etc/nginx/conf.d/default.conf
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 
 EXPOSE 80

@@ -9,6 +9,7 @@ import {
 import { AuthService } from "./domain/auth-service.js";
 import { PasswordResetService } from "./domain/password-reset-service.js";
 import { PasswordChangeService } from "./domain/password-change-service.js";
+import { AccountDeletionService } from "./domain/account-deletion-service.js";
 import type { PasswordHasher } from "./domain/password.js";
 import type { UserRepository } from "./repositories/user-repository.js";
 import type { PasswordActionTokenRepository } from "./repositories/password-action-token-repository.js";
@@ -16,6 +17,7 @@ import type { UserMeasurementsRepository } from "./repositories/user-measurement
 import type { AccountPreferencesRepository } from "./repositories/account-preferences-repository.js";
 import type { MeasurementCacheRepository } from "./repositories/measurement-cache-repository.js";
 import type { MeasurementEventPublisher } from "./events/measurement-events-publisher.js";
+import type { AccountDeletionEventPublisher } from "./events/account-deletion-publisher.js";
 import { createAuthRoutes } from "./routes/auth-routes.js";
 import { createMeRoutes } from "./routes/me-routes.js";
 import { createMeasurementsRoutes } from "./routes/measurements-routes.js";
@@ -37,6 +39,7 @@ export interface AppDeps {
   measurementCache: MeasurementCacheRepository;
   measurementEventPublisher: MeasurementEventPublisher;
   accountPreferences: AccountPreferencesRepository;
+  accountDeletionEventPublisher: AccountDeletionEventPublisher;
   passwords: PasswordHasher;
   tokens: AccessTokenService;
   mailer: Mailer;
@@ -63,6 +66,13 @@ export function createApp(deps: AppDeps): Express {
     deps.passwords,
     deps.mailer
   );
+  const accountDeletionService = new AccountDeletionService(
+    deps.users,
+    deps.measurements,
+    deps.accountPreferences,
+    deps.accountDeletionEventPublisher,
+    deps.logger
+  );
 
   // Endpoint di health check: verificato dalla pipeline CI e da Docker Compose.
   app.get("/health", (_req, res) => {
@@ -70,7 +80,7 @@ export function createApp(deps: AppDeps): Express {
   });
 
   app.use("/auth", createAuthRoutes(authService, passwordResetService));
-  app.use(createMeRoutes(deps.users, deps.tokens, passwordChangeService));
+  app.use(createMeRoutes(deps.users, deps.tokens, passwordChangeService, accountDeletionService));
   app.use(
     createMeasurementsRoutes(
       deps.measurements,

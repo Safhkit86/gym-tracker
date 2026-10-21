@@ -17,7 +17,8 @@ loadDotenv({ path: fileURLToPath(new URL("../../../.env", import.meta.url)) });
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4005),
   DATABASE_URL: z.string().url(),
-  JWT_SECRET: z.string().min(1, "JWT_SECRET non puo' essere vuoto"),
+  // min(32): vedi commento nello stesso punto di api-gateway/src/config.ts.
+  JWT_SECRET: z.string().min(32, "JWT_SECRET deve essere lungo almeno 32 caratteri"),
   RABBITMQ_URL: z.string().url(),
 });
 

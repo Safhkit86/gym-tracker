@@ -4,6 +4,7 @@ import type { AccessTokenService, AuthResponse, PublicUser } from "@gym-tracker/
 import { UnauthorizedError } from "../errors.js";
 import type { UserRepository } from "../repositories/user-repository.js";
 import type { PasswordChangeService } from "../domain/password-change-service.js";
+import type { AccountDeletionService } from "../domain/account-deletion-service.js";
 import { authenticate } from "../middleware/authenticate.js";
 
 const changeRequestSchema = z.object({
@@ -19,7 +20,8 @@ const changeConfirmSchema = z.object({
 export function createMeRoutes(
   users: UserRepository,
   tokens: AccessTokenService,
-  passwordChangeService: PasswordChangeService
+  passwordChangeService: PasswordChangeService,
+  accountDeletionService: AccountDeletionService
 ): Router {
   const router = Router();
 
@@ -105,6 +107,37 @@ export function createMeRoutes(
       const body = changeConfirmSchema.parse(req.body);
       const result = await passwordChangeService.confirmChange(claims.sub, body.otp);
       res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Diritto alla portabilita' dei dati (GDPR): solo i dati di account-service,
+  // vedi commento su AccountDataExport in account-deletion-service.ts per il
+  // perche' un export cross-servizio completo non passa di qui.
+  router.get("/me/export", authenticate(tokens), async (req, res, next) => {
+    try {
+      const claims = req.userClaims;
+      if (!claims) {
+        throw new UnauthorizedError();
+      }
+      const result = await accountDeletionService.exportAccountData(claims.sub);
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Diritto all'oblio (GDPR): cancella l'account e pubblica (best-effort)
+  // la pulizia cross-servizio, vedi AccountDeletionService.
+  router.delete("/me", authenticate(tokens), async (req, res, next) => {
+    try {
+      const claims = req.userClaims;
+      if (!claims) {
+        throw new UnauthorizedError();
+      }
+      await accountDeletionService.deleteAccount(claims.sub);
+      res.status(204).send();
     } catch (err) {
       next(err);
     }

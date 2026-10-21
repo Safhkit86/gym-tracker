@@ -18,6 +18,8 @@ export interface ProgressionPreferencesRepository {
     userId: string,
     values: ProgressionPreferencesRecord
   ): Promise<ProgressionPreferencesRecord>;
+  /** Usato dal consumer di user-deleted-progress (cancellazione account, GDPR). */
+  delete(userId: string): Promise<void>;
 }
 
 /** Implementazione su Postgres via Kysely. */
@@ -64,6 +66,10 @@ export class KyselyProgressionPreferencesRepository implements ProgressionPrefer
       groupingScope: row.grouping_scope,
     };
   }
+
+  async delete(userId: string): Promise<void> {
+    await this.db.deleteFrom("progression_preferences").where("user_id", "=", userId).execute();
+  }
 }
 
 /** Implementazione in memoria: usata nei test per evitare un DB reale. */
@@ -80,5 +86,9 @@ export class InMemoryProgressionPreferencesRepository implements ProgressionPref
   ): Promise<ProgressionPreferencesRecord> {
     this.byUserId.set(userId, values);
     return values;
+  }
+
+  async delete(userId: string): Promise<void> {
+    this.byUserId.delete(userId);
   }
 }

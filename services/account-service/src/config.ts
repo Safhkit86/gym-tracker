@@ -17,7 +17,13 @@ loadDotenv({ path: fileURLToPath(new URL("../../../.env", import.meta.url)) });
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4001),
   DATABASE_URL: z.string().url(),
-  JWT_SECRET: z.string().min(1, "JWT_SECRET non puo' essere vuoto"),
+  // min(32): un secret troppo corto e' forzabile per brute-force in tempi
+  // ragionevoli (un HS256 da pochi caratteri ha molta meno entropia del
+  // keyspace che l'algoritmo assume). Protegge solo contro un deploy
+  // configurato male con un segreto debole o il placeholder di .env.example
+  // lasciato com'e' — non sostituisce la scelta di un secret davvero
+  // casuale (vedi commento in .env.production.example).
+  JWT_SECRET: z.string().min(32, "JWT_SECRET deve essere lungo almeno 32 caratteri"),
   SMTP_HOST: z.string().min(1).default("localhost"),
   SMTP_PORT: z.coerce.number().int().positive().default(1025),
   SMTP_FROM: z.string().min(1).default("no-reply@gym-tracker.local"),

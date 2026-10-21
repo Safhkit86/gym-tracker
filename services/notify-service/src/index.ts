@@ -10,6 +10,7 @@ import { loadConfig } from "./config.js";
 import { createDb } from "./db/client.js";
 import { NotificationService } from "./domain/notification-service.js";
 import { parseProgressionEventMessage } from "./events/consumer.js";
+import { startUserDeletedConsumer } from "./events/user-deleted-consumer.js";
 import { KyselyNotificationRepository } from "./repositories/notification-repository.js";
 
 const config = loadConfig();
@@ -50,6 +51,13 @@ const consumer = await startReliableConsumer({
     });
   },
 });
+const userDeletedConsumer = await startUserDeletedConsumer({
+  connectionUrl: config.RABBITMQ_URL,
+  logger,
+  notifications,
+  mailer,
+  opsAlertEmail: config.OPS_ALERT_EMAIL,
+});
 
 const app = createApp({
   notifications,
@@ -67,6 +75,7 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
     server.close(() => {
       void db.destroy();
       void consumer.close();
+      void userDeletedConsumer.close();
     });
   });
 }
