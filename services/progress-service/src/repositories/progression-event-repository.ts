@@ -25,6 +25,8 @@ export interface ProgressionEventRepository {
    *  servizio (vedi migrazione 013), invocato dal consumer su
    *  `session-deleted`. */
   deleteByTriggeringSession(sessionId: string): Promise<void>;
+  /** Usato dal consumer di user-deleted-progress (cancellazione account, GDPR). */
+  deleteAllForUser(userId: string): Promise<void>;
 }
 
 export class KyselyProgressionEventRepository implements ProgressionEventRepository {
@@ -73,6 +75,10 @@ export class KyselyProgressionEventRepository implements ProgressionEventReposit
       .deleteFrom("progression_events")
       .where("triggering_session_id", "=", sessionId)
       .execute();
+  }
+
+  async deleteAllForUser(userId: string): Promise<void> {
+    await this.db.deleteFrom("progression_events").where("user_id", "=", userId).execute();
   }
 }
 
@@ -142,5 +148,9 @@ export class InMemoryProgressionEventRepository implements ProgressionEventRepos
         events.filter((e) => e.triggeringSessionId !== sessionId)
       );
     }
+  }
+
+  async deleteAllForUser(userId: string): Promise<void> {
+    this.byOwner.delete(userId);
   }
 }

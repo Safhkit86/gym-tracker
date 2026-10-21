@@ -276,7 +276,11 @@
       "otpSubmitting": "Confirming…",
       "cancel": "Cancel",
       "logout": "Log out",
-      "logoutConfirmTitle": "Do you want to log out?"
+      "logoutConfirmTitle": "Do you want to log out?",
+      "deleteAccount": "Delete my account",
+      "deleting": "Deleting…",
+      "deleteAccountConfirmTitle": "Are you sure you want to permanently delete your account?",
+      "deleteAccountConfirmMessage": "Workouts, sessions, measurements and notifications will be deleted and cannot be recovered."
     },
     "measurements": {
       "loadError": "Unable to load your measurements.",
@@ -310,6 +314,7 @@
   },
   "errors": {
     "INVALID_CREDENTIALS": "Invalid email or password.",
+    "ACCOUNT_LOCKED": "Account temporarily locked after too many failed attempts. Please try again later.",
     "EMAIL_ALREADY_IN_USE": "A user with this email already exists.",
     "VALIDATION_ERROR": "Invalid data. Please check the fields and try again.",
     "UNKNOWN_ERROR": "Unexpected error. Please try again.",

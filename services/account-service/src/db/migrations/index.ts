@@ -4,6 +4,7 @@ import * as addPasswordActionTokens from "./002-add-password-action-tokens.js";
 import * as addUserMeasurements from "./003-add-user-measurements.js";
 import * as addAccountPreferences from "./004-add-account-preferences.js";
 import * as measurementHistory from "./005-measurement-history.js";
+import * as addLoginLockout from "./006-add-login-lockout.js";
 
 /**
  * Registro statico delle migrazioni. Preferito a FileMigrationProvider perche'
@@ -23,4 +24,5 @@ export const migrations: Record<string, Migration> = {
   "003-add-user-measurements": addUserMeasurements,
   "004-add-account-preferences": addAccountPreferences,
   "005-measurement-history": measurementHistory,
+  "006-add-login-lockout": addLoginLockout,
 };

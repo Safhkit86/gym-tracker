@@ -59,3 +59,30 @@ export function confirmPasswordChange(
     token,
   });
 }
+
+/** Diritto alla portabilita' dei dati (GDPR): solo i dati di account-service
+ *  (profilo, misure, preferenze) — il resto (schede, sessioni, notifiche,
+ *  suggerimenti di progressione) e' aggregato lato client dalle rotte
+ *  esistenti, vedi ../export/export-account-data.ts. Nessun tipo condiviso
+ *  dedicato in @gym-tracker/shared: e' solo questa pagina a consumarlo,
+ *  stesso trattamento di altri DTO specifici di una sola rotta. */
+export interface AccountDataExport {
+  profile: { id: string; email: string; createdAt: string };
+  measurements: { heightCm: number | null };
+  accountPreferences: {
+    prefillScope: string;
+    timerSoundEnabled: boolean;
+    historicizeMeasurements: boolean;
+  };
+}
+
+export function exportAccountData(token: string): Promise<AccountDataExport> {
+  return apiRequest<AccountDataExport>("/me/export", { token });
+}
+
+/** Diritto all'oblio (GDPR): cancella l'account e, lato server, pubblica
+ *  (best-effort) la pulizia cross-servizio — vedi AccountDeletionService in
+ *  account-service. 204 No Content, apiRequest torna undefined. */
+export function deleteAccount(token: string): Promise<undefined> {
+  return apiRequest<undefined>("/me", { method: "DELETE", token });
+}

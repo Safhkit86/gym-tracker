@@ -1,11 +1,33 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { resetPassword } from "../api/auth";
 import { ApiRequestError } from "../api/client";
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get("token") ?? "";
+  // Letto una volta sola in un ref, non da searchParams a ogni render: lo
+  // rimuoviamo dall'URL subito sotto, quindi su un secondo render
+  // searchParams.get("token") tornerebbe già vuoto.
+  const tokenRef = useRef(searchParams.get("token") ?? "");
+  const token = tokenRef.current;
+
+  // Il token di reset viaggia nella query string del link mandato per
+  // email (?token=...): finché resta nella barra degli indirizzi/nella
+  // cronologia del browser, uno screenshot, un "copia link" o chiunque
+  // riusi quel device prima della scadenza (30 min, vedi
+  // password-reset-service.ts) lo espone di nuovo, anche se è già a uso
+  // singolo e hashato a riposo lato server. replaceState lo toglie
+  // dall'URL visibile non appena letto, senza un redirect/reload che
+  // perderebbe il valore già salvato in tokenRef sopra.
+  useEffect(() => {
+    if (searchParams.get("token")) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+    // Va eseguito una sola volta al mount, non ogni volta che cambia
+    // searchParams (sempre la stessa istanza in pratica su questa pagina).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const navigate = useNavigate();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

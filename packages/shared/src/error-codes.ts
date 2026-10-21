@@ -31,6 +31,8 @@ export const ERROR_CODES = {
   // --- account-service ---
   EMAIL_ALREADY_IN_USE: "Registrazione con un'email gia' in uso.",
   INVALID_CREDENTIALS: "Login con email/password errati.",
+  ACCOUNT_LOCKED:
+    "Login bloccato temporaneamente dopo troppi tentativi falliti consecutivi (indipendente dal rate limit per IP del gateway).",
   INVALID_CURRENT_PASSWORD: "Cambio password: la password attuale fornita e' sbagliata.",
   INVALID_OTP: "Cambio password: codice OTP errato o scaduto.",
   INVALID_RESET_TOKEN:

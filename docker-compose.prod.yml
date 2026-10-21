@@ -79,6 +79,10 @@ services:
     restart: unless-stopped
     environment:
       PORT: 4001
+      # CAMBIAMI (8 caratteri) e' sotto il min(32) richiesto da config.ts in
+      # ogni servizio: se .env.production non imposta un JWT_SECRET vero, il
+      # servizio si rifiuta di partire invece di avviarsi silenziosamente con
+      # un segreto debole/predicibile — comportamento voluto, non un bug.
       JWT_SECRET: ${JWT_SECRET:-CAMBIAMI}
       DATABASE_URL: postgres://${POSTGRES_USER:-gymtracker}:${POSTGRES_PASSWORD:-CAMBIAMI}@postgres:5432/${POSTGRES_DB:-gymtracker}
       # Nessun mailpit in produzione: finche' non e' configurato un relay
@@ -111,10 +115,14 @@ services:
       PORT: 4002
       JWT_SECRET: ${JWT_SECRET:-CAMBIAMI}
       DATABASE_URL: postgres://${POSTGRES_USER:-gymtracker}:${POSTGRES_PASSWORD:-CAMBIAMI}@postgres:5432/${POSTGRES_DB:-gymtracker}
+      # Vedi commento nello stesso punto di docker-compose.yml.
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-gymtracker}:${RABBITMQ_PASSWORD:-CAMBIAMI}@rabbitmq:5672
     ports:
       - "${WORKOUT_SERVICE_PORT:-5002}:4002"
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
 
   progress-service:
@@ -191,6 +199,7 @@ services:
       PROGRESS_SERVICE_URL: http://progress-service:4003
       HISTORY_SERVICE_URL: http://history-service:4005
       NOTIFY_SERVICE_URL: http://notify-service:4004
+      WEB_APP_URL: ${WEB_APP_URL:-http://localhost:8080}
     ports:
       - "${API_GATEWAY_PORT:-5000}:4000"
     depends_on:

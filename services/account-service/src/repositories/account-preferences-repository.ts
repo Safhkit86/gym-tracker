@@ -17,6 +17,11 @@ export interface AccountPreferencesRepository {
   /** I default se l'utente non ha ancora salvato nulla (nessun backfill richiesto). */
   find(userId: string): Promise<AccountPreferencesRecord>;
   upsert(userId: string, values: AccountPreferencesRecord): Promise<AccountPreferencesRecord>;
+  /** Usato da AccountDeletionService: esplicito invece di fare affidamento
+   *  solo sulla FK ON DELETE CASCADE di account_preferences.user_id (vedi
+   *  migrazione 004), vedi stesso commento in
+   *  user-measurements-repository.ts. */
+  delete(userId: string): Promise<void>;
 }
 
 /** Implementazione su Postgres via Kysely. */
@@ -67,6 +72,10 @@ export class KyselyAccountPreferencesRepository implements AccountPreferencesRep
       historicizeMeasurements: row.historicize_measurements,
     };
   }
+
+  async delete(userId: string): Promise<void> {
+    await this.db.deleteFrom("account_preferences").where("user_id", "=", userId).execute();
+  }
 }
 
 /** Implementazione in memoria: usata nei test per evitare un DB reale. */
@@ -83,5 +92,9 @@ export class InMemoryAccountPreferencesRepository implements AccountPreferencesR
   ): Promise<AccountPreferencesRecord> {
     this.byUserId.set(userId, values);
     return values;
+  }
+
+  async delete(userId: string): Promise<void> {
+    this.byUserId.delete(userId);
   }
 }

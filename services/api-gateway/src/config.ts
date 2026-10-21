@@ -19,7 +19,18 @@ const envSchema = z.object({
   PROGRESS_SERVICE_URL: z.string().url(),
   HISTORY_SERVICE_URL: z.string().url(),
   NOTIFY_SERVICE_URL: z.string().url(),
-  JWT_SECRET: z.string().min(1, "JWT_SECRET non puo' essere vuoto"),
+  // Origine esatta della webapp, per restringere CORS (vedi app.ts): prima
+  // d'ora cors() era chiamato senza opzioni (riflette qualunque Origin).
+  // Non serve alla webapp mobile (le richieste native non passano dal CORS
+  // del browser), solo al client browser.
+  WEB_APP_URL: z.string().url().default("http://localhost:5173"),
+  // min(32): un secret troppo corto e' forzabile per brute-force in tempi
+  // ragionevoli (un HS256 da pochi caratteri ha molta meno entropia del
+  // keyspace che l'algoritmo assume). Protegge solo contro un deploy
+  // configurato male con un segreto debole o il placeholder di .env.example
+  // lasciato com'e' — non sostituisce la scelta di un secret davvero
+  // casuale (vedi commento in .env.production.example).
+  JWT_SECRET: z.string().min(32, "JWT_SECRET deve essere lungo almeno 32 caratteri"),
   // Opzionali, default = gli stessi valori hardcoded in rate-limit.ts (nessuna
   // di queste var impostata => comportamento identico a prima). Esistono
   // solo per poter alzare il limite globale in sviluppo (docker-compose.yml,

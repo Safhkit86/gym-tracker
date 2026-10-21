@@ -17,6 +17,11 @@ export interface UserMeasurementsRepository {
   /** `heightCm: null` se l'utente non ha ancora salvato nulla. */
   find(userId: string): Promise<UserHeight>;
   upsert(userId: string, values: UserHeight): Promise<UserHeight>;
+  /** Usato da AccountDeletionService: esplicito invece di fare affidamento
+   *  solo sulla FK ON DELETE CASCADE di user_measurements.user_id (vedi
+   *  migrazione 003), cosi' il comportamento e' verificabile anche con
+   *  l'implementazione in memoria usata nei test, che non ha FK reali. */
+  delete(userId: string): Promise<void>;
 }
 
 /** Implementazione su Postgres via Kysely. */
@@ -46,6 +51,10 @@ export class KyselyUserMeasurementsRepository implements UserMeasurementsReposit
       .executeTakeFirstOrThrow();
     return { heightCm: row.height_cm };
   }
+
+  async delete(userId: string): Promise<void> {
+    await this.db.deleteFrom("user_measurements").where("user_id", "=", userId).execute();
+  }
 }
 
 /** Implementazione in memoria: usata nei test per evitare un DB reale. */
@@ -59,5 +68,9 @@ export class InMemoryUserMeasurementsRepository implements UserMeasurementsRepos
   async upsert(userId: string, values: UserHeight): Promise<UserHeight> {
     this.byUserId.set(userId, values);
     return values;
+  }
+
+  async delete(userId: string): Promise<void> {
+    this.byUserId.delete(userId);
   }
 }

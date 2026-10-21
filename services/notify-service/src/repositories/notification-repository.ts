@@ -44,6 +44,8 @@ export interface NotificationRepository {
   acceptWithCascade(userId: string, id: string): Promise<boolean>;
   /** Numero di notifiche segnate come lette. */
   markAllRead(userId: string): Promise<number>;
+  /** Usato dal consumer di user-deleted-notify (cancellazione account, GDPR). */
+  deleteAllForUser(userId: string): Promise<void>;
 }
 
 export class KyselyNotificationRepository implements NotificationRepository {
@@ -144,6 +146,10 @@ export class KyselyNotificationRepository implements NotificationRepository {
       .where("read_at", "is", null)
       .executeTakeFirst();
     return Number(result.numUpdatedRows ?? 0n);
+  }
+
+  async deleteAllForUser(userId: string): Promise<void> {
+    await this.db.deleteFrom("notifications").where("user_id", "=", userId).execute();
   }
 }
 
@@ -289,6 +295,14 @@ export class InMemoryNotificationRepository implements NotificationRepository {
       }
     }
     return count;
+  }
+
+  async deleteAllForUser(userId: string): Promise<void> {
+    for (const [id, stored] of this.byId) {
+      if (stored.userId === userId) {
+        this.byId.delete(id);
+      }
+    }
   }
 }
 

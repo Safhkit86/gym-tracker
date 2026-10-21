@@ -17,12 +17,35 @@ function renderResetPage(initialEntry: string) {
 describe("ResetPasswordPage", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it("mostra un errore se manca il token nella query string", async () => {
     renderResetPage("/reset-password");
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/link di reset non valido/i);
+  });
+
+  it("rimuove il token dall'URL/cronologia del browser non appena letto", async () => {
+    // Il token non deve restare visibile nella barra degli indirizzi (vedi
+    // commento nel componente: screenshot, "copia link", cronologia
+    // condivisa su un device pubblico lo esporrebbero di nuovo anche se è
+    // già a uso singolo lato server).
+    const replaceStateSpy = vi.spyOn(window.history, "replaceState");
+
+    renderResetPage("/reset-password?token=abc123");
+    await screen.findByRole("button", { name: /reimposta password/i });
+
+    expect(replaceStateSpy).toHaveBeenCalled();
+  });
+
+  it("non tocca la cronologia quando non c'e' alcun token da rimuovere", async () => {
+    const replaceStateSpy = vi.spyOn(window.history, "replaceState");
+
+    renderResetPage("/reset-password");
+    await screen.findByRole("alert");
+
+    expect(replaceStateSpy).not.toHaveBeenCalled();
   });
 
   it("mostra un errore se le due password non coincidono", async () => {
