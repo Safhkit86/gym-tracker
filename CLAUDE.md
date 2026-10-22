@@ -143,15 +143,25 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   `winget install --id Google.PlatformTools` lo aggiunge (non serve l'intero
   Android Studio). **Per farlo funzionare anche via Wi-Fi** (bundle-location
   sull'IP LAN del PC, non `localhost`) serve in piu' il plugin
-  `expo-build-properties` con `android.usesCleartextTraffic: true` in
-  `app.json`: il bundle JS si scarica comunque anche senza (passa da un
-  meccanismo nativo diverso, non soggetto alla policy), ma le chiamate reali
-  dell'app (`fetch` verso l'API) restano bloccate silenziosamente da Android
-  (blocca di default il traffico HTTP non cifrato verso host diversi da
-  "localhost") — sintomo: l'app scarica il bundle ma poi resta su una
-  schermata grigia vuota, senza errori ne' in console ne' in logcat.
-  Richiede una nuova build nativa per avere effetto (non basta cambiare
-  `app.json` su un build gia' installato).
+  `expo-build-properties` con `android.usesCleartextTraffic: true`: il
+  bundle JS si scarica comunque anche senza (passa da un meccanismo nativo
+  diverso, non soggetto alla policy), ma le chiamate reali dell'app (`fetch`
+  verso l'API) restano bloccate silenziosamente da Android (blocca di
+  default il traffico HTTP non cifrato verso host diversi da "localhost")
+  — sintomo: l'app scarica il bundle ma poi resta su una schermata grigia
+  vuota, senza errori ne' in console ne' in logcat. Richiede una nuova build
+  nativa per avere effetto (non basta cambiare la config su un build gia'
+  installato). Questo flag e' acceso di default (nessun beneficio nelle
+  chiamate verso l'API, sempre HTTPS, ma solo superficie d'attacco in piu'
+  se restasse acceso anche li'): `apps/mobile/app.config.js` (config
+  dinamica sopra `app.json`, che resta la fonte statica di tutto il resto)
+  lo spegne quando la variabile d'ambiente `APP_VARIANT` vale `production`
+  — impostala (es. in `apps/mobile/.env`, non committato) prima di lanciare
+  una build di release. Nessun profilo EAS Build in questo progetto (la
+  build nativa si fa con `expo run:android`), quindi la distinzione
+  dev/produzione e' manuale, non automatica: se mai si passasse a EAS
+  Build, i suoi profili (`eas.json`) sarebbero un segnale piu' robusto di
+  questa variabile impostata a mano.
 - Un restyling grafico di `apps/web` copre **tutte** le pagine esistenti, non
   solo quelle toccate dalla feature che lo ha motivato: prima di chiudere una
   PR di restyling, passa in rassegna ogni file in `src/pages/` e applica le
