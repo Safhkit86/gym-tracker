@@ -464,3 +464,88 @@ describe("DELETE /workouts/:id", () => {
     expect(response.status).toBe(404);
   });
 });
+
+describe("Schede e allenamenti", () => {
+  it("una scheda creata senza allenamentoId entra nell'allenamento attivo", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const exerciseId = await getExerciseId(app, token, "Panca piana");
+
+    const created = await request(app)
+      .post("/workouts")
+      .set("Authorization", `Bearer ${token}`)
+      .send(workoutPayload(exerciseId));
+
+    const allenamenti = await request(app)
+      .get("/allenamenti")
+      .set("Authorization", `Bearer ${token}`);
+    expect(created.body.allenamentoId).toBe(allenamenti.body[0].id);
+  });
+
+  it("GET /workouts?allenamentoId filtra alle sole schede di quell'allenamento", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const exerciseId = await getExerciseId(app, token, "Panca piana");
+
+    await request(app)
+      .post("/workouts")
+      .set("Authorization", `Bearer ${token}`)
+      .send(workoutPayload(exerciseId));
+    const altro = await request(app)
+      .post("/allenamenti")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Altro allenamento" });
+    const scheda2 = await request(app)
+      .post("/workouts")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ ...workoutPayload(exerciseId), allenamentoId: altro.body.id });
+
+    const response = await request(app)
+      .get(`/workouts?allenamentoId=${altro.body.id}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0].id).toBe(scheda2.body.id);
+  });
+
+  it("PUT /workouts/:id con un allenamentoId diverso sposta la scheda", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const exerciseId = await getExerciseId(app, token, "Panca piana");
+    const created = await request(app)
+      .post("/workouts")
+      .set("Authorization", `Bearer ${token}`)
+      .send(workoutPayload(exerciseId));
+    const destinazione = await request(app)
+      .post("/allenamenti")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Destinazione" });
+
+    const response = await request(app)
+      .put(`/workouts/${created.body.id}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ ...workoutPayload(exerciseId), allenamentoId: destinazione.body.id });
+
+    expect(response.status).toBe(200);
+    expect(response.body.allenamentoId).toBe(destinazione.body.id);
+  });
+
+  it("rifiuta un allenamentoId che non e' dell'utente", async () => {
+    const { app } = buildTestApp();
+    const tokenA = await bearerFor(OWNER_A);
+    const tokenB = await bearerFor(OWNER_B);
+    const exerciseId = await getExerciseId(app, tokenA, "Panca piana");
+    const allenamentoB = await request(app)
+      .post("/allenamenti")
+      .set("Authorization", `Bearer ${tokenB}`)
+      .send({ name: "Di B" });
+
+    const response = await request(app)
+      .post("/workouts")
+      .set("Authorization", `Bearer ${tokenA}`)
+      .send({ ...workoutPayload(exerciseId), allenamentoId: allenamentoB.body.id });
+
+    expect(response.status).toBe(404);
+  });
+});

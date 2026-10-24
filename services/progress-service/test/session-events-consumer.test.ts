@@ -9,6 +9,7 @@ import { InMemoryProgressionPreferencesRepository } from "../src/repositories/pr
 import { InMemoryProgressionDefaultsRepository } from "../src/repositories/progression-defaults-repository.js";
 import { InMemoryExerciseHistoryCacheRepository } from "../src/repositories/exercise-history-cache-repository.js";
 import { InMemoryProcessedSessionsRepository } from "../src/repositories/processed-sessions-repository.js";
+import { InMemoryPersonalRecordRepository } from "../src/repositories/personal-record-repository.js";
 import { InMemoryProgressionEventPublisher } from "../src/events/publisher.js";
 import { createLogger } from "@gym-tracker/shared";
 import type { SessionLoggedEvent } from "@gym-tracker/shared";
@@ -26,6 +27,7 @@ function buildDeps(): SessionEventsConsumerDeps {
     progressionDefaults: new InMemoryProgressionDefaultsRepository(),
     exerciseHistoryCache: new InMemoryExerciseHistoryCacheRepository(),
     processedSessions: new InMemoryProcessedSessionsRepository(),
+    personalRecords: new InMemoryPersonalRecordRepository(),
     publisher: new InMemoryProgressionEventPublisher(),
   };
 }
@@ -122,6 +124,101 @@ describe("handleSessionLogged", () => {
   });
 });
 
+describe("handleSessionLogged — rilevamento PR", () => {
+  it("non genera un PR al primo log (nessun record da battere)", async () => {
+    const deps = buildDeps();
+
+    await handleSessionLogged(
+      sessionLoggedEvent({ sessionId: "s1", performedAt: "2026-07-01T10:00:00.000Z" }),
+      deps
+    );
+
+    const events = await deps.progressionEvents.listByOwner(USER_A);
+    expect(events.filter((e) => e.suggestionType === "personal_record_weight")).toHaveLength(0);
+  });
+
+  it("genera e pubblica un personal_record_weight quando un set batte il record storico", async () => {
+    const deps = buildDeps();
+    await handleSessionLogged(
+      sessionLoggedEvent({
+        sessionId: "s1",
+        performedAt: "2026-07-01T10:00:00.000Z",
+        actualWeight: 80,
+      }),
+      deps
+    );
+
+    await handleSessionLogged(
+      sessionLoggedEvent({
+        sessionId: "s2",
+        performedAt: "2026-07-08T10:00:00.000Z",
+        actualWeight: 85,
+      }),
+      deps
+    );
+
+    const events = await deps.progressionEvents.listByOwner(USER_A);
+    const prEvents = events.filter((e) => e.suggestionType === "personal_record_weight");
+    expect(prEvents).toHaveLength(1);
+    expect(prEvents[0]).toMatchObject({
+      previousValue: 80,
+      suggestedValue: 85,
+      triggeringSessionId: "s2",
+    });
+
+    const publisher = deps.publisher as InMemoryProgressionEventPublisher;
+    expect(publisher.published.some((p) => p.suggestionType === "personal_record_weight")).toBe(
+      true
+    );
+  });
+
+  it("non genera un PR se il peso non supera il record precedente", async () => {
+    const deps = buildDeps();
+    await handleSessionLogged(
+      sessionLoggedEvent({
+        sessionId: "s1",
+        performedAt: "2026-07-01T10:00:00.000Z",
+        actualWeight: 80,
+      }),
+      deps
+    );
+
+    await handleSessionLogged(
+      sessionLoggedEvent({
+        sessionId: "s2",
+        performedAt: "2026-07-08T10:00:00.000Z",
+        actualWeight: 75,
+      }),
+      deps
+    );
+
+    const events = await deps.progressionEvents.listByOwner(USER_A);
+    expect(events.filter((e) => e.suggestionType === "personal_record_weight")).toHaveLength(0);
+  });
+
+  it("e' idempotente rispetto a processedSessions: una ridelivery non duplica il PR", async () => {
+    const deps = buildDeps();
+    await handleSessionLogged(
+      sessionLoggedEvent({
+        sessionId: "s1",
+        performedAt: "2026-07-01T10:00:00.000Z",
+        actualWeight: 80,
+      }),
+      deps
+    );
+    const second = sessionLoggedEvent({
+      sessionId: "s2",
+      performedAt: "2026-07-08T10:00:00.000Z",
+      actualWeight: 85,
+    });
+    await handleSessionLogged(second, deps);
+    await handleSessionLogged(second, deps);
+
+    const events = await deps.progressionEvents.listByOwner(USER_A);
+    expect(events.filter((e) => e.suggestionType === "personal_record_weight")).toHaveLength(1);
+  });
+});
+
 describe("handleSessionDeleted", () => {
   it("cancella i progression_events collegati e rimuove l'entry dalla cache", async () => {
     const deps = buildDeps();
@@ -142,5 +239,46 @@ describe("handleSessionDeleted", () => {
     );
 
     expect(await deps.progressionEvents.listByOwner(USER_A)).toHaveLength(0);
+  });
+
+  it("cancella anche un progression_event di tipo PR triggerato dalla sessione cancellata", async () => {
+    const deps = buildDeps();
+    await handleSessionLogged(
+      sessionLoggedEvent({
+        sessionId: "s1",
+        performedAt: "2026-07-01T10:00:00.000Z",
+        actualWeight: 80,
+      }),
+      deps
+    );
+    await handleSessionLogged(
+      sessionLoggedEvent({
+        sessionId: "s2",
+        performedAt: "2026-07-08T10:00:00.000Z",
+        actualWeight: 85,
+      }),
+      deps
+    );
+    expect(
+      (await deps.progressionEvents.listByOwner(USER_A)).filter(
+        (e) => e.suggestionType === "personal_record_weight"
+      )
+    ).toHaveLength(1);
+
+    await handleSessionDeleted(
+      { sessionId: "s2", userId: USER_A, exerciseIds: [EXERCISE_ID] },
+      deps
+    );
+
+    expect(
+      (await deps.progressionEvents.listByOwner(USER_A)).filter(
+        (e) => e.suggestionType === "personal_record_weight"
+      )
+    ).toHaveLength(0);
+    // Il record "permanente" (85kg) non viene retrocesso: semplificazione
+    // accettata, vedi commento in handleSessionDeleted.
+    expect(await deps.personalRecords.findByUserAndExercise(USER_A, EXERCISE_ID)).toMatchObject({
+      bestWeight: 85,
+    });
   });
 });

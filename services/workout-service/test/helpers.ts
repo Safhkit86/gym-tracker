@@ -3,6 +3,7 @@ import { createApp } from "../src/app.js";
 import type { AppDeps } from "../src/app.js";
 import { InMemoryExerciseRepository } from "../src/repositories/exercise-repository.js";
 import { InMemoryWorkoutRepository } from "../src/repositories/workout-repository.js";
+import { InMemoryAllenamentoRepository } from "../src/repositories/allenamento-repository.js";
 
 export const TEST_JWT_SECRET = "test-secret-please-change";
 
@@ -16,6 +17,7 @@ export function buildTestApp(): { app: ReturnType<typeof createApp>; deps: AppDe
   const deps: AppDeps = {
     exercises: new InMemoryExerciseRepository(SEED_EXERCISES),
     workouts: new InMemoryWorkoutRepository(),
+    allenamenti: new InMemoryAllenamentoRepository(),
     tokens: createAccessTokenService(TEST_JWT_SECRET),
     logger: createLogger("workout-service", { level: "silent" }),
   };

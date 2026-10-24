@@ -11,6 +11,7 @@ import type { ProgressionPreferencesRepository } from "../repositories/progressi
 import type { ProgressionDefaultsRepository } from "../repositories/progression-defaults-repository.js";
 import type { ExerciseHistoryCacheRepository } from "../repositories/exercise-history-cache-repository.js";
 import type { ProcessedSessionsRepository } from "../repositories/processed-sessions-repository.js";
+import type { PersonalRecordRepository } from "../repositories/personal-record-repository.js";
 
 const userDeletedEventSchema = z.object({
   userId: z.string().uuid(),
@@ -28,12 +29,13 @@ export interface UserDeletedConsumerDeps {
   progressionDefaults: ProgressionDefaultsRepository;
   exerciseHistoryCache: ExerciseHistoryCacheRepository;
   processedSessions: ProcessedSessionsRepository;
+  personalRecords: PersonalRecordRepository;
 }
 
 /**
  * Pulisce la quota di dati di progress-service dopo che l'utente ha
  * cancellato il proprio account (diritto all'oblio, GDPR), vedi
- * AccountDeletionService/UserDeletedEvent in account-service. Le 5 tabelle
+ * AccountDeletionService/UserDeletedEvent in account-service. Le 6 tabelle
  * di questo servizio non hanno FK tra loro per user_id (vedi db/types.ts),
  * quindi l'ordine di cancellazione non ha importanza.
  */
@@ -47,6 +49,7 @@ export async function handleUserDeleted(
     deps.progressionDefaults.deleteAllForUser(event.userId),
     deps.exerciseHistoryCache.deleteAllForUser(event.userId),
     deps.processedSessions.deleteAllForUser(event.userId),
+    deps.personalRecords.deleteAllForUser(event.userId),
   ]);
 }
 

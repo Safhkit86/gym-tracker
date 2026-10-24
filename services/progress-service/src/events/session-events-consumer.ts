@@ -9,6 +9,10 @@ import {
   type SessionDeletedEvent,
 } from "@gym-tracker/shared";
 import { evaluateProgression } from "../domain/progression-rule-engine.js";
+import {
+  evaluatePersonalRecords,
+  formatPersonalRecordReason,
+} from "../domain/personal-record-detector.js";
 import type { ProgressionEventRepository } from "../repositories/progression-event-repository.js";
 import type { ProgressionPreferencesRepository } from "../repositories/progression-preferences-repository.js";
 import type { ProgressionDefaultsRepository } from "../repositories/progression-defaults-repository.js";
@@ -17,6 +21,7 @@ import {
   filterEntriesForEvaluation,
   type ExerciseHistoryCacheRepository,
 } from "../repositories/exercise-history-cache-repository.js";
+import type { PersonalRecordRepository } from "../repositories/personal-record-repository.js";
 import type { ProgressionEventPublisher } from "./publisher.js";
 
 const historicalSetSchema = z.object({
@@ -63,6 +68,7 @@ export interface SessionEventsConsumerDeps {
   progressionPreferences: ProgressionPreferencesRepository;
   progressionDefaults: ProgressionDefaultsRepository;
   exerciseHistoryCache: ExerciseHistoryCacheRepository;
+  personalRecords: PersonalRecordRepository;
   processedSessions: ProcessedSessionsRepository;
   publisher: ProgressionEventPublisher;
 }
@@ -119,25 +125,66 @@ export async function handleSessionLogged(
       exercise.progressionIncrement,
       preferences.requiredConsecutiveSessions
     );
-    if (!result) {
-      continue;
+    if (result) {
+      hadSuggestions = true;
+
+      const created = await deps.progressionEvents.create({
+        userId: event.userId,
+        exerciseId: exercise.exerciseId,
+        exerciseName: exercise.exerciseName,
+        triggeringSessionId: event.sessionId,
+        ...result,
+      });
+
+      try {
+        await deps.publisher.publish({ ...created, userId: event.userId });
+      } catch (err) {
+        // Best-effort: l'evento e' gia' salvato con successo, un fallimento di
+        // publish non deve bloccare la valutazione degli altri esercizi.
+        deps.logger.error({ err }, "pubblicazione di progression-events fallita");
+      }
     }
-    hadSuggestions = true;
 
-    const created = await deps.progressionEvents.create({
-      userId: event.userId,
-      exerciseId: exercise.exerciseId,
-      exerciseName: exercise.exerciseName,
-      triggeringSessionId: event.sessionId,
-      ...result,
-    });
-
-    try {
-      await deps.publisher.publish({ ...created, userId: event.userId });
-    } catch (err) {
-      // Best-effort: l'evento e' gia' salvato con successo, un fallimento di
-      // publish non deve bloccare la valutazione degli altri esercizi.
-      deps.logger.error({ err }, "pubblicazione di progression-events fallita");
+    // Rilevamento massimali: indipendente dal motore di regole sopra (un
+    // nuovo PR non richiede N sessioni consecutive, scatta al primo set che
+    // batte il record storico). Confronta SOLO i set di questa sessione, non
+    // la finestra scorrevole: il record e' una memoria permanente separata
+    // (vedi personal-record-repository.ts), la finestra non basterebbe.
+    const previousRecord = await deps.personalRecords.findByUserAndExercise(
+      event.userId,
+      exercise.exerciseId
+    );
+    const prEvaluation = evaluatePersonalRecords(previousRecord, exercise.sets);
+    // Persistito sempre, anche quando newRecords e' vuoto: al primo log di
+    // un esercizio il record va comunque inizializzato (silenziosamente,
+    // vedi personal-record-detector.ts), altrimenti la prossima sessione lo
+    // troverebbe ancora vuoto e tratterebbe anche quella come "primo log".
+    await deps.personalRecords.upsert(
+      event.userId,
+      exercise.exerciseId,
+      exercise.exerciseName,
+      prEvaluation.state
+    );
+    if (prEvaluation.newRecords.length > 0) {
+      hadSuggestions = true;
+      for (const record of prEvaluation.newRecords) {
+        const created = await deps.progressionEvents.create({
+          userId: event.userId,
+          exerciseId: exercise.exerciseId,
+          exerciseName: exercise.exerciseName,
+          triggeringSessionId: event.sessionId,
+          suggestionType:
+            record.kind === "weight" ? "personal_record_weight" : "personal_record_reps",
+          previousValue: record.previousValue,
+          suggestedValue: record.newValue,
+          reason: formatPersonalRecordReason(record),
+        });
+        try {
+          await deps.publisher.publish({ ...created, userId: event.userId });
+        } catch (err) {
+          deps.logger.error({ err }, "pubblicazione di progression-events (PR) fallita");
+        }
+      }
     }
   }
 
@@ -148,6 +195,15 @@ export async function handleSessionDeleted(
   event: SessionDeletedEvent,
   deps: SessionEventsConsumerDeps
 ): Promise<void> {
+  // Rimuove anche gli eventuali progression_events di tipo PR triggerati da
+  // questa sessione (stessa tabella, vedi handleSessionLogged): la notifica/
+  // il badge non restano agganciati a una sessione che non esiste piu'.
+  // Semplificazione accettata (stesso spirito del commento su
+  // recordSessionDeleted sotto): il record in personal_records NON viene
+  // "retrocesso" se la sessione cancellata era quella che lo aveva stabilito
+  // — richiederebbe riscansionare tutto lo storico residuo per ricalcolare
+  // il vero massimale, edge case raro con impatto basso (il record resta
+  // valido comunque, semplicemente non si "annulla" l'averlo raggiunto).
   await deps.progressionEvents.deleteByTriggeringSession(event.sessionId);
   for (const exerciseId of event.exerciseIds) {
     await deps.exerciseHistoryCache.recordSessionDeleted(event.userId, exerciseId, event.sessionId);

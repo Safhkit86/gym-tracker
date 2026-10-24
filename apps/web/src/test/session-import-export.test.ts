@@ -60,6 +60,7 @@ const WORKOUTS: WorkoutSummary[] = [
     id: "w1",
     name: "Push day",
     notes: null,
+    allenamentoId: "a1",
     exerciseCount: 1,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",

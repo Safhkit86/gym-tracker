@@ -63,6 +63,12 @@ export interface WorkoutExerciseInput {
 export interface WorkoutInput {
   name: string;
   notes?: string | null;
+  /** Allenamento (gruppo di schede) a cui assegnare/spostare questa scheda.
+   *  Assente/null = resta/entra nell'allenamento attivo dell'utente (vedi
+   *  AllenamentoService.resolveAllenamentoId in workout-service): permette
+   *  di spostare una scheda passando un id diverso su PUT /workouts/:id
+   *  senza dover esporre una rotta dedicata solo per questo. */
+  allenamentoId?: string | null;
   exercises: WorkoutExerciseInput[];
 }
 
@@ -111,6 +117,7 @@ export interface WorkoutSummary {
   id: string;
   name: string;
   notes: string | null;
+  allenamentoId: string;
   exerciseCount: number;
   createdAt: string;
   updatedAt: string;
@@ -121,7 +128,40 @@ export interface WorkoutDetail {
   id: string;
   name: string;
   notes: string | null;
+  allenamentoId: string;
   exercises: WorkoutExercise[];
   createdAt: string;
   updatedAt: string;
+}
+
+// --- Allenamenti (gruppi di schede) ---
+
+/**
+ * Un allenamento raggruppa un sottoinsieme delle schede dell'utente (una
+ * scheda appartiene a esattamente un allenamento, vedi WorkoutInput.
+ * allenamentoId): permette di seguire un programma o un altro a seconda dei
+ * periodi senza dover modificare le schede ogni volta. Al massimo un
+ * allenamento per utente ha isActive true (vedi migrazione 018 in
+ * workout-service): Registra sessione (nel punto d'accesso generale, non
+ * quando si apre una scheda specifica) e il "prossimo esercizio" della
+ * Dashboard si limitano alle schede dell'allenamento attivo.
+ */
+export interface AllenamentoSummary {
+  id: string;
+  name: string;
+  isActive: boolean;
+  workoutCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateAllenamentoRequest {
+  name: string;
+}
+
+/** Entrambi i campi opzionali e indipendenti: si puo' rinominare,
+ *  attivare, o entrambi nella stessa richiesta. */
+export interface UpdateAllenamentoRequest {
+  name?: string;
+  isActive?: boolean;
 }

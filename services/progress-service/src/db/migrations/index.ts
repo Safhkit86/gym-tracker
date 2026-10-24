@@ -12,6 +12,7 @@ import * as addTimerSoundEnabled from "./010-add-timer-sound-enabled.js";
 import * as renameOwnerIdToUserId from "./011-rename-owner-id-to-user-id.js";
 import * as dropPrefillScopeAndTimerSound from "./012-drop-prefill-scope-and-timer-sound.js";
 import * as historyServiceSplit from "./013-history-service-split.js";
+import * as addPersonalRecords from "./014-add-personal-records.js";
 
 /**
  * Registro statico delle migrazioni (chiavi ordinate). Preferito a
@@ -32,4 +33,5 @@ export const migrations: Record<string, Migration> = {
   "011-rename-owner-id-to-user-id": renameOwnerIdToUserId,
   "012-drop-prefill-scope-and-timer-sound": dropPrefillScopeAndTimerSound,
   "013-history-service-split": historyServiceSplit,
+  "014-add-personal-records": addPersonalRecords,
 };

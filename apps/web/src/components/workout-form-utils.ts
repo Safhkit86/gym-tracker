@@ -140,6 +140,15 @@ export function duplicateWorkoutInput(workout: WorkoutDetail, newName: string): 
   return toWorkoutInput(newName, notes, exercises);
 }
 
+/** Stesso riuso di duplicateWorkoutInput, ma per PUT /workouts/:id con un
+ *  allenamentoId diverso (sposta una scheda tra allenamenti, vedi
+ *  AllenamentiPage): nome/esercizi invariati, serve comunque il body
+ *  completo perche' PUT sostituisce l'intera scheda. */
+export function moveWorkoutInput(workout: WorkoutDetail, allenamentoId: string): WorkoutInput {
+  const { notes, exercises } = workoutDetailToFormValues(workout);
+  return { ...toWorkoutInput(workout.name, notes, exercises), allenamentoId };
+}
+
 /** Estrae i path dei campi (formato zod, es. "exercises.0.sets.0.targetMinReps"
  *  oppure "exercises.0.sets.0" per un refine cross-campo come min<=max) da
  *  ApiRequestError.details di un 400 VALIDATION_ERROR: usato per evidenziare

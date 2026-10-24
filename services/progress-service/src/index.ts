@@ -10,6 +10,7 @@ import { KyselyProgressionPreferencesRepository } from "./repositories/progressi
 import { KyselyProgressionDefaultsRepository } from "./repositories/progression-defaults-repository.js";
 import { KyselyExerciseHistoryCacheRepository } from "./repositories/exercise-history-cache-repository.js";
 import { KyselyProcessedSessionsRepository } from "./repositories/processed-sessions-repository.js";
+import { KyselyPersonalRecordRepository } from "./repositories/personal-record-repository.js";
 
 const config = loadConfig();
 const logger = createLogger("progress-service");
@@ -22,6 +23,7 @@ const progressionPreferences = new KyselyProgressionPreferencesRepository(db);
 const progressionDefaults = new KyselyProgressionDefaultsRepository(db);
 const exerciseHistoryCache = new KyselyExerciseHistoryCacheRepository(db);
 const processedSessions = new KyselyProcessedSessionsRepository(db);
+const personalRecords = new KyselyPersonalRecordRepository(db);
 
 const sessionEventsConsumer = await startSessionEventsConsumer({
   connectionUrl: config.RABBITMQ_URL,
@@ -30,6 +32,7 @@ const sessionEventsConsumer = await startSessionEventsConsumer({
   progressionPreferences,
   progressionDefaults,
   exerciseHistoryCache,
+  personalRecords,
   processedSessions,
   publisher,
 });
@@ -41,6 +44,7 @@ const userDeletedConsumer = await startUserDeletedConsumer({
   progressionDefaults,
   exerciseHistoryCache,
   processedSessions,
+  personalRecords,
 });
 
 const app = createApp({

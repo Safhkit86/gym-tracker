@@ -6,8 +6,12 @@ import type {
 } from "@gym-tracker/shared";
 import { apiRequest } from "./client";
 
-export function listWorkouts(token: string): Promise<WorkoutSummary[]> {
-  return apiRequest<WorkoutSummary[]>("/workouts", { token });
+/** allenamentoId: filtro opzionale (usato dalla Dashboard per il "prossimo
+ *  esercizio", limitato alle schede dell'allenamento attivo). Assente =
+ *  tutte le schede, comportamento invariato (usato dalla pagina Schede). */
+export function listWorkouts(token: string, allenamentoId?: string): Promise<WorkoutSummary[]> {
+  const query = allenamentoId ? `?allenamentoId=${allenamentoId}` : "";
+  return apiRequest<WorkoutSummary[]>(`/workouts${query}`, { token });
 }
 
 export function getWorkout(token: string, id: string): Promise<WorkoutDetail> {

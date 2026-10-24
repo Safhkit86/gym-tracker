@@ -15,7 +15,8 @@ export interface NotificationsTable {
   /** Non FK: il catalogo esercizi vive in workout-service. */
   exercise_id: string;
   exercise_name: string;
-  /** "increase_weight" | "increase_reps" */
+  /** ProgressionSuggestionType di @gym-tracker/shared: "increase_weight" |
+   *  "increase_reps" | "personal_record_weight" | "personal_record_reps". */
   suggestion_type: string;
   previous_value: ColumnType<string | null, number | null, number | null>;
   suggested_value: ColumnType<string | null, number | null, number | null>;

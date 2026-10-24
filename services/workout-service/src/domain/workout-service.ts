@@ -2,6 +2,7 @@ import type { WorkoutDetail, WorkoutInput, WorkoutSummary } from "@gym-tracker/s
 import { BadRequestError, NotFoundError } from "../errors.js";
 import type { ExerciseRepository } from "../repositories/exercise-repository.js";
 import type { NormalizedWorkout, WorkoutRepository } from "../repositories/workout-repository.js";
+import type { AllenamentoService } from "./allenamento-service.js";
 
 /**
  * Logica delle schede. La validazione strutturale del body (nomi, range,
@@ -12,7 +13,8 @@ import type { NormalizedWorkout, WorkoutRepository } from "../repositories/worko
 export class WorkoutService {
   constructor(
     private readonly workouts: WorkoutRepository,
-    private readonly exercises: ExerciseRepository
+    private readonly exercises: ExerciseRepository,
+    private readonly allenamenti: AllenamentoService
   ) {}
 
   async create(userId: string, input: WorkoutInput): Promise<WorkoutDetail> {
@@ -29,8 +31,9 @@ export class WorkoutService {
     return result;
   }
 
-  async list(userId: string): Promise<WorkoutSummary[]> {
-    return this.workouts.listByOwner(userId);
+  /** allenamentoId: filtro opzionale, vedi WorkoutRepository.listByOwner. */
+  async list(userId: string, allenamentoId?: string): Promise<WorkoutSummary[]> {
+    return this.workouts.listByOwner(userId, allenamentoId);
   }
 
   async get(userId: string, id: string): Promise<WorkoutDetail> {
@@ -68,9 +71,12 @@ export class WorkoutService {
       );
     }
 
+    const allenamentoId = await this.allenamenti.resolveAllenamentoId(userId, input.allenamentoId);
+
     return {
       name: input.name,
       notes: input.notes ?? null,
+      allenamentoId,
       exercises: exercises.map((e) => ({
         exerciseId: e.exerciseId,
         // Presente per certo: gli id mancanti sono gia' stati respinti sopra.

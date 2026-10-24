@@ -89,10 +89,24 @@ export interface ProcessedSessionsTable {
   had_suggestions: boolean;
 }
 
+/** Memoria permanente del miglior set mai loggato per esercizio, vedi
+ *  migrazione 014 e personal-record-detector.ts (a differenza di
+ *  ExerciseHistoryCacheTable, che e' solo una finestra scorrevole). */
+export interface PersonalRecordsTable {
+  user_id: string;
+  exercise_id: string;
+  exercise_name: string;
+  best_weight: ColumnType<string | null, number | null, number | null>;
+  best_weight_reps: number | null;
+  best_bodyweight_reps: number | null;
+  updated_at: ColumnType<Date, Date | undefined, Date>;
+}
+
 export interface Database {
   progression_events: ProgressionEventsTable;
   progression_preferences: ProgressionPreferencesTable;
   progression_defaults: ProgressionDefaultsTable;
   exercise_history_cache: ExerciseHistoryCacheTable;
   processed_sessions: ProcessedSessionsTable;
+  personal_records: PersonalRecordsTable;
 }

@@ -13,8 +13,12 @@ import { acceptProgressionDefaults } from "../api/profile";
 import { ApiRequestError } from "../api/client";
 import { IconButton } from "../components/IconButton";
 import { Pagination } from "../components/Pagination";
-import { CheckIcon, TrendingUpIcon } from "../components/icons";
-import { formatSuggestionDelta, toOverride } from "../notifications/suggestion-format";
+import { CheckIcon, TrendingUpIcon, TrophyIcon } from "../components/icons";
+import {
+  formatSuggestionDelta,
+  isPersonalRecord,
+  toOverride,
+} from "../notifications/suggestion-format";
 
 /** Stesso valore del default lato server (vedi il commento analogo in
  *  SessionHistoryPage.tsx sul perche' non e' importato da @gym-tracker/shared). */
@@ -165,7 +169,10 @@ export function NotificationsPage() {
               }
             >
               <div>
-                <strong>{notification.exerciseName}</strong>
+                <div className="notification-item__title">
+                  {isPersonalRecord(notification) && <TrophyIcon />}
+                  <strong>{notification.exerciseName}</strong>
+                </div>
                 <p>{notification.reason}</p>
                 {formatSuggestionDelta(notification) && (
                   <p className="notification-item__delta">{formatSuggestionDelta(notification)}</p>
@@ -176,11 +183,13 @@ export function NotificationsPage() {
               </div>
               {notification.readAt === null && (
                 <div className="notification-item__actions">
-                  <IconButton
-                    icon={<TrendingUpIcon />}
-                    label="Accetta progressione"
-                    onClick={() => handleAccept(notification)}
-                  />
+                  {!isPersonalRecord(notification) && (
+                    <IconButton
+                      icon={<TrendingUpIcon />}
+                      label="Accetta progressione"
+                      onClick={() => handleAccept(notification)}
+                    />
+                  )}
                   <IconButton
                     icon={<CheckIcon />}
                     label="Segna come letta"

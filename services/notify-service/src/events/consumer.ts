@@ -6,7 +6,12 @@ const progressionEventMessageSchema = z.object({
   exerciseId: z.string().uuid(),
   exerciseName: z.string().min(1),
   triggeringSessionId: z.string().uuid(),
-  suggestionType: z.enum(["increase_weight", "increase_reps"]),
+  suggestionType: z.enum([
+    "increase_weight",
+    "increase_reps",
+    "personal_record_weight",
+    "personal_record_reps",
+  ]),
   previousValue: z.number().nullable(),
   suggestedValue: z.number().nullable(),
   reason: z.string().min(1),

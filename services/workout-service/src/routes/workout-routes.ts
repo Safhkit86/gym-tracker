@@ -73,6 +73,10 @@ const exerciseSchema = z.object({
 const workoutSchema = z.object({
   name: z.string().trim().min(1, "Il nome della scheda e' obbligatorio."),
   notes: z.string().trim().min(1).nullish(),
+  // Assente/null = resta/entra nell'allenamento attivo (vedi
+  // AllenamentoService.resolveAllenamentoId): passare un id diverso qui su
+  // PUT /workouts/:id e' il modo di spostare una scheda tra allenamenti.
+  allenamentoId: z.string().uuid().nullish(),
   exercises: z
     .array(exerciseSchema)
     .refine(
@@ -110,7 +114,9 @@ export function createWorkoutRoutes(workouts: WorkoutService, tokens: AccessToke
 
   router.get("/workouts", async (req, res, next) => {
     try {
-      const list = await workouts.list(userId(req));
+      const allenamentoId =
+        typeof req.query.allenamentoId === "string" ? req.query.allenamentoId : undefined;
+      const list = await workouts.list(userId(req), allenamentoId);
       res.status(200).json(list);
     } catch (err) {
       next(err);

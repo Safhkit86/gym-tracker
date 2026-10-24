@@ -38,12 +38,17 @@ export interface NormalizedExercise {
 export interface NormalizedWorkout {
   name: string;
   notes: string | null;
+  allenamentoId: string;
   exercises: NormalizedExercise[];
 }
 
 export interface WorkoutRepository {
   create(userId: string, input: NormalizedWorkout): Promise<WorkoutDetail>;
-  listByOwner(userId: string): Promise<WorkoutSummary[]>;
+  /** allenamentoId: filtro opzionale (usato da GET /workouts?allenamentoId=
+   *  e, lato domain, per contare le schede di un allenamento prima di
+   *  permetterne la cancellazione). Assente = tutte le schede dell'utente,
+   *  comportamento invariato. */
+  listByOwner(userId: string, allenamentoId?: string): Promise<WorkoutSummary[]>;
   findDetail(userId: string, id: string): Promise<WorkoutDetail | null>;
   /** null se la scheda non esiste o non e' dell'utente. */
   replace(userId: string, id: string, input: NormalizedWorkout): Promise<WorkoutDetail | null>;
@@ -74,6 +79,7 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
           name: input.name,
           notes: input.notes,
           position: Number(nextPosition.max_position) + 1,
+          allenamento_id: input.allenamentoId,
         })
         .returning("id")
         .executeTakeFirstOrThrow();
@@ -101,7 +107,12 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
       }
       await trx
         .updateTable("workouts")
-        .set({ name: input.name, notes: input.notes, updated_at: new Date() })
+        .set({
+          name: input.name,
+          notes: input.notes,
+          allenamento_id: input.allenamentoId,
+          updated_at: new Date(),
+        })
         .where("id", "=", id)
         .execute();
       // La cascade su workout_exercises elimina anche i relativi set.
@@ -112,21 +123,23 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
     return replaced ? this.findDetail(userId, id) : null;
   }
 
-  async listByOwner(userId: string): Promise<WorkoutSummary[]> {
-    const rows = await this.db
+  async listByOwner(userId: string, allenamentoId?: string): Promise<WorkoutSummary[]> {
+    let query = this.db
       .selectFrom("workouts as w")
       .leftJoin("workout_exercises as we", "we.workout_id", "w.id")
-      .select(["w.id", "w.name", "w.notes", "w.created_at", "w.updated_at"])
+      .select(["w.id", "w.name", "w.notes", "w.allenamento_id", "w.created_at", "w.updated_at"])
       .select((eb) => eb.fn.count("we.id").as("exercise_count"))
-      .where("w.user_id", "=", userId)
-      .groupBy("w.id")
-      .orderBy("w.position", "asc")
-      .execute();
+      .where("w.user_id", "=", userId);
+    if (allenamentoId) {
+      query = query.where("w.allenamento_id", "=", allenamentoId);
+    }
+    const rows = await query.groupBy("w.id").orderBy("w.position", "asc").execute();
 
     return rows.map((r) => ({
       id: r.id,
       name: r.name,
       notes: r.notes,
+      allenamentoId: r.allenamento_id,
       exerciseCount: Number(r.exercise_count),
       createdAt: r.created_at.toISOString(),
       updatedAt: r.updated_at.toISOString(),
@@ -191,6 +204,7 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
       id: workout.id,
       name: workout.name,
       notes: workout.notes,
+      allenamentoId: workout.allenamento_id,
       exercises: exerciseRows.map((r) => ({
         id: r.id,
         exerciseId: r.exercise_id,
@@ -302,6 +316,7 @@ interface StoredWorkout {
   name: string;
   notes: string | null;
   position: number;
+  allenamentoId: string;
   exercises: WorkoutExercise[];
   createdAt: Date;
   updatedAt: Date;
@@ -321,6 +336,7 @@ export class InMemoryWorkoutRepository implements WorkoutRepository {
       name: input.name,
       notes: input.notes,
       position: maxPosition + 1,
+      allenamentoId: input.allenamentoId,
       exercises: buildExercises(input.exercises),
       createdAt: now,
       updatedAt: now,
@@ -342,6 +358,7 @@ export class InMemoryWorkoutRepository implements WorkoutRepository {
       ...existing,
       name: input.name,
       notes: input.notes,
+      allenamentoId: input.allenamentoId,
       exercises: buildExercises(input.exercises),
       updatedAt: new Date(),
     };
@@ -349,14 +366,15 @@ export class InMemoryWorkoutRepository implements WorkoutRepository {
     return toDetail(updated);
   }
 
-  async listByOwner(userId: string): Promise<WorkoutSummary[]> {
+  async listByOwner(userId: string, allenamentoId?: string): Promise<WorkoutSummary[]> {
     return [...this.byId.values()]
-      .filter((w) => w.userId === userId)
+      .filter((w) => w.userId === userId && (!allenamentoId || w.allenamentoId === allenamentoId))
       .sort((a, b) => a.position - b.position)
       .map((w) => ({
         id: w.id,
         name: w.name,
         notes: w.notes,
+        allenamentoId: w.allenamentoId,
         exerciseCount: w.exercises.length,
         createdAt: w.createdAt.toISOString(),
         updatedAt: w.updatedAt.toISOString(),
@@ -429,6 +447,7 @@ function toDetail(w: StoredWorkout): WorkoutDetail {
     id: w.id,
     name: w.name,
     notes: w.notes,
+    allenamentoId: w.allenamentoId,
     exercises: w.exercises,
     createdAt: w.createdAt.toISOString(),
     updatedAt: w.updatedAt.toISOString(),

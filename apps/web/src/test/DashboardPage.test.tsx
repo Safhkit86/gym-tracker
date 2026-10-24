@@ -26,8 +26,35 @@ const EXERCISES = [
 ];
 
 const WORKOUTS = [
-  { id: "w1", name: "Push day", notes: null, exerciseCount: 1, createdAt: "", updatedAt: "" },
-  { id: "w2", name: "Pull day", notes: null, exerciseCount: 4, createdAt: "", updatedAt: "" },
+  {
+    id: "w1",
+    name: "Push day",
+    notes: null,
+    allenamentoId: "a1",
+    exerciseCount: 1,
+    createdAt: "",
+    updatedAt: "",
+  },
+  {
+    id: "w2",
+    name: "Pull day",
+    notes: null,
+    allenamentoId: "a1",
+    exerciseCount: 4,
+    createdAt: "",
+    updatedAt: "",
+  },
+];
+
+const ALLENAMENTI = [
+  {
+    id: "a1",
+    name: "Allenamento 1",
+    isActive: true,
+    workoutCount: 2,
+    createdAt: "",
+    updatedAt: "",
+  },
 ];
 
 function workoutExercise(id: string, exerciseId: string, exerciseName: string) {
@@ -134,6 +161,10 @@ function baseHandlers(
     { match: (u: string, m: string) => u.endsWith("/stats") && m === "GET", body: STATS },
     { match: (u: string, m: string) => u.endsWith("/exercises") && m === "GET", body: EXERCISES },
     { match: (u: string, m: string) => u.endsWith("/workouts") && m === "GET", body: WORKOUTS },
+    {
+      match: (u: string, m: string) => u.endsWith("/allenamenti") && m === "GET",
+      body: ALLENAMENTI,
+    },
     {
       match: (u: string, m: string) => u.includes("/sessions?limit=1") && m === "GET",
       body: [LAST_SESSION],
@@ -497,6 +528,7 @@ describe("DashboardPage", () => {
       { match: (u, m) => u.endsWith("/stats") && m === "GET", body: statsFixture },
       { match: (u, m) => u.endsWith("/exercises") && m === "GET", body: exercisesFixture },
       { match: (u, m) => u.endsWith("/workouts") && m === "GET", body: workoutsFixture },
+      { match: (u, m) => u.endsWith("/allenamenti") && m === "GET", body: [] },
       { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: workoutDetail },
       { match: (u, m) => u.includes("/sessions?limit=1") && m === "GET", body: [] },
       { match: (u, m) => u.includes("/progression/stalled") && m === "GET", body: null },
@@ -571,6 +603,7 @@ describe("DashboardPage", () => {
       { match: (u, m) => u.endsWith("/stats") && m === "GET", body: statsFixture },
       { match: (u, m) => u.endsWith("/exercises") && m === "GET", body: exercisesFixture },
       { match: (u, m) => u.endsWith("/workouts") && m === "GET", body: workoutsFixture },
+      { match: (u, m) => u.endsWith("/allenamenti") && m === "GET", body: [] },
       { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: workoutDetail },
       { match: (u, m) => u.includes("/sessions?limit=1") && m === "GET", body: [] },
       { match: (u, m) => u.includes("/progression/stalled") && m === "GET", body: null },
@@ -639,6 +672,7 @@ describe("DashboardPage", () => {
       { match: (u, m) => u.endsWith("/stats") && m === "GET", body: statsFixture },
       { match: (u, m) => u.endsWith("/exercises") && m === "GET", body: exercisesFixture },
       { match: (u, m) => u.endsWith("/workouts") && m === "GET", body: workoutsFixture },
+      { match: (u, m) => u.endsWith("/allenamenti") && m === "GET", body: [] },
       { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: workoutDetail },
       { match: (u, m) => u.includes("/sessions?limit=1") && m === "GET", body: [] },
       { match: (u, m) => u.includes("/progression/stalled") && m === "GET", body: null },

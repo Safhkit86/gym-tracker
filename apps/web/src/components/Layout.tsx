@@ -26,6 +26,7 @@ export function Layout() {
             Dashboard
           </Link>
           <NavLink to="/workouts">Schede</NavLink>
+          <NavLink to="/allenamenti">Allenamenti</NavLink>
           <NavLink to="/sessions">Storico</NavLink>
           <NavLink to="/statistics">Statistiche</NavLink>
           <NavLink to="/notifications">

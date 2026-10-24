@@ -8,6 +8,7 @@ import {
 } from "@gym-tracker/shared";
 import type { WorkoutRepository } from "../repositories/workout-repository.js";
 import type { ExerciseRepository } from "../repositories/exercise-repository.js";
+import type { AllenamentoRepository } from "../repositories/allenamento-repository.js";
 
 const userDeletedEventSchema = z.object({
   userId: z.string().uuid(),
@@ -22,22 +23,26 @@ export interface UserDeletedConsumerDeps {
   logger: Logger;
   workouts: WorkoutRepository;
   exercises: ExerciseRepository;
+  allenamenti: AllenamentoRepository;
 }
 
 /**
  * Pulisce la quota di dati di workout-service dopo che l'utente ha
  * cancellato il proprio account (diritto all'oblio, GDPR), vedi
- * AccountDeletionService/UserDeletedEvent in account-service. Le schede
- * vanno cancellate PRIMA degli esercizi custom: ExerciseRepository ha un
- * FK ON DELETE RESTRICT verso workout_exercises (vedi migrazione 001),
- * quindi un esercizio ancora referenziato da una scheda non cancellabile
- * dell'utente bloccherebbe la seconda query se l'ordine fosse invertito.
+ * AccountDeletionService/UserDeletedEvent in account-service. Ordine delle
+ * cancellazioni, entrambi per FK: le schede PRIMA degli allenamenti
+ * (workouts.allenamento_id li referenzia, vedi migrazione 018) e PRIMA degli
+ * esercizi custom (ExerciseRepository ha un FK ON DELETE RESTRICT verso
+ * workout_exercises, vedi migrazione 001) — un esercizio o un allenamento
+ * ancora referenziato bloccherebbe la rispettiva query se l'ordine fosse
+ * invertito.
  */
 export async function handleUserDeleted(
   event: UserDeletedEvent,
   deps: UserDeletedConsumerDeps
 ): Promise<void> {
   await deps.workouts.deleteAllForUser(event.userId);
+  await deps.allenamenti.deleteAllForUser(event.userId);
   await deps.exercises.deleteAllCustomForUser(event.userId);
 }
 

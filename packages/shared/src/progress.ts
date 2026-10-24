@@ -6,7 +6,26 @@ import type { SessionDetail } from "./history.js";
  * i due servizi si sono separati.
  */
 
-export type ProgressionSuggestionType = "increase_weight" | "increase_reps";
+/**
+ * "increase_weight"/"increase_reps": suggerimento del motore di regole
+ * (vedi sotto). "personal_record_weight"/"personal_record_reps": rilevato
+ * invece confrontando ogni set loggato con il record storico dell'utente su
+ * quell'esercizio (vedi PersonalRecordRepository in progress-service) — non
+ * e' un suggerimento su cui agire (niente azione "accetta", a differenza
+ * degli altri due), solo il riconoscimento di un nuovo massimale: peso
+ * (previousValue/suggestedValue in kg) se l'esercizio e' pesato, altrimenti
+ * ripetizioni a corpo libero.
+ */
+export type ProgressionSuggestionType =
+  "increase_weight" | "increase_reps" | "personal_record_weight" | "personal_record_reps";
+
+/** Sottoinsieme di ProgressionSuggestionType per cui "accetta progressione"
+ *  ha senso (un prefill override sul prossimo log): un nuovo massimale non è
+ *  un suggerimento su cui agire, va escluso da questo controllo lato
+ *  client/server. */
+export function isActionableSuggestion(type: ProgressionSuggestionType): boolean {
+  return type === "increase_weight" || type === "increase_reps";
+}
 
 /**
  * Suggerimento emesso dal motore di regole quando lo storico soddisfa la

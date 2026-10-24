@@ -145,6 +145,7 @@ export function createApp(deps: AppDeps): Express {
   app.use("/me", proxyTo(deps.accountServiceUrl));
   app.use("/exercises", proxyTo(deps.workoutServiceUrl));
   app.use("/workouts", proxyTo(deps.workoutServiceUrl));
+  app.use("/allenamenti", proxyTo(deps.workoutServiceUrl));
   // Storico sessioni: history-service. GET /sessions/:id/status (polling
   // dopo il log) e' pero' del motore di regole, quindi va a progress-service
   // — montata prima, altrimenti il blanket /sessions qui sotto la
