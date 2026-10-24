@@ -83,6 +83,18 @@ export function TrendingUpIcon() {
   );
 }
 
+export function TrophyIcon() {
+  return (
+    <svg {...iconProps()}>
+      <path d="M8 21h8" />
+      <path d="M12 17v4" />
+      <path d="M7 4h10v4a5 5 0 0 1-10 0V4Z" />
+      <path d="M7 6H4a2 2 0 0 0 2 4" />
+      <path d="M17 6h3a2 2 0 0 1-2 4" />
+    </svg>
+  );
+}
+
 export function TimerIcon() {
   return (
     <svg {...iconProps()}>

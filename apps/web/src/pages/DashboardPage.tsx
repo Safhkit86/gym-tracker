@@ -19,6 +19,7 @@ import { formatSuggestionDelta, toOverride } from "../notifications/suggestion-f
 import { getDashboardStats, getExerciseHistory, getStalledExercise } from "../api/stats";
 import { listExercises } from "../api/exercises";
 import { getWorkout, listWorkouts } from "../api/workouts";
+import { listAllenamenti } from "../api/allenamenti";
 import { listSessions } from "../api/sessions";
 import { listMeasurements } from "../api/measurements";
 import { acceptNotification, listNotifications } from "../api/notifications";
@@ -91,12 +92,14 @@ export function DashboardPage() {
 
     async function load(authToken: string): Promise<void> {
       try {
-        const [statsResult, exercisesResult, workoutsResult, sessionsResult] = await Promise.all([
-          getDashboardStats(authToken),
-          listExercises(authToken),
-          listWorkouts(authToken),
-          listSessions(authToken, 1),
-        ]);
+        const [statsResult, exercisesResult, workoutsResult, sessionsResult, allenamenti] =
+          await Promise.all([
+            getDashboardStats(authToken),
+            listExercises(authToken),
+            listWorkouts(authToken),
+            listSessions(authToken, 1),
+            listAllenamenti(authToken),
+          ]);
         if (cancelled) {
           return;
         }
@@ -113,11 +116,25 @@ export function DashboardPage() {
             return;
           }
 
-          const lastIndex = last
-            ? workoutsResult.findIndex((w: WorkoutSummary) => w.id === last.workoutId)
-            : -1;
-          const nextIndex = (lastIndex + 1) % workoutsResult.length;
-          setNextWorkout(workoutDetails[nextIndex]);
+          // Il "prossimo" ruota solo tra le schede dell'allenamento attivo
+          // (non tra tutte quelle che l'utente possiede): se l'ultima
+          // sessione registrata era su una scheda fuori da quell'allenamento
+          // (possibile: Registra sessione aperto da una scheda specifica non
+          // lo impedisce, vedi CLAUDE.md), semplicemente non la trova nella
+          // lista filtrata e riparte dalla prima di quell'allenamento,
+          // nessun caso speciale necessario.
+          const activeAllenamentoId = allenamenti.find((a) => a.isActive)?.id;
+          const activeWorkouts = activeAllenamentoId
+            ? workoutsResult.filter((w: WorkoutSummary) => w.allenamentoId === activeAllenamentoId)
+            : workoutsResult;
+          if (activeWorkouts.length > 0) {
+            const lastIndex = last
+              ? activeWorkouts.findIndex((w: WorkoutSummary) => w.id === last.workoutId)
+              : -1;
+            const nextIndex = (lastIndex + 1) % activeWorkouts.length;
+            const nextWorkoutId = activeWorkouts[nextIndex].id;
+            setNextWorkout(workoutDetails.find((d) => d.id === nextWorkoutId) ?? null);
+          }
 
           const exerciseUnion = new Map<string, string>();
           for (const detail of workoutDetails) {

@@ -4,6 +4,7 @@ import { loadConfig } from "./config.js";
 import { createDb } from "./db/client.js";
 import { KyselyExerciseRepository } from "./repositories/exercise-repository.js";
 import { KyselyWorkoutRepository } from "./repositories/workout-repository.js";
+import { KyselyAllenamentoRepository } from "./repositories/allenamento-repository.js";
 import { startUserDeletedConsumer } from "./events/user-deleted-consumer.js";
 
 const config = loadConfig();
@@ -12,17 +13,20 @@ const logger = createLogger("workout-service");
 const db = createDb(config.DATABASE_URL);
 const exercises = new KyselyExerciseRepository(db);
 const workouts = new KyselyWorkoutRepository(db);
+const allenamenti = new KyselyAllenamentoRepository(db);
 
 const userDeletedConsumer = await startUserDeletedConsumer({
   connectionUrl: config.RABBITMQ_URL,
   logger,
   workouts,
   exercises,
+  allenamenti,
 });
 
 const app = createApp({
   exercises,
   workouts,
+  allenamenti,
   tokens: createAccessTokenService(config.JWT_SECRET),
   logger,
 });

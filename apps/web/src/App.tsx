@@ -10,6 +10,7 @@ import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { WorkoutsListPage } from "./pages/WorkoutsListPage";
+import { AllenamentiPage } from "./pages/AllenamentiPage";
 import { CreateWorkoutPage } from "./pages/CreateWorkoutPage";
 import { WorkoutDetailPage } from "./pages/WorkoutDetailPage";
 import { EditWorkoutPage } from "./pages/EditWorkoutPage";
@@ -33,6 +34,7 @@ export function App() {
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/workouts" element={<WorkoutsListPage />} />
+                <Route path="/allenamenti" element={<AllenamentiPage />} />
                 <Route path="/workouts/new" element={<CreateWorkoutPage />} />
                 <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
                 <Route path="/workouts/:id/edit" element={<EditWorkoutPage />} />

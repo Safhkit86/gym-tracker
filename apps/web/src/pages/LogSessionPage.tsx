@@ -18,7 +18,8 @@ import { useRestTimers } from "../hooks/useRestTimers";
 import { useSlidingSession } from "../hooks/useSlidingSession";
 import { RestTimerTray } from "../components/RestTimerTray";
 import { IconButton } from "../components/IconButton";
-import { TimerIcon } from "../components/icons";
+import { TimerIcon, TrophyIcon } from "../components/icons";
+import { isPersonalRecord } from "../notifications/suggestion-format";
 
 interface SessionSetForm {
   setNumber: number;
@@ -532,11 +533,20 @@ export function LogSessionPage() {
             <p>Nessun suggerimento di progressione questa volta.</p>
           )}
           {suggestionStatus === "with-suggestion" &&
-            suggestions.map((suggestion) => (
-              <p key={suggestion.id} className="progression-suggestion">
-                <strong>{suggestion.exerciseName}</strong>: {suggestion.reason}
-              </p>
-            ))}
+            suggestions.map((suggestion) =>
+              isPersonalRecord(suggestion) ? (
+                <p key={suggestion.id} className="personal-record-notice">
+                  <TrophyIcon />
+                  <span>
+                    <strong>{suggestion.exerciseName}</strong>: {suggestion.reason}
+                  </span>
+                </p>
+              ) : (
+                <p key={suggestion.id} className="progression-suggestion">
+                  <strong>{suggestion.exerciseName}</strong>: {suggestion.reason}
+                </p>
+              )
+            )}
           {suggestionStatus === "timeout" && (
             <p>
               Sessione registrata. Verifica in corso — se disponibile, lo vedrai tra le notifiche.

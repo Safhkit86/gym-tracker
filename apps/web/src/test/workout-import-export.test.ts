@@ -52,6 +52,7 @@ const WORKOUT_DETAIL: WorkoutDetail = {
   id: "w1",
   name: "Push day",
   notes: "Focus petto",
+  allenamentoId: "a1",
   exercises: [
     {
       id: "we1",

@@ -9,6 +9,7 @@ import { InMemoryProgressionPreferencesRepository } from "../src/repositories/pr
 import { InMemoryProgressionDefaultsRepository } from "../src/repositories/progression-defaults-repository.js";
 import { InMemoryExerciseHistoryCacheRepository } from "../src/repositories/exercise-history-cache-repository.js";
 import { InMemoryProcessedSessionsRepository } from "../src/repositories/processed-sessions-repository.js";
+import { InMemoryPersonalRecordRepository } from "../src/repositories/personal-record-repository.js";
 
 const USER_A = "11111111-1111-1111-a111-111111111111";
 const USER_B = "22222222-2222-2222-a222-222222222222";
@@ -20,6 +21,7 @@ function buildDeps(): UserDeletedConsumerDeps & {
   progressionDefaults: InMemoryProgressionDefaultsRepository;
   exerciseHistoryCache: InMemoryExerciseHistoryCacheRepository;
   processedSessions: InMemoryProcessedSessionsRepository;
+  personalRecords: InMemoryPersonalRecordRepository;
 } {
   return {
     connectionUrl: "amqp://unused",
@@ -29,6 +31,7 @@ function buildDeps(): UserDeletedConsumerDeps & {
     progressionDefaults: new InMemoryProgressionDefaultsRepository(),
     exerciseHistoryCache: new InMemoryExerciseHistoryCacheRepository(),
     processedSessions: new InMemoryProcessedSessionsRepository(),
+    personalRecords: new InMemoryPersonalRecordRepository(),
   };
 }
 
@@ -57,6 +60,11 @@ async function seedUser(deps: ReturnType<typeof buildDeps>, userId: string): Pro
     sets: [],
   });
   await deps.processedSessions.markProcessed("s1", userId, true);
+  await deps.personalRecords.upsert(userId, EXERCISE_ID, "Panca piana", {
+    bestWeight: 80,
+    bestWeightReps: 5,
+    bestBodyweightReps: null,
+  });
 }
 
 describe("handleUserDeleted", () => {
@@ -74,6 +82,11 @@ describe("handleUserDeleted", () => {
     expect(await deps.progressionDefaults.listByOwner(USER_A)).toHaveLength(0);
     expect(await deps.exerciseHistoryCache.getStalledExercise(USER_A)).toBeNull();
     expect(await deps.processedSessions.findStatus("s1")).toBeNull();
+    expect(await deps.personalRecords.findByUserAndExercise(USER_A, EXERCISE_ID)).toEqual({
+      bestWeight: null,
+      bestWeightReps: null,
+      bestBodyweightReps: null,
+    });
   });
 
   it("non tocca i dati di un altro utente", async () => {
@@ -87,6 +100,11 @@ describe("handleUserDeleted", () => {
     expect(await deps.processedSessions.findStatus("s1")).toEqual({
       userId: USER_B,
       hadSuggestions: true,
+    });
+    expect(await deps.personalRecords.findByUserAndExercise(USER_B, EXERCISE_ID)).toEqual({
+      bestWeight: 80,
+      bestWeightReps: 5,
+      bestBodyweightReps: null,
     });
   });
 });

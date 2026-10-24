@@ -309,4 +309,26 @@ describe("NotificationsPage", () => {
       expect(screen.queryByText("1")).not.toBeInTheDocument();
     });
   });
+
+  it("una notifica di nuovo PR non ha il pulsante 'Accetta progressione'", async () => {
+    const PR_NOTIFICATION = {
+      ...NOTIFICATION_UNREAD,
+      id: "n-pr",
+      suggestionType: "personal_record_weight",
+      previousValue: 80,
+      suggestedValue: 85,
+      reason: "Nuovo massimale: 85 kg (precedente: 80 kg)",
+    };
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      ...notificationsHandlers([PR_NOTIFICATION]),
+    ]);
+
+    renderWithProviders(<NotificationsPage />, ["/notifications"]);
+
+    expect(await screen.findByText(/nuovo massimale/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /accetta progressione/i })).not.toBeInTheDocument();
+    // "Segna come letta" resta disponibile anche per un PR.
+    expect(screen.getByRole("button", { name: /segna come letta/i })).toBeInTheDocument();
+  });
 });

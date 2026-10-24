@@ -442,6 +442,63 @@ describe("LogSessionPage", () => {
     expect(await screen.findByText(/aumenta il carico/i)).toBeInTheDocument();
   });
 
+  it("un nuovo PR nel polling viene mostrato col trattamento massimale, non come suggerimento di progressione", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: WORKOUT_DETAIL },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      preferencesHandler(),
+      {
+        match: (u, m) => u.endsWith("/sessions") && m === "POST",
+        status: 201,
+        body: {
+          id: "sess1",
+          workoutId: "w1",
+          workoutName: "Push day",
+          workoutNotes: null,
+          performedAt: new Date().toISOString(),
+          notes: null,
+          exercises: [],
+          createdAt: new Date().toISOString(),
+        },
+      },
+      {
+        match: (u, m) => u.endsWith("/sessions/sess1/status") && m === "GET",
+        body: {
+          status: "with-suggestion",
+          suggestions: [
+            {
+              id: "pe1",
+              exerciseId: "e1",
+              exerciseName: "Panca piana",
+              triggeringSessionId: "sess1",
+              suggestionType: "personal_record_weight",
+              previousValue: 80,
+              suggestedValue: 85,
+              reason: "Nuovo massimale: 85 kg (precedente: 80 kg)",
+              source: "rule",
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        },
+      },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+      </Routes>,
+      ["/workouts/w1/log"]
+    );
+
+    await screen.findByLabelText(/panca piana set 1 rep effettive/i);
+    fireEvent.click(screen.getByRole("button", { name: /registra sessione/i }));
+
+    const notice = await screen.findByText(/nuovo massimale/i);
+    expect(notice.closest(".personal-record-notice")).not.toBeNull();
+    expect(document.querySelector(".progression-suggestion")).toBeNull();
+  });
+
   it("mostra 'nessun suggerimento' quando il polling risolve senza suggerimenti", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },

@@ -31,6 +31,26 @@ describe("parseProgressionEventMessage", () => {
     });
   });
 
+  it("valida un messaggio di tipo personal_record_weight", () => {
+    const raw = Buffer.from(
+      JSON.stringify(
+        validMessage({
+          suggestionType: "personal_record_weight",
+          reason: "Nuovo massimale: 85 kg (precedente: 80 kg)",
+        })
+      )
+    );
+    expect(parseProgressionEventMessage(raw)).toMatchObject({
+      suggestionType: "personal_record_weight",
+    });
+  });
+
+  it("lancia per un suggestionType non riconosciuto", () => {
+    const message = validMessage({ suggestionType: "qualcos_altro" });
+    const raw = Buffer.from(JSON.stringify(message));
+    expect(() => parseProgressionEventMessage(raw)).toThrow();
+  });
+
   it("lancia per un messaggio con un campo obbligatorio mancante", () => {
     const message = validMessage();
     delete message.userId;

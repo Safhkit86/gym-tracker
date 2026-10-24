@@ -121,6 +121,16 @@ describe("routing verso gli upstream", () => {
     expect(ctx.workout.lastRequest?.url).toBe("/workouts/11111111-1111-1111-a111-111111111111");
   });
 
+  it("inoltra GET /allenamenti a workout-service", async () => {
+    const ctx = await buildTestApp();
+    closeAll = ctx.closeAll;
+    const token = await bearerFor("u1");
+
+    await request(ctx.app).get("/allenamenti").set("Authorization", `Bearer ${token}`);
+
+    expect(ctx.workout.lastRequest?.url).toBe("/allenamenti");
+  });
+
   it("inoltra POST /sessions a history-service preservando il body", async () => {
     const ctx = await buildTestApp();
     closeAll = ctx.closeAll;

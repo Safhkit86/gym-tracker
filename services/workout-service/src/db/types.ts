@@ -26,6 +26,16 @@ export interface WorkoutsTable {
   name: string;
   notes: string | null;
   position: number;
+  allenamento_id: string;
+  created_at: Generated<Date>;
+  updated_at: ColumnType<Date, Date | undefined, Date>;
+}
+
+export interface AllenamentiTable {
+  id: Generated<string>;
+  user_id: string;
+  name: string;
+  is_active: boolean;
   created_at: Generated<Date>;
   updated_at: ColumnType<Date, Date | undefined, Date>;
 }
@@ -66,4 +76,5 @@ export interface Database {
   workouts: WorkoutsTable;
   workout_exercises: WorkoutExercisesTable;
   workout_sets: WorkoutSetsTable;
+  allenamenti: AllenamentiTable;
 }

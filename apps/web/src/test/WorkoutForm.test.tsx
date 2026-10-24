@@ -7,6 +7,7 @@ function workout(overrides: Partial<WorkoutDetail> = {}): WorkoutDetail {
     id: "w1",
     name: "Push day",
     notes: null,
+    allenamentoId: "a1",
     exercises: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
