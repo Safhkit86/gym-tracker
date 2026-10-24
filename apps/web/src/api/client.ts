@@ -1,6 +1,9 @@
 import type { ApiError } from "@gym-tracker/shared";
 
-const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000";
+// HTTPS di default (non la porta HTTP usata dall'app mobile): il cookie
+// httpOnly della sessione web richiede Secure — vedi AUTH_COOKIE_NAME in
+// packages/shared/src/auth.ts e docker-compose.yml, servizio api-gateway.
+const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? "https://localhost:4443";
 
 /** Emesso quando una richiesta autenticata (token presente) riceve 401: il
  * token e' scaduto o non piu' valido. AuthProvider ci fa logout automatico,
@@ -29,6 +32,17 @@ export class ApiRequestError extends Error {
 interface RequestOptions {
   method?: string;
   body?: unknown;
+  /**
+   * Non piu' usato per l'header Authorization (la sessione viaggia nel
+   * cookie httpOnly, mandato automaticamente dal browser — vedi
+   * `credentials: "include"` sotto): un XSS che leggesse questo valore da
+   * JS non otterrebbe comunque il JWT reale. Il parametro resta per non
+   * dover toccare le decine di funzioni api/*.ts e le pagine che le
+   * chiamano, tutte scritte per passare `token` — qui serve solo a decidere
+   * se un 401 e' una sessione scaduta (vedi sotto) invece che credenziali
+   * errate su login/register (che non passano `token`). Qualsiasi stringa
+   * "veritiera" va bene (oggi: l'id utente, vedi AuthProvider.tsx).
+   */
   token?: string | null;
 }
 
@@ -42,13 +56,15 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   if (options.body !== undefined) {
     headers["Content-Type"] = "application/json";
   }
-  if (options.token) {
-    headers.Authorization = `Bearer ${options.token}`;
-  }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: options.method ?? "GET",
     headers,
+    // Manda/riceve il cookie httpOnly di sessione anche cross-origin
+    // (webapp e gateway restano origini diverse anche in locale): senza,
+    // il browser non manderebbe mai il cookie su un fetch verso un'altra
+    // origine, nonostante Set-Cookie l'avesse impostato correttamente.
+    credentials: "include",
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
   });
 

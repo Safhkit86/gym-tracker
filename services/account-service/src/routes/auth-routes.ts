@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { clearAuthCookie, setAuthCookie } from "@gym-tracker/shared";
 import type { AuthService } from "../domain/auth-service.js";
 import type { PasswordResetService } from "../domain/password-reset-service.js";
 
@@ -29,10 +30,15 @@ export function createAuthRoutes(
 ): Router {
   const router = Router();
 
+  // setAuthCookie in aggiunta (non in sostituzione) al token nel body JSON:
+  // l'app mobile continua a leggerlo di li' e a mandarlo come Bearer
+  // (nessun cookie jar utile su React Native), la webapp smette di
+  // leggerlo dal body e si affida al cookie httpOnly — vedi AuthProvider.tsx.
   router.post("/register", async (req, res, next) => {
     try {
       const body = credentialsSchema.parse(req.body);
       const result = await authService.register(body);
+      setAuthCookie(res, result.token);
       res.status(201).json(result);
     } catch (err) {
       next(err);
@@ -43,10 +49,22 @@ export function createAuthRoutes(
     try {
       const body = credentialsSchema.parse(req.body);
       const result = await authService.login(body);
+      setAuthCookie(res, result.token);
       res.status(200).json(result);
     } catch (err) {
       next(err);
     }
+  });
+
+  // Un cookie httpOnly non e' leggibile/cancellabile da JS: senza questa
+  // rotta il "logout" lato client (svuotare lo stato React) non basterebbe
+  // a invalidarlo, resterebbe valido fino alla scadenza naturale (1h).
+  // Pubblica (nessun authenticate): idempotente anche senza una sessione
+  // valida, la webapp la chiama sempre al logout senza doverlo verificare
+  // prima. Mai chiamata dall'app mobile (nessun cookie da cancellare li').
+  router.post("/logout", (_req, res) => {
+    clearAuthCookie(res);
+    res.status(204).send();
   });
 
   router.post("/forgot-password", async (req, res, next) => {

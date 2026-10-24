@@ -1,6 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { AccessTokenService, AuthResponse, PublicUser } from "@gym-tracker/shared";
+import {
+  setAuthCookie,
+  type AccessTokenService,
+  type AuthResponse,
+  type PublicUser,
+} from "@gym-tracker/shared";
 import { UnauthorizedError } from "../errors.js";
 import type { UserRepository } from "../repositories/user-repository.js";
 import type { PasswordChangeService } from "../domain/password-change-service.js";
@@ -70,6 +75,7 @@ export function createMeRoutes(
       }
 
       const newToken = await tokens.sign({ sub: user.id, email: user.email });
+      setAuthCookie(res, newToken);
       const body: AuthResponse = {
         token: newToken,
         user: { id: user.id, email: user.email, createdAt: user.createdAt.toISOString() },

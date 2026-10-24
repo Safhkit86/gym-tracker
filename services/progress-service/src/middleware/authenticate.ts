@@ -1,6 +1,6 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import type { AccessTokenService, AuthTokenClaims } from "@gym-tracker/shared";
-import { TokenVerificationError } from "@gym-tracker/shared";
+import { extractAuthToken, TokenVerificationError } from "@gym-tracker/shared";
 import { UnauthorizedError } from "../errors.js";
 
 declare global {
@@ -13,28 +13,17 @@ declare global {
   }
 }
 
-/** Estrae il token da "Authorization: Bearer <token>". */
-function extractBearer(header: string | undefined): string | null {
-  if (!header) {
-    return null;
-  }
-  const [scheme, token] = header.split(" ");
-  if (scheme !== "Bearer" || !token) {
-    return null;
-  }
-  return token;
-}
-
 /**
- * Verifica il Bearer JWT (emesso da account-service, verificato qui con lo
- * stesso AccessTokenService condiviso) e popola `req.userClaims`.
+ * Verifica il token (Bearer, app mobile, o cookie httpOnly, webapp — vedi
+ * extractAuthToken) emesso da account-service, verificato qui con lo
+ * stesso AccessTokenService condiviso, e popola `req.userClaims`.
  */
 export function authenticate(tokens: AccessTokenService): RequestHandler {
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
-      const token = extractBearer(req.header("authorization"));
+      const token = extractAuthToken(req);
       if (!token) {
-        throw new UnauthorizedError("Header Authorization Bearer mancante.");
+        throw new UnauthorizedError("Autenticazione mancante (Bearer o cookie).");
       }
       req.userClaims = await tokens.verify(token);
       next();

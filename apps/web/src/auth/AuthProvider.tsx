@@ -1,43 +1,42 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import type { PublicUser } from "@gym-tracker/shared";
 import * as authApi from "../api/auth";
 import { UNAUTHORIZED_EVENT } from "../api/client";
 import { AuthContext, type AuthContextValue } from "./context";
 
-const TOKEN_STORAGE_KEY = "gym-tracker.token";
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_STORAGE_KEY));
+  // Non piu' il JWT reale: da quando la sessione viaggia in un cookie
+  // httpOnly (illeggibile da JS, vedi client.ts/packages/shared/src/auth.ts),
+  // la webapp non ha piu' nulla da leggere/scrivere in localStorage. Questo
+  // resta un marcatore locale "ho una sessione" (l'id utente una volta
+  // autenticati, altrimenti null), usato dalle guardie `if (!token)` sparse
+  // nell'app e passato (ignorato per l'header, vedi client.ts) alle
+  // funzioni api/*.ts esistenti — evita di dover toccare ogni pagina/
+  // funzione che oggi si aspetta un `token` da passare in giro.
+  const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<PublicUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Verifica che il token salvato sia ancora valido caricando /me; se il
-  // gateway risponde 401 il token viene scartato. Se `user` e' gia' popolato
-  // (login/register l'hanno appena impostato insieme al token) non rifare la
-  // chiamata: eviterebbe solo un flash di "Caricamento..." subito dopo
-  // l'accesso, dato che abbiamo gia' i dati freschi dalla risposta.
+  // Il cookie httpOnly non e' leggibile da JS: l'unico modo di sapere, al
+  // primo caricamento della pagina, se il browser ha ancora una sessione
+  // valida e' chiamare /me e vedere se risponde 200 (il browser manda il
+  // cookie da solo, vedi `credentials: "include"` in apiRequest) o 401.
+  // A differenza di prima (un controllo sincrono su localStorage), questo
+  // comporta sempre un giro di rete ad ogni refresh della pagina — il
+  // costo accettato per non tenere piu' il token in un posto leggibile da JS.
   useEffect(() => {
-    if (!token) {
-      setUser(null);
-      setIsLoading(false);
-      return;
-    }
-    if (user) {
-      setIsLoading(false);
-      return;
-    }
     let cancelled = false;
-    setIsLoading(true);
     authApi
-      .me(token)
+      .me()
       .then((fetchedUser) => {
         if (!cancelled) {
           setUser(fetchedUser);
+          setToken(fetchedUser.id);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          localStorage.removeItem(TOKEN_STORAGE_KEY);
+          setUser(null);
           setToken(null);
         }
       })
@@ -49,47 +48,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [token, user]);
-
-  function persistToken(newToken: string): void {
-    localStorage.setItem(TOKEN_STORAGE_KEY, newToken);
-    setToken(newToken);
-  }
+  }, []);
 
   async function login(email: string, password: string): Promise<void> {
     const result = await authApi.login({ email, password });
     setUser(result.user);
-    persistToken(result.token);
+    setToken(result.user.id);
   }
 
   async function register(email: string, password: string): Promise<void> {
     const result = await authApi.register({ email, password });
     setUser(result.user);
-    persistToken(result.token);
+    setToken(result.user.id);
   }
 
   const logout = useCallback((): void => {
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    // Best-effort, non aspettato: anche se la richiesta di rete fallisse
+    // (es. offline), l'utente deve comunque vedere l'app come disconnessa
+    // subito — il cookie lato server resterebbe valido fino alla scadenza
+    // naturale (1h) in quel caso limite, non c'e' modo di garantire
+    // altrimenti senza bloccare la UI finche' la richiesta non risponde.
+    void authApi.logout().catch(() => {});
     setToken(null);
     setUser(null);
   }, []);
 
-  // Letto da un ref sempre aggiornato (non dalla closure di refreshToken
-  // sotto, che altrimenti catturerebbe il token del render in cui e' stata
-  // creata): senza, un consumatore che tiene un riferimento stabile alla
-  // funzione (es. l'intervallo di useSlidingSession, mai ricreato dopo il
-  // primo render) continuerebbe a rinnovare lo stesso token ormai scaduto
-  // da un pezzo invece dell'ultimo emesso.
-  const tokenRef = useRef(token);
-  tokenRef.current = token;
-
   const refreshToken = useCallback(async (): Promise<void> => {
-    if (!tokenRef.current) {
-      return;
-    }
-    const result = await authApi.refreshToken(tokenRef.current);
+    const result = await authApi.refreshToken();
     setUser(result.user);
-    persistToken(result.token);
+    setToken(result.user.id);
   }, []);
 
   // Un 401 su una richiesta autenticata (token scaduto/non valido) fa logout
