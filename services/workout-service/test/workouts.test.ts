@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import request from "supertest";
 import { bearerFor, buildTestApp } from "./helpers.js";
 
-const OWNER_A = "11111111-1111-1111-1111-111111111111";
-const OWNER_B = "22222222-2222-2222-2222-222222222222";
+const OWNER_A = "11111111-1111-1111-a111-111111111111";
+const OWNER_B = "22222222-2222-2222-a222-222222222222";
 
 async function getExerciseId(
   app: ReturnType<typeof buildTestApp>["app"],
@@ -86,7 +86,7 @@ describe("POST /workouts", () => {
     const response = await request(app)
       .post("/workouts")
       .set("Authorization", `Bearer ${token}`)
-      .send(workoutPayload("99999999-9999-9999-9999-999999999999"));
+      .send(workoutPayload("99999999-9999-4999-9999-999999999999"));
 
     expect(response.status).toBe(400);
     expect(response.body.code).toBe("INVALID_EXERCISE_REFERENCE");

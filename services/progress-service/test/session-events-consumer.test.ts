@@ -13,9 +13,9 @@ import { InMemoryProgressionEventPublisher } from "../src/events/publisher.js";
 import { createLogger } from "@gym-tracker/shared";
 import type { SessionLoggedEvent } from "@gym-tracker/shared";
 
-const USER_A = "11111111-1111-1111-1111-111111111111";
-const WORKOUT_ID = "22222222-2222-2222-2222-222222222222";
-const EXERCISE_ID = "33333333-3333-3333-3333-333333333333";
+const USER_A = "11111111-1111-1111-a111-111111111111";
+const WORKOUT_ID = "22222222-2222-2222-a222-222222222222";
+const EXERCISE_ID = "33333333-3333-3333-a333-333333333333";
 
 function buildDeps(): SessionEventsConsumerDeps {
   return {
