@@ -3,20 +3,20 @@ import request from "supertest";
 import type { NewNotification } from "../src/repositories/notification-repository.js";
 import { bearerFor, buildTestApp } from "./helpers.js";
 
-const OWNER_A = "11111111-1111-1111-1111-111111111111";
-const OWNER_B = "22222222-2222-2222-2222-222222222222";
+const OWNER_A = "11111111-1111-1111-a111-111111111111";
+const OWNER_B = "22222222-2222-2222-a222-222222222222";
 
 function notificationInput(overrides: Partial<NewNotification> = {}): NewNotification {
   return {
     userId: OWNER_A,
-    exerciseId: "55555555-5555-5555-5555-555555555555",
+    exerciseId: "55555555-5555-5555-a555-555555555555",
     exerciseName: "Panca piana",
     suggestionType: "increase_weight",
     previousValue: 80,
     suggestedValue: 82.5,
     reason: "Obiettivo di ripetizioni raggiunto per 2 sessioni consecutive a 80kg.",
-    triggeringSessionId: "66666666-6666-6666-6666-666666666666",
-    progressionEventId: "77777777-7777-7777-7777-777777777777",
+    triggeringSessionId: "66666666-6666-6666-a666-666666666666",
+    progressionEventId: "77777777-7777-7777-a777-777777777777",
     ...overrides,
   };
 }
@@ -65,13 +65,13 @@ describe("GET /notifications", () => {
   it("con page/pageSize risponde in forma paginata invece del semplice array", async () => {
     const { app, deps } = buildTestApp();
     await deps.notifications.create(
-      notificationInput({ progressionEventId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" })
+      notificationInput({ progressionEventId: "aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa" })
     );
     await deps.notifications.create(
-      notificationInput({ progressionEventId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" })
+      notificationInput({ progressionEventId: "bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb" })
     );
     await deps.notifications.create(
-      notificationInput({ progressionEventId: "cccccccc-cccc-cccc-cccc-cccccccccccc" })
+      notificationInput({ progressionEventId: "cccccccc-cccc-4ccc-accc-cccccccccccc" })
     );
     const token = await bearerFor(OWNER_A);
 
@@ -93,11 +93,11 @@ describe("GET /notifications", () => {
   it("combina page/pageSize con ?unread=true", async () => {
     const { app, deps } = buildTestApp();
     const read = await deps.notifications.create(
-      notificationInput({ progressionEventId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" })
+      notificationInput({ progressionEventId: "aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa" })
     );
     await deps.notifications.markRead(OWNER_A, read!.id);
     await deps.notifications.create(
-      notificationInput({ progressionEventId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" })
+      notificationInput({ progressionEventId: "bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb" })
     );
     const token = await bearerFor(OWNER_A);
 
@@ -153,18 +153,18 @@ describe("PATCH /notifications/:id/accept", () => {
   it("segna come letta la notifica accettata e le precedenti non lette dello stesso esercizio", async () => {
     const { app, deps } = buildTestApp();
     const older = await deps.notifications.create(
-      notificationInput({ progressionEventId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" })
+      notificationInput({ progressionEventId: "aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa" })
     );
     // La notifica piu' recente per un esercizio diverso non deve essere
     // toccata dalla cascata: solo lo stesso esercizio conta.
     const otherExercise = await deps.notifications.create(
       notificationInput({
         exerciseId: "88888888-8888-8888-8888-888888888888",
-        progressionEventId: "cccccccc-cccc-cccc-cccc-cccccccccccc",
+        progressionEventId: "cccccccc-cccc-4ccc-accc-cccccccccccc",
       })
     );
     const newer = await deps.notifications.create(
-      notificationInput({ progressionEventId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" })
+      notificationInput({ progressionEventId: "bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb" })
     );
     const token = await bearerFor(OWNER_A);
 
@@ -185,10 +185,10 @@ describe("PATCH /notifications/:id/accept", () => {
   it("accettare una notifica piu' vecchia non tocca quelle piu' recenti dello stesso esercizio", async () => {
     const { app, deps } = buildTestApp();
     const older = await deps.notifications.create(
-      notificationInput({ progressionEventId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" })
+      notificationInput({ progressionEventId: "aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa" })
     );
     const newer = await deps.notifications.create(
-      notificationInput({ progressionEventId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" })
+      notificationInput({ progressionEventId: "bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb" })
     );
     const token = await bearerFor(OWNER_A);
 
@@ -207,10 +207,10 @@ describe("PATCH /notifications/:id/accept", () => {
   it("segnare una notifica come 'solo letta' non tocca le altre dello stesso esercizio", async () => {
     const { app, deps } = buildTestApp();
     const older = await deps.notifications.create(
-      notificationInput({ progressionEventId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" })
+      notificationInput({ progressionEventId: "aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa" })
     );
     const newer = await deps.notifications.create(
-      notificationInput({ progressionEventId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" })
+      notificationInput({ progressionEventId: "bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb" })
     );
     const token = await bearerFor(OWNER_A);
 
@@ -243,10 +243,10 @@ describe("POST /notifications/read-all", () => {
   it("segna tutte le notifiche non lette dell'utente e ritorna il conteggio", async () => {
     const { app, deps } = buildTestApp();
     await deps.notifications.create(
-      notificationInput({ progressionEventId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" })
+      notificationInput({ progressionEventId: "aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa" })
     );
     await deps.notifications.create(
-      notificationInput({ progressionEventId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" })
+      notificationInput({ progressionEventId: "bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb" })
     );
     const token = await bearerFor(OWNER_A);
 

@@ -3,14 +3,14 @@ import { parseProgressionEventMessage } from "../src/events/consumer.js";
 import { NotificationService } from "../src/domain/notification-service.js";
 import { InMemoryNotificationRepository } from "../src/repositories/notification-repository.js";
 
-const OWNER_ID = "11111111-1111-1111-1111-111111111111";
+const OWNER_ID = "11111111-1111-1111-a111-111111111111";
 
 function validMessage(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
-    id: "77777777-7777-7777-7777-777777777777",
-    exerciseId: "55555555-5555-5555-5555-555555555555",
+    id: "77777777-7777-7777-a777-777777777777",
+    exerciseId: "55555555-5555-5555-a555-555555555555",
     exerciseName: "Panca piana",
-    triggeringSessionId: "66666666-6666-6666-6666-666666666666",
+    triggeringSessionId: "66666666-6666-6666-a666-666666666666",
     suggestionType: "increase_weight",
     previousValue: 80,
     suggestedValue: 82.5,

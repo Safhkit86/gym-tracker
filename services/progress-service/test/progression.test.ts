@@ -2,10 +2,10 @@ import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { bearerFor, buildTestApp } from "./helpers.js";
 
-const OWNER_A = "11111111-1111-1111-1111-111111111111";
-const OWNER_B = "22222222-2222-2222-2222-222222222222";
-const EXERCISE_ID = "55555555-5555-5555-5555-555555555555";
-const SESSION_ID = "66666666-6666-6666-6666-666666666666";
+const OWNER_A = "11111111-1111-1111-a111-111111111111";
+const OWNER_B = "22222222-2222-2222-a222-222222222222";
+const EXERCISE_ID = "55555555-5555-5555-a555-555555555555";
+const SESSION_ID = "66666666-6666-6666-a666-666666666666";
 
 describe("GET /progression", () => {
   it("richiede autenticazione", async () => {
@@ -65,7 +65,7 @@ describe("GET /progression", () => {
     expect(response.body).toHaveLength(1);
 
     const noMatch = await request(app)
-      .get("/progression?exerciseId=99999999-9999-9999-9999-999999999999")
+      .get("/progression?exerciseId=99999999-9999-4999-9999-999999999999")
       .set("Authorization", `Bearer ${token}`);
     expect(noMatch.body).toHaveLength(0);
   });

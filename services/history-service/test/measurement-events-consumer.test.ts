@@ -8,7 +8,7 @@ import {
 import { InMemoryMeasurementEntryRepository } from "../src/repositories/measurement-entry-repository.js";
 import { InMemoryMeasurementEventPublisher } from "../src/events/measurement-events-publisher.js";
 
-const USER_A = "11111111-1111-1111-1111-111111111111";
+const USER_A = "11111111-1111-1111-a111-111111111111";
 
 function buildDeps(): MeasurementEventsConsumerDeps & {
   measurementEntries: InMemoryMeasurementEntryRepository;

@@ -54,7 +54,7 @@ describe("POST /me/token/refresh", () => {
     const { app } = buildTestApp();
     const orphanToken = await new SignJWT({ email: "ghost@example.com" })
       .setProtectedHeader({ alg: "HS256" })
-      .setSubject("11111111-1111-1111-1111-111111111111")
+      .setSubject("11111111-1111-1111-a111-111111111111")
       .setExpirationTime("1h")
       .sign(new TextEncoder().encode(TEST_JWT_SECRET));
 

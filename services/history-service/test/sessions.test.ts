@@ -2,10 +2,10 @@ import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { bearerFor, buildTestApp } from "./helpers.js";
 
-const OWNER_A = "11111111-1111-1111-1111-111111111111";
-const OWNER_B = "22222222-2222-2222-2222-222222222222";
-const WORKOUT_ID = "33333333-3333-3333-3333-333333333333";
-const EXERCISE_ID = "55555555-5555-5555-5555-555555555555";
+const OWNER_A = "11111111-1111-1111-a111-111111111111";
+const OWNER_B = "22222222-2222-2222-a222-222222222222";
+const WORKOUT_ID = "33333333-3333-3333-a333-333333333333";
+const EXERCISE_ID = "55555555-5555-5555-a555-555555555555";
 
 function sessionPayload(overrides: {
   performedAt: string;

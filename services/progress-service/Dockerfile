@@ -17,6 +17,7 @@ RUN npm install --workspace=@gym-tracker/shared --workspace=@gym-tracker/progres
 # --- Stage 2: build TypeScript ---
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/services/progress-service/node_modules ./services/progress-service/node_modules
 COPY package.json package-lock.json* ./
 COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
@@ -30,6 +31,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/services/progress-service/node_modules ./services/progress-service/node_modules
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 COPY --from=build /app/packages/shared/package.json ./packages/shared/package.json
 COPY --from=build /app/services/progress-service/dist ./services/progress-service/dist

@@ -115,10 +115,10 @@ describe("routing verso gli upstream", () => {
     const token = await bearerFor("u1");
 
     await request(ctx.app)
-      .get("/workouts/11111111-1111-1111-1111-111111111111")
+      .get("/workouts/11111111-1111-1111-a111-111111111111")
       .set("Authorization", `Bearer ${token}`);
 
-    expect(ctx.workout.lastRequest?.url).toBe("/workouts/11111111-1111-1111-1111-111111111111");
+    expect(ctx.workout.lastRequest?.url).toBe("/workouts/11111111-1111-1111-a111-111111111111");
   });
 
   it("inoltra POST /sessions a history-service preservando il body", async () => {
@@ -129,11 +129,11 @@ describe("routing verso gli upstream", () => {
     await request(ctx.app)
       .post("/sessions")
       .set("Authorization", `Bearer ${token}`)
-      .send({ workoutId: "11111111-1111-1111-1111-111111111111" });
+      .send({ workoutId: "11111111-1111-1111-a111-111111111111" });
 
     expect(ctx.history.lastRequest?.url).toBe("/sessions");
     expect(JSON.parse(ctx.history.lastRequest?.body ?? "{}")).toMatchObject({
-      workoutId: "11111111-1111-1111-1111-111111111111",
+      workoutId: "11111111-1111-1111-a111-111111111111",
     });
     expect(ctx.workout.lastRequest).toBeNull();
     expect(ctx.progress.lastRequest).toBeNull();
@@ -145,11 +145,11 @@ describe("routing verso gli upstream", () => {
     const token = await bearerFor("u1");
 
     await request(ctx.app)
-      .get("/sessions/11111111-1111-1111-1111-111111111111/status")
+      .get("/sessions/11111111-1111-1111-a111-111111111111/status")
       .set("Authorization", `Bearer ${token}`);
 
     expect(ctx.progress.lastRequest?.url).toBe(
-      "/sessions/11111111-1111-1111-1111-111111111111/status"
+      "/sessions/11111111-1111-1111-a111-111111111111/status"
     );
     expect(ctx.history.lastRequest).toBeNull();
   });
@@ -218,11 +218,11 @@ describe("routing verso gli upstream", () => {
     const token = await bearerFor("u1");
 
     await request(ctx.app)
-      .patch("/notifications/11111111-1111-1111-1111-111111111111/read")
+      .patch("/notifications/11111111-1111-1111-a111-111111111111/read")
       .set("Authorization", `Bearer ${token}`);
 
     expect(ctx.notify.lastRequest?.url).toBe(
-      "/notifications/11111111-1111-1111-1111-111111111111/read"
+      "/notifications/11111111-1111-1111-a111-111111111111/read"
     );
   });
 

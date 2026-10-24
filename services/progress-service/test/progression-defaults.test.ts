@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { bearerFor, buildTestApp } from "./helpers.js";
 
-const EXERCISE_ID = "55555555-5555-5555-5555-555555555555";
-const OTHER_EXERCISE_ID = "66666666-6666-6666-6666-666666666666";
+const EXERCISE_ID = "55555555-5555-5555-a555-555555555555";
+const OTHER_EXERCISE_ID = "66666666-6666-6666-a666-666666666666";
 
 describe("GET /me/progression-defaults", () => {
   it("richiede autenticazione", async () => {
