@@ -45,6 +45,20 @@ tracking allenamenti in palestra. Vedi README.md per l'architettura completa.
   singoli workspace: senza il manifest di root, `/app` non è riconosciuto
   come workspace root e `npm run build --workspace=...` fallisce con
   `ENOENT: package.json`. Usa il Dockerfile di `account-service` come modello.
+  Se un servizio dichiara una dipendenza su una major diversa da quella
+  usata da altri workspace del monorepo (es. `zod` v4 nei servizi backend
+  mentre `apps/mobile`/`apps/web` restano su v3 per via di dipendenze di
+  toolchain), npm installa quella dipendenza **annidata** sotto
+  `services/<nome-servizio>/node_modules/`, non nella root hoisted — gli
+  stage `build`/`runtime` che fanno `COPY --from=deps /app/node_modules
+./node_modules` devono quindi copiare **anche**
+  `COPY --from=deps /app/services/<nome-servizio>/node_modules
+./services/<nome-servizio>/node_modules`, altrimenti il build Docker
+  fallisce con `Cannot find module` (o TypeScript silenzia il tipo mancante
+  come `any`) perché quella copia annidata non viene mai copiata nello
+  stage successivo — sintomo scoperto con il bump di `zod` a v4 solo nei
+  servizi backend. Verificabile in anticipo con `node -e` sul
+  `package-lock.json` cercando entry `services/*/node_modules/<pkg>`.
 - `apps/web` è containerizzata sia in dev che in prod, con stage Docker
   diversi nello stesso `apps/web/Dockerfile`: `dev` (Vite dev server con hot
   reload, usato da `docker-compose.yml`) e `runtime` (nginx su build statica,
