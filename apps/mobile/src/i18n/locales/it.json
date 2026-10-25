@@ -339,6 +339,10 @@
       "saved": "Preferenze salvate."
     }
   },
+  "security": {
+    "rootedWarningTitle": "Dispositivo potenzialmente compromesso",
+    "rootedWarningMessage": "Questo dispositivo risulta rootato o jailbroken: il sistema operativo non garantisce più l'isolamento normale tra le app. Puoi continuare a usare l'app, ma i tuoi dati potrebbero essere meno protetti."
+  },
   "errors": {
     "INVALID_CREDENTIALS": "Email o password non validi.",
     "ACCOUNT_LOCKED": "Account temporaneamente bloccato per troppi tentativi falliti. Riprova più tardi.",

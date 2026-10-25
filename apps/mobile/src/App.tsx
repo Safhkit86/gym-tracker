@@ -6,6 +6,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "./auth/AuthProvider";
 import { RootNavigator } from "./navigation/RootNavigator";
 import { useOrientationLock } from "./hooks/useOrientationLock";
+import { useRootedDeviceWarning } from "./hooks/useRootedDeviceWarning";
 
 export function App() {
   // Sveglia del timer di recupero udibile anche a interruttore silenzioso
@@ -15,6 +16,8 @@ export function App() {
   useEffect(() => {
     void setAudioModeAsync({ playsInSilentMode: true });
   }, []);
+
+  useRootedDeviceWarning();
 
   // Telefono bloccato in portrait, tablet libero di ruotare — vedi
   // useOrientationLock per il dettaglio della primitiva usata.
