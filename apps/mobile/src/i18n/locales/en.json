@@ -200,6 +200,8 @@
     },
     "noSessionsInPeriod": "No session logged in this period.",
     "noMeasurementsInPeriod": "No measurement recorded in this period.",
+    "calendarPrevMonth": "Previous month",
+    "calendarNextMonth": "Next month",
     "quickFilter": {
       "oneMonth": "1M",
       "threeMonths": "3M",

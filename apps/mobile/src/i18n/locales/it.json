@@ -200,6 +200,8 @@
     },
     "noSessionsInPeriod": "Nessuna sessione registrata in questo periodo.",
     "noMeasurementsInPeriod": "Nessuna misurazione registrata in questo periodo.",
+    "calendarPrevMonth": "Mese precedente",
+    "calendarNextMonth": "Mese successivo",
     "quickFilter": {
       "oneMonth": "1M",
       "threeMonths": "3M",
