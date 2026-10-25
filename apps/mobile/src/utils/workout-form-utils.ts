@@ -141,6 +141,14 @@ export function duplicateWorkoutInput(workout: WorkoutDetail, newName: string): 
   return toWorkoutInput(newName, notes, exercises);
 }
 
+/** Costruisce il WorkoutInput per spostare una scheda in un altro
+ *  allenamento: stesso contenuto, stesso nome, solo allenamentoId diverso.
+ *  Vedi moveWorkoutInput di apps/web/src/components/workout-form-utils.ts. */
+export function moveWorkoutInput(workout: WorkoutDetail, allenamentoId: string): WorkoutInput {
+  const { notes, exercises } = workoutDetailToFormValues(workout);
+  return { ...toWorkoutInput(workout.name, notes, exercises), allenamentoId };
+}
+
 /** Estrae i path dei campi (formato zod, es. "exercises.0.sets.0.targetMinReps"
  *  oppure "exercises.0.sets.0" per un refine cross-campo come min<=max) da
  *  ApiRequestError.details di un 400 VALIDATION_ERROR: usato per evidenziare

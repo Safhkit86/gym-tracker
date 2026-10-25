@@ -122,6 +122,33 @@
       "submitting": "Salvataggio…"
     }
   },
+  "allenamenti": {
+    "headerButton": "Allenamenti",
+    "title": "Allenamenti",
+    "description": "Raggruppa le tue schede per programma (es. \"Massa\", \"Definizione\"): quello attivo è quello che vedi in Registra sessione dalla Dashboard. Le schede restano comunque tutte visibili in \"Schede\".",
+    "empty": "Non hai ancora nessun allenamento.",
+    "new": "Nuovo allenamento",
+    "active": "Attivo",
+    "inactive": "Non attivo",
+    "workoutCount_one": "{{count}} scheda",
+    "workoutCount_other": "{{count}} schede",
+    "noWorkoutsHere": "Nessuna scheda qui.",
+    "activate": "Rendi attivo",
+    "rename": "Rinomina allenamento",
+    "delete": "Elimina allenamento",
+    "moveTo": "Sposta in…",
+    "moveWorkoutTitle": "Sposta \"{{name}}\" in…",
+    "createPromptMessage": "Nuovo allenamento",
+    "createPromptLabel": "Nome",
+    "renamePromptMessage": "Rinomina \"{{name}}\"",
+    "renamePromptLabel": "Nome",
+    "deleteConfirmTitle": "Eliminare l'allenamento \"{{name}}\"? Possibile solo se vuoto e non attivo: sposta prima le sue schede altrove.",
+    "createError": "Impossibile creare l'allenamento.",
+    "renameError": "Impossibile rinominare l'allenamento.",
+    "activateError": "Impossibile attivare l'allenamento.",
+    "deleteError": "Impossibile eliminare l'allenamento.",
+    "moveError": "Impossibile spostare la scheda."
+  },
   "session": {
     "title": "Registra sessione",
     "loadError": "Impossibile caricare la scheda.",

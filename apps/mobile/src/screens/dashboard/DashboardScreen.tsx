@@ -33,6 +33,7 @@ import { formatSuggestionDelta, toOverride } from "../../utils/suggestion-format
 import { getDashboardStats, getExerciseHistory, getStalledExercise } from "../../api/stats";
 import { listExercises } from "../../api/exercises";
 import { getWorkout, listWorkouts } from "../../api/workouts";
+import { listAllenamenti } from "../../api/allenamenti";
 import { listSessions } from "../../api/sessions";
 import { listMeasurements } from "../../api/measurements";
 import { acceptNotification, listNotifications } from "../../api/notifications";
@@ -135,12 +136,14 @@ export function DashboardScreen({ navigation }: Props) {
       return;
     }
     try {
-      const [statsResult, exercisesResult, workoutsResult, sessionsResult] = await Promise.all([
-        getDashboardStats(token),
-        listExercises(token),
-        listWorkouts(token),
-        listSessions(token, 1),
-      ]);
+      const [statsResult, exercisesResult, workoutsResult, sessionsResult, allenamenti] =
+        await Promise.all([
+          getDashboardStats(token),
+          listExercises(token),
+          listWorkouts(token),
+          listSessions(token, 1),
+          listAllenamenti(token),
+        ]);
       if (!isMountedRef.current) {
         return;
       }
@@ -157,11 +160,22 @@ export function DashboardScreen({ navigation }: Props) {
           return;
         }
 
-        const lastIndex = last
-          ? workoutsResult.findIndex((w: WorkoutSummary) => w.id === last.workoutId)
-          : -1;
-        const nextIndex = (lastIndex + 1) % workoutsResult.length;
-        setNextWorkout(workoutDetails[nextIndex] ?? null);
+        // "Prossima sessione" ruota solo tra le schede dell'allenamento
+        // attivo, non tutte — vedi lo stesso commento in
+        // apps/web/src/pages/DashboardPage.tsx. L'unione esercizi sotto
+        // resta invece sull'intero workoutsResult (scope invariato).
+        const activeAllenamentoId = allenamenti.find((a) => a.isActive)?.id;
+        const activeWorkouts = activeAllenamentoId
+          ? workoutsResult.filter((w: WorkoutSummary) => w.allenamentoId === activeAllenamentoId)
+          : workoutsResult;
+        if (activeWorkouts.length > 0) {
+          const lastIndex = last
+            ? activeWorkouts.findIndex((w: WorkoutSummary) => w.id === last.workoutId)
+            : -1;
+          const nextIndex = (lastIndex + 1) % activeWorkouts.length;
+          const nextWorkoutId = activeWorkouts[nextIndex]?.id;
+          setNextWorkout(workoutDetails.find((d) => d.id === nextWorkoutId) ?? null);
+        }
 
         const exerciseUnion = new Map<string, string>();
         for (const detail of workoutDetails) {

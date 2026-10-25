@@ -44,6 +44,19 @@ const readNotification = {
   createdAt: "2026-07-29T10:00:00.000Z",
 };
 
+const personalRecordNotification = {
+  id: "n3",
+  exerciseId: "e3",
+  exerciseName: "Stacco",
+  suggestionType: "personal_record_weight" as const,
+  previousValue: 100,
+  suggestedValue: 105,
+  reason: "Nuovo massimale: 105 kg (precedente: 100 kg).",
+  triggeringSessionId: "sess2",
+  readAt: null,
+  createdAt: "2026-08-02T10:00:00.000Z",
+};
+
 function baseHandlers(allNotifications: unknown[]) {
   return [
     { match: (u: string, m: string) => u.endsWith("/me") && m === "GET", body: fakeUser },
@@ -102,6 +115,21 @@ describe("NotificationsScreen", () => {
         expect.objectContaining({ method: "PATCH" })
       );
     });
+  });
+
+  it("un nuovo massimale non ha il pulsante 'Accetta progressione', solo 'Segna come letta'", async () => {
+    mockFetchResponses(baseHandlers([personalRecordNotification]));
+
+    const screen = await renderWithProviders(
+      <NotificationsScreen navigation={mockNavigation()} route={{} as Props["route"]} />
+    );
+
+    expect(await screen.findByText("Stacco")).toBeTruthy();
+    // accessibilityElementsHidden sull'icona la esclude dall'albero di
+    // accessibilita' usato dalle query di default: va richiesta esplicitamente.
+    expect(screen.getByText("★", { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Accetta" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Segna come letta" })).toBeTruthy();
   });
 
   it("mostra i controlli di paginazione e richiede la pagina successiva al tocco", async () => {

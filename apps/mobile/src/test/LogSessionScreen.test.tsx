@@ -119,6 +119,65 @@ describe("LogSessionScreen", () => {
     expect(navigation.popTo).toHaveBeenCalledWith("WorkoutDetail", { id: "w1" });
   });
 
+  it("un nuovo massimale viene mostrato con lo stile/icona dedicati, non come un suggerimento di progressione", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
+      { match: (u, m) => u.endsWith("/workouts/w1") && m === "GET", body: workout },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      {
+        match: (u, m) => u.endsWith("/me/account-preferences") && m === "GET",
+        body: accountPreferences,
+      },
+      { match: (u, m) => u.endsWith("/me/progression-defaults") && m === "GET", body: [] },
+      {
+        match: (u, m) => u.endsWith("/sessions") && m === "POST",
+        body: {
+          id: "sess1",
+          workoutId: "w1",
+          workoutName: "Spinta",
+          workoutNotes: null,
+          performedAt: new Date().toISOString(),
+          notes: null,
+          exercises: [],
+          createdAt: "",
+        },
+      },
+      {
+        match: (u, m) => u.endsWith("/sessions/sess1/status") && m === "GET",
+        body: {
+          status: "with-suggestion",
+          suggestions: [
+            {
+              id: "pr1",
+              exerciseId: "e1",
+              exerciseName: "Panca piana",
+              triggeringSessionId: "sess1",
+              suggestionType: "personal_record_weight",
+              previousValue: 60,
+              suggestedValue: 65,
+              reason: "Nuovo massimale: 65 kg (precedente: 60 kg).",
+              source: "rule",
+              createdAt: "",
+            },
+          ],
+        },
+      },
+    ]);
+
+    const screen = await renderWithProviders(
+      <LogSessionScreen navigation={mockNavigation()} route={mockRoute("w1")} />
+    );
+
+    await screen.findByLabelText("Panca piana set 1 rep effettive");
+    fireEvent.press(screen.getByRole("button", { name: "Registra sessione" }));
+
+    expect(await screen.findByText(/Nuovo massimale: 65 kg/)).toBeTruthy();
+    // Stile/icona dedicati (non il generico styles.suggestion): verifica
+    // sul JSON renderizzato, piu' robusto di un getByText su un nodo con
+    // figli <Text> annidati (icona + nome esercizio + motivo).
+    expect(JSON.stringify(screen.toJSON())).toContain("★");
+  });
+
   it("su tablet in landscape mostra la tabella invece dello stack di card", async () => {
     setDeviceDimensions("tabletLandscape");
     mockFetchResponses([

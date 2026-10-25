@@ -122,6 +122,33 @@
       "submitting": "Saving…"
     }
   },
+  "allenamenti": {
+    "headerButton": "Workout groups",
+    "title": "Workout groups",
+    "description": "Group your workouts by program (e.g. \"Bulk\", \"Cut\"): the active one is what you see in Log session from the Dashboard. Workouts stay visible in \"Workouts\" either way.",
+    "empty": "You don't have any workout group yet.",
+    "new": "New group",
+    "active": "Active",
+    "inactive": "Not active",
+    "workoutCount_one": "{{count}} workout",
+    "workoutCount_other": "{{count}} workouts",
+    "noWorkoutsHere": "No workouts here.",
+    "activate": "Make active",
+    "rename": "Rename group",
+    "delete": "Delete group",
+    "moveTo": "Move to…",
+    "moveWorkoutTitle": "Move \"{{name}}\" to…",
+    "createPromptMessage": "New workout group",
+    "createPromptLabel": "Name",
+    "renamePromptMessage": "Rename \"{{name}}\"",
+    "renamePromptLabel": "Name",
+    "deleteConfirmTitle": "Delete workout group \"{{name}}\"? Only possible if it's empty and not active: move its workouts elsewhere first.",
+    "createError": "Unable to create the workout group.",
+    "renameError": "Unable to rename the workout group.",
+    "activateError": "Unable to activate the workout group.",
+    "deleteError": "Unable to delete the workout group.",
+    "moveError": "Unable to move the workout."
+  },
   "session": {
     "title": "Log session",
     "loadError": "Unable to load the workout.",
