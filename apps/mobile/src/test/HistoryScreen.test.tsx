@@ -126,6 +126,47 @@ describe("HistoryScreen", () => {
     expect(screen.getByText("90s")).toBeTruthy();
   });
 
+  it("cliccando un giorno nel calendario salta alla pagina di quella sessione ed evidenzia la card", async () => {
+    const sessionInCalendarMonth = {
+      ...session,
+      id: "sess-cal",
+      performedAt: "2026-10-05T10:00:00.000Z",
+    };
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
+      ...sessionsHandlers([sessionInCalendarMonth]),
+    ]);
+
+    const screen = await renderWithProviders(
+      <HistoryScreen navigation={mockNavigation()} route={mockRoute()} />
+    );
+    await screen.findByText("Spinta");
+
+    // Il mese mostrato di default e' quello corrente (ottobre 2026, vedi
+    // system date della sessione di test): il giorno 5 ha una sessione.
+    fireEvent.press(screen.getByLabelText("2026-10-05"));
+
+    await waitFor(() => {
+      expect(screen.getByText("05/10/2026")).toBeTruthy();
+    });
+  });
+
+  it("i giorni senza sessioni nel calendario non sono cliccabili", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: fakeUser },
+      ...sessionsHandlers([session]),
+    ]);
+
+    const screen = await renderWithProviders(
+      <HistoryScreen navigation={mockNavigation()} route={mockRoute()} />
+    );
+    await screen.findByText("Spinta");
+
+    // Nessuna sessione in ottobre 2026 (mese mostrato di default) in questo
+    // fixture (la sessione e' di agosto): ogni giorno del mese e' disabilitato.
+    expect(screen.getByLabelText("2026-10-05")).toBeDisabled();
+  });
+
   it("mostra le sessioni ed elimina dopo conferma", async () => {
     const alertSpy = jest.spyOn(Alert, "alert").mockImplementation((_title, _msg, buttons) => {
       buttons?.find((b) => b.style === "destructive")?.onPress?.();

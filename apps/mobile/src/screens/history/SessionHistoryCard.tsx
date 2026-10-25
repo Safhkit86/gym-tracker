@@ -12,6 +12,7 @@ interface SessionHistoryCardProps {
   week: number | undefined;
   isNewWeek: boolean;
   isDeleting: boolean;
+  isHighlighted?: boolean;
   onRequestDelete: () => void;
 }
 
@@ -20,6 +21,7 @@ export function SessionHistoryCard({
   week,
   isNewWeek,
   isDeleting,
+  isHighlighted = false,
   onRequestDelete,
 }: SessionHistoryCardProps) {
   const { t, i18n } = useTranslation();
@@ -54,7 +56,7 @@ export function SessionHistoryCard({
           <Text style={styles.weekDividerText}>{t("history.week", { number: week })}</Text>
         </View>
       )}
-      <View style={[styles.card, tabletCardStyle]}>
+      <View style={[styles.card, tabletCardStyle, isHighlighted && styles.cardHighlighted]}>
         <View style={styles.header}>
           <View style={styles.titleBlock}>
             <Text style={styles.workoutName}>{session.workoutName}</Text>
@@ -124,6 +126,9 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
+  },
+  cardHighlighted: {
+    borderColor: colors.accent,
   },
   header: {
     flexDirection: "row",

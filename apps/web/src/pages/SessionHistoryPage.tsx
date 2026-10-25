@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState, type ChangeEvent } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import type { MeasurementEntry, Paginated, SessionDetail } from "@gym-tracker/shared";
 import { useAuth } from "../auth/useAuth";
 import { deleteSession, listSessions, listSessionsPage } from "../api/sessions";
@@ -6,6 +6,7 @@ import { deleteMeasurement, listMeasurements, listMeasurementsPage } from "../ap
 import { ApiRequestError } from "../api/client";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { IconButton } from "../components/IconButton";
+import { MonthCalendar } from "../components/MonthCalendar";
 import { Pagination } from "../components/Pagination";
 import { QuickFilterChips } from "../components/QuickFilterChips";
 import { DownloadIcon, TrashIcon, UploadIcon } from "../components/icons";
@@ -116,6 +117,88 @@ export function SessionHistoryPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const isNarrow = useIsNarrowViewport(NARROW_TABLE_LAYOUT_QUERY);
+
+  // Calendario mensile sopra l'elenco: solo un navigatore verso una
+  // sessione già presente in `sessions` (storico completo, non paginato),
+  // non una seconda fonte di dati. Un click resetta il filtro rapido su
+  // "Tutto" (il giorno scelto potrebbe cadere fuori dal periodo attivo) e
+  // salta alla pagina che contiene quella sessione.
+  const today = new Date();
+  const [calendarYear, setCalendarYear] = useState(today.getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState(today.getMonth());
+  const [highlightSessionIds, setHighlightSessionIds] = useState<Set<string>>(new Set());
+  const sessionCardRefs = useRef(new Map<string, HTMLElement>());
+
+  const trainedDaysInMonth = useMemo(() => {
+    const prefix = `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-`;
+    const result = new Set<string>();
+    for (const session of sessions ?? []) {
+      const date = session.performedAt.slice(0, 10);
+      if (date.startsWith(prefix)) {
+        result.add(date);
+      }
+    }
+    return result;
+  }, [sessions, calendarYear, calendarMonth]);
+
+  function handleSelectDay(date: string): void {
+    if (!sessions) {
+      return;
+    }
+    const matching = sessions.filter((s) => s.performedAt.slice(0, 10) === date);
+    if (matching.length === 0) {
+      return;
+    }
+    const sorted = [...sessions].sort((a, b) =>
+      sortOrder === "desc"
+        ? b.performedAt.localeCompare(a.performedAt)
+        : a.performedAt.localeCompare(b.performedAt)
+    );
+    const firstIndex = sorted.findIndex((s) => s.performedAt.slice(0, 10) === date);
+    setQuickFilter("all");
+    setPage(Math.floor(firstIndex / HISTORY_PAGE_SIZE) + 1);
+    setHighlightSessionIds(new Set(matching.map((s) => s.id)));
+  }
+
+  function handlePrevMonth(): void {
+    if (calendarMonth === 0) {
+      setCalendarMonth(11);
+      setCalendarYear((y) => y - 1);
+    } else {
+      setCalendarMonth((m) => m - 1);
+    }
+  }
+
+  function handleNextMonth(): void {
+    if (calendarMonth === 11) {
+      setCalendarMonth(0);
+      setCalendarYear((y) => y + 1);
+    } else {
+      setCalendarMonth((m) => m + 1);
+    }
+  }
+
+  // Scorre fino alla prima sessione evidenziata (scelta dal calendario) non
+  // appena la pagina giusta e' caricata, e rimuove l'evidenziazione dopo
+  // qualche secondo — stesso pattern "evidenzia poi sfuma" di "✓ Accettato"
+  // nella Dashboard, invece di dover intercettare ogni altro controllo
+  // (ordinamento, filtro rapido, paginazione manuale) per pulirla a mano.
+  useEffect(() => {
+    if (highlightSessionIds.size === 0) {
+      return;
+    }
+    for (const id of highlightSessionIds) {
+      const card = sessionCardRefs.current.get(id);
+      // jsdom (usato dai test) non implementa scrollIntoView: stessa guardia
+      // di WorkoutForm.tsx.
+      if (typeof card?.scrollIntoView === "function") {
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      break;
+    }
+    const timeout = setTimeout(() => setHighlightSessionIds(new Set()), 3000);
+    return () => clearTimeout(timeout);
+  }, [sessionsPage, highlightSessionIds]);
 
   // Stesso schema delle sessioni: measurements e' il totale non paginato
   // (per "Esporta misure"), measurementsPage la fetta mostrata a schermo.
@@ -555,6 +638,15 @@ export function SessionHistoryPage() {
 
           {sessions && sessions.length > 0 && (
             <>
+              <MonthCalendar
+                year={calendarYear}
+                month={calendarMonth}
+                trainedDays={trainedDaysInMonth}
+                onSelectDay={handleSelectDay}
+                onPrevMonth={handlePrevMonth}
+                onNextMonth={handleNextMonth}
+              />
+
               <div className="toolbar toolbar--end">
                 <button
                   type="button"
@@ -592,7 +684,19 @@ export function SessionHistoryPage() {
                         <span>Settimana {week}</span>
                       </div>
                     )}
-                    <section className="card session-card">
+                    <section
+                      className={
+                        "card session-card" +
+                        (highlightSessionIds.has(session.id) ? " session-card--highlighted" : "")
+                      }
+                      ref={(el) => {
+                        if (el) {
+                          sessionCardRefs.current.set(session.id, el);
+                        } else {
+                          sessionCardRefs.current.delete(session.id);
+                        }
+                      }}
+                    >
                       <div className="session-card__header">
                         <div className="session-card__title">
                           <h2>{session.workoutName}</h2>

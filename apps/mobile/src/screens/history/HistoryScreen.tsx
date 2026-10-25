@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
@@ -15,6 +15,7 @@ import type { HistoryStackParamList } from "../../navigation/HistoryNavigator";
 import { computeWeekNumbers } from "../../utils/session-history-utils";
 import { findPreviousMeasurement } from "../../utils/measurements";
 import { sinceForQuickFilter, type QuickFilterPreset } from "../../utils/quick-filters";
+import { MonthCalendar } from "../../components/MonthCalendar";
 import { Pagination } from "../../components/Pagination";
 import { QuickFilterChips } from "../../components/QuickFilterChips";
 import { SessionHistoryCard } from "./SessionHistoryCard";
@@ -57,6 +58,65 @@ export function HistoryScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
+
+  // Calendario mensile sopra l'elenco: solo un navigatore verso una
+  // sessione già presente in `sessions` (storico completo, non paginato),
+  // non una seconda fonte di dati — stesso schema di
+  // apps/web/src/pages/SessionHistoryPage.tsx.
+  const today = useMemo(() => new Date(), []);
+  const [calendarYear, setCalendarYear] = useState(today.getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState(today.getMonth());
+  const [highlightSessionIds, setHighlightSessionIds] = useState<Set<string>>(new Set());
+  const sessionListRef = useRef<FlatList<SessionDetail>>(null);
+
+  const trainedDaysInMonth = useMemo(() => {
+    const prefix = `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-`;
+    const result = new Set<string>();
+    for (const session of sessions ?? []) {
+      const date = session.performedAt.slice(0, 10);
+      if (date.startsWith(prefix)) {
+        result.add(date);
+      }
+    }
+    return result;
+  }, [sessions, calendarYear, calendarMonth]);
+
+  function handleSelectDay(date: string): void {
+    if (!sessions) {
+      return;
+    }
+    const matching = sessions.filter((s) => s.performedAt.slice(0, 10) === date);
+    if (matching.length === 0) {
+      return;
+    }
+    const sorted = [...sessions].sort((a, b) =>
+      sortOrder === "desc"
+        ? b.performedAt.localeCompare(a.performedAt)
+        : a.performedAt.localeCompare(b.performedAt)
+    );
+    const firstIndex = sorted.findIndex((s) => s.performedAt.slice(0, 10) === date);
+    setQuickFilter("all");
+    setPage(Math.floor(firstIndex / HISTORY_PAGE_SIZE) + 1);
+    setHighlightSessionIds(new Set(matching.map((s) => s.id)));
+  }
+
+  function handlePrevMonth(): void {
+    if (calendarMonth === 0) {
+      setCalendarMonth(11);
+      setCalendarYear((y) => y - 1);
+    } else {
+      setCalendarMonth((m) => m - 1);
+    }
+  }
+
+  function handleNextMonth(): void {
+    if (calendarMonth === 11) {
+      setCalendarMonth(0);
+      setCalendarYear((y) => y + 1);
+    } else {
+      setCalendarMonth((m) => m + 1);
+    }
+  }
 
   // Stesso schema delle sessioni: measurements e' il totale non paginato
   // (nessun uso analogo all'export della webapp qui, ma comunque utile ad
@@ -255,6 +315,24 @@ export function HistoryScreen({ navigation }: Props) {
   const weekBySessionId = sessions ? computeWeekNumbers(sessions) : null;
   const sessionItems = sessionsPage?.items ?? [];
 
+  // Scorre fino alla prima sessione evidenziata (scelta dal calendario) non
+  // appena la pagina giusta e' caricata, e rimuove l'evidenziazione dopo
+  // qualche secondo — stesso pattern "evidenzia poi sfuma" di apps/web/src/
+  // pages/SessionHistoryPage.tsx, invece di dover intercettare ogni altro
+  // controllo (ordinamento, filtro rapido, paginazione manuale) per pulirla
+  // a mano.
+  useEffect(() => {
+    if (highlightSessionIds.size === 0) {
+      return;
+    }
+    const target = (sessionsPage?.items ?? []).find((item) => highlightSessionIds.has(item.id));
+    if (target) {
+      sessionListRef.current?.scrollToItem({ item: target, animated: true, viewPosition: 0.3 });
+    }
+    const timeout = setTimeout(() => setHighlightSessionIds(new Set()), 3000);
+    return () => clearTimeout(timeout);
+  }, [sessionsPage, highlightSessionIds]);
+
   return (
     <View style={[styles.container, safeAreaPadding]}>
       <View style={styles.tabRow}>
@@ -284,6 +362,7 @@ export function HistoryScreen({ navigation }: Props) {
 
       {tab === "sessions" ? (
         <FlatList
+          ref={sessionListRef}
           data={sessionItems}
           keyExtractor={(item) => item.id}
           ListHeaderComponent={
@@ -301,6 +380,14 @@ export function HistoryScreen({ navigation }: Props) {
               )}
               {sessions && sessions.length > 0 && (
                 <>
+                  <MonthCalendar
+                    year={calendarYear}
+                    month={calendarMonth}
+                    trainedDays={trainedDaysInMonth}
+                    onSelectDay={handleSelectDay}
+                    onPrevMonth={handlePrevMonth}
+                    onNextMonth={handleNextMonth}
+                  />
                   <TouchableOpacity
                     style={styles.sortButton}
                     onPress={() => {
@@ -343,6 +430,7 @@ export function HistoryScreen({ navigation }: Props) {
                 week={week}
                 isNewWeek={isNewWeek}
                 isDeleting={deletingSessionId === item.id}
+                isHighlighted={highlightSessionIds.has(item.id)}
                 onRequestDelete={() => requestDeleteSession(item.id)}
               />
             );

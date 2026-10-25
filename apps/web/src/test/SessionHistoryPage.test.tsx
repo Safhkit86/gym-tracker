@@ -124,7 +124,9 @@ describe("SessionHistoryPage", () => {
     expect(screen.getAllByText("80 kg")).toHaveLength(2);
     expect(screen.getAllByText("90s")).toHaveLength(2);
 
-    const dates = screen.getAllByText(/2026/).map((el) => el.textContent);
+    const dates = screen
+      .getAllByText(/2026/, { selector: ".session-card__date" })
+      .map((el) => el.textContent);
     expect(dates[0]).toMatch(/08/);
     expect(dates[1]).toMatch(/01/);
 
@@ -163,10 +165,54 @@ describe("SessionHistoryPage", () => {
     // Il toggle non inverte piu' in locale un array gia' caricato: rifa' la
     // fetch paginata con order=asc, quindi l'aggiornamento e' asincrono.
     await waitFor(() => {
-      const dates = screen.getAllByText(/2026/).map((el) => el.textContent);
+      const dates = screen
+        .getAllByText(/2026/, { selector: ".session-card__date" })
+        .map((el) => el.textContent);
       expect(dates[0]).toMatch(/01/);
       expect(dates[1]).toMatch(/08/);
     });
+  });
+
+  it("cliccando un giorno nel calendario salta alla pagina di quella sessione ed evidenzia la card", async () => {
+    const SESSION_CALENDAR = {
+      ...SESSION_OLDER,
+      id: "sess-cal",
+      performedAt: "2026-10-05T10:00:00.000Z",
+      createdAt: "2026-10-05T10:00:00.000Z",
+    };
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      ...sessionsHandlers([SESSION_CALENDAR, SESSION_NEWER, SESSION_OLDER]),
+    ]);
+
+    renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+    await screen.findAllByText("Panca piana");
+
+    // Il mese mostrato di default e' quello corrente (ottobre 2026, vedi
+    // system date della sessione di test): il giorno 5 ha una sessione,
+    // è quindi un bottone cliccabile nel calendario.
+    fireEvent.click(screen.getByRole("button", { name: "2026-10-05" }));
+
+    await waitFor(() => {
+      const card = document.querySelector(".session-card--highlighted");
+      expect(card).not.toBeNull();
+      expect(card).toHaveTextContent("05/10/2026");
+    });
+  });
+
+  it("i giorni senza sessioni nel calendario non sono cliccabili", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      ...sessionsHandlers([SESSION_NEWER, SESSION_OLDER]),
+    ]);
+
+    renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+    await screen.findAllByText("Panca piana");
+
+    // Nessuna sessione in ottobre 2026 (mese mostrato di default) in questo
+    // fixture: ogni giorno del mese e' disabilitato.
+    const emptyDay = screen.getByRole("button", { name: "2026-10-05" });
+    expect(emptyDay).toBeDisabled();
   });
 
   it("mostra i controlli di paginazione e richiede la pagina successiva al click", async () => {
@@ -267,11 +313,13 @@ describe("SessionHistoryPage", () => {
 
     await screen.findByText("Panca piana");
     expect(document.querySelector("table")).not.toBeInTheDocument();
-    expect(document.querySelectorAll(".stack-block")).toHaveLength(1);
-    expect(screen.getByText("Set 1")).toBeInTheDocument();
-    expect(screen.getByText("10")).toBeInTheDocument();
-    expect(screen.getByText("80 kg")).toBeInTheDocument();
-    expect(screen.getByText("90s")).toBeInTheDocument();
+    const stackBlocks = document.querySelectorAll(".stack-block");
+    expect(stackBlocks).toHaveLength(1);
+    const block = within(stackBlocks[0] as HTMLElement);
+    expect(block.getByText("Set 1")).toBeInTheDocument();
+    expect(block.getByText("10")).toBeInTheDocument();
+    expect(block.getByText("80 kg")).toBeInTheDocument();
+    expect(block.getByText("90s")).toBeInTheDocument();
   });
 
   it("mostra il recupero EFFETTIVO inserito in Registra Sessione, non quello informativo prescritto dalla scheda", async () => {
