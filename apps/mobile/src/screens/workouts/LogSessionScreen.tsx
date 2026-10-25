@@ -32,6 +32,7 @@ import { centeredContentStyle, MAX_CONTENT_WIDTH_DP } from "../../theme/layout";
 import { useIsTabletLandscape } from "../../hooks/useResponsiveLayout";
 import type { WorkoutsStackParamList } from "../../navigation/WorkoutsNavigator";
 import { SessionExerciseCard } from "./SessionExerciseCard";
+import { isPersonalRecord } from "../../utils/suggestion-format";
 import { SessionExerciseTable } from "./SessionExerciseTable";
 import {
   buildInitialExercises,
@@ -290,12 +291,20 @@ export function LogSessionScreen({ navigation, route }: Props) {
             <Text style={styles.resultText}>{t("session.noSuggestion")}</Text>
           )}
           {suggestionStatus === "with-suggestion" &&
-            suggestions.map((suggestion) => (
-              <Text key={suggestion.id} style={styles.suggestion}>
-                <Text style={styles.suggestionExercise}>{suggestion.exerciseName}</Text>:{" "}
-                {suggestion.reason}
-              </Text>
-            ))}
+            suggestions.map((suggestion) =>
+              isPersonalRecord(suggestion) ? (
+                <Text key={suggestion.id} style={styles.personalRecord}>
+                  <Text style={styles.personalRecordIcon}>★ </Text>
+                  <Text style={styles.suggestionExercise}>{suggestion.exerciseName}</Text>:{" "}
+                  {suggestion.reason}
+                </Text>
+              ) : (
+                <Text key={suggestion.id} style={styles.suggestion}>
+                  <Text style={styles.suggestionExercise}>{suggestion.exerciseName}</Text>:{" "}
+                  {suggestion.reason}
+                </Text>
+              )
+            )}
           {suggestionStatus === "timeout" && (
             <Text style={styles.resultText}>{t("session.suggestionsTimeout")}</Text>
           )}
@@ -595,6 +604,18 @@ const styles = StyleSheet.create({
   },
   suggestionExercise: {
     fontWeight: "700",
+  },
+  personalRecord: {
+    color: colors.warning,
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: spacing.sm,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+  },
+  personalRecordIcon: {
+    color: colors.warning,
   },
   backButton: {
     marginTop: spacing.md,

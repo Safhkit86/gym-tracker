@@ -135,6 +135,11 @@ function baseHandlers() {
       match: (u: string, m: string) => u.endsWith("/workouts/w1") && m === "GET",
       body: workoutDetail,
     },
+    // body: [] -> nessun allenamento attivo trovato, activeAllenamentoId
+    // resta undefined e il codice ricade sull'intero workoutsResult non
+    // filtrato: stesso trucco di apps/web/test/DashboardPage.test.tsx,
+    // preserva tutte le asserzioni esistenti su "Avvia sessione" -> w1.
+    { match: (u: string, m: string) => u.endsWith("/allenamenti") && m === "GET", body: [] },
     {
       match: (u: string, m: string) => u.includes("/sessions?limit=1") && m === "GET",
       body: [lastSession],
@@ -301,6 +306,7 @@ describe("DashboardScreen", () => {
       { match: (u, m) => u.endsWith("/exercises") && m === "GET", body: [] },
       { match: (u, m) => u.endsWith("/workouts") && m === "GET", body: [] },
       { match: (u, m) => u.includes("/sessions?limit=1") && m === "GET", body: [] },
+      { match: (u, m) => u.endsWith("/allenamenti") && m === "GET", body: [] },
       {
         match: (u, m) => u.endsWith("/stats") && m === "GET",
         status: 500,

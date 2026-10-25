@@ -14,7 +14,7 @@ import {
 } from "../../api/notifications";
 import { acceptProgressionDefaults } from "../../api/profile";
 import { ApiRequestError } from "../../api/client";
-import { formatSuggestionDelta, toOverride } from "../../utils/suggestion-format";
+import { formatSuggestionDelta, isPersonalRecord, toOverride } from "../../utils/suggestion-format";
 import { colors, radius, spacing } from "../../theme/theme";
 import { centeredContentStyle } from "../../theme/layout";
 import { useSafeAreaHorizontalPadding } from "../../hooks/useResponsiveLayout";
@@ -173,10 +173,18 @@ export function NotificationsScreen({ navigation }: Props) {
 
       {notificationsPage?.items?.map((notification) => {
         const isUnread = notification.readAt === null;
+        const isPr = isPersonalRecord(notification);
         const delta = formatSuggestionDelta(notification, t("dashboard.suggestions.repsUnit"));
         return (
           <View key={notification.id} style={[styles.card, isUnread && styles.cardUnread]}>
-            <Text style={styles.cardTitle}>{notification.exerciseName}</Text>
+            <View style={styles.cardTitleRow}>
+              {isPr && (
+                <Text style={styles.prIcon} accessibilityElementsHidden>
+                  ★
+                </Text>
+              )}
+              <Text style={styles.cardTitle}>{notification.exerciseName}</Text>
+            </View>
             <Text style={styles.reasonText}>{notification.reason}</Text>
             {delta !== "" && <Text style={styles.deltaText}>{delta}</Text>}
             <Text style={styles.metaText}>
@@ -184,14 +192,16 @@ export function NotificationsScreen({ navigation }: Props) {
             </Text>
             {isUnread && (
               <View style={styles.actionsRow}>
-                <TouchableOpacity
-                  style={styles.acceptButton}
-                  onPress={() => handleAccept(notification)}
-                  accessibilityRole="button"
-                  accessibilityLabel={t("dashboard.suggestions.accept")}
-                >
-                  <Text style={styles.acceptButtonText}>{t("dashboard.suggestions.accept")}</Text>
-                </TouchableOpacity>
+                {!isPr && (
+                  <TouchableOpacity
+                    style={styles.acceptButton}
+                    onPress={() => handleAccept(notification)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("dashboard.suggestions.accept")}
+                  >
+                    <Text style={styles.acceptButtonText}>{t("dashboard.suggestions.accept")}</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   style={styles.secondaryButton}
                   onPress={() => handleMarkRead(notification.id)}
@@ -256,10 +266,19 @@ const styles = StyleSheet.create({
   cardUnread: {
     borderColor: colors.accent,
   },
+  cardTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
   cardTitle: {
     color: colors.text,
     fontSize: 15,
     fontWeight: "700",
+  },
+  prIcon: {
+    color: colors.warning,
+    fontSize: 14,
   },
   reasonText: {
     color: colors.text,

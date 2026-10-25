@@ -7,6 +7,7 @@ import { WorkoutDetailScreen } from "../screens/workouts/WorkoutDetailScreen";
 import { CreateWorkoutScreen } from "../screens/workouts/CreateWorkoutScreen";
 import { EditWorkoutScreen } from "../screens/workouts/EditWorkoutScreen";
 import { LogSessionScreen } from "../screens/workouts/LogSessionScreen";
+import { AllenamentiScreen } from "../screens/workouts/AllenamentiScreen";
 import { ProfileScreen } from "../screens/profile/ProfileScreen";
 import { ProfileHeaderButton } from "../components/ProfileHeaderButton";
 
@@ -16,6 +17,7 @@ export type WorkoutsStackParamList = {
   CreateWorkout: undefined;
   EditWorkout: { id: string };
   LogSession: { id: string };
+  Allenamenti: undefined;
   Profile: undefined;
 };
 
@@ -39,6 +41,14 @@ export function WorkoutsNavigator() {
           title: t("nav.workouts"),
           headerRight: () => (
             <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("Allenamenti")}
+                accessibilityRole="button"
+                accessibilityLabel={t("allenamenti.headerButton")}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={{ color: colors.text, fontSize: 20, marginRight: spacing.md }}>▦</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => navigation.navigate("CreateWorkout")}
                 accessibilityRole="button"
@@ -94,6 +104,11 @@ export function WorkoutsNavigator() {
         // una pagina distinta.
         getId={({ params }) => params.id}
         options={{ title: t("session.title") }}
+      />
+      <Stack.Screen
+        name="Allenamenti"
+        component={AllenamentiScreen}
+        options={{ title: t("allenamenti.title") }}
       />
       <Stack.Screen
         name="Profile"
