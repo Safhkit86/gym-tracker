@@ -25,7 +25,7 @@ const stats = {
   totalKgLifted: 1000,
   currentWeekVolumeByExercise: [{ exerciseId: "e1", setCount: 3, repCount: 24 }],
   recentExercises: [{ exerciseId: "e1", exerciseName: "Panca piana" }],
-  streakCalendar: ["2026-08-01"],
+  dailyActivity: [{ date: "2026-08-01", setCount: 12 }],
 };
 
 const exercises = [
@@ -193,7 +193,7 @@ describe("DashboardScreen", () => {
     const portraitScreen = await renderWithProviders(
       <DashboardScreen navigation={mockNavigation()} route={mockRoute()} />
     );
-    expect(await portraitScreen.findByText("Costanza recente")).toBeTruthy();
+    expect(await portraitScreen.findByText("Costanza")).toBeTruthy();
     expect(portraitScreen.getByText("Progressioni per esercizio")).toBeTruthy();
     expect(portraitScreen.getByText("Squat")).toBeTruthy();
     portraitScreen.unmount();
@@ -202,7 +202,7 @@ describe("DashboardScreen", () => {
     const landscapeScreen = await renderWithProviders(
       <DashboardScreen navigation={mockNavigation()} route={mockRoute()} />
     );
-    expect(await landscapeScreen.findByText("Costanza recente")).toBeTruthy();
+    expect(await landscapeScreen.findByText("Costanza")).toBeTruthy();
     expect(landscapeScreen.getByText("Progressioni per esercizio")).toBeTruthy();
     expect(landscapeScreen.getByText("Squat")).toBeTruthy();
   });

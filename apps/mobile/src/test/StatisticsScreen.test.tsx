@@ -26,7 +26,7 @@ const stats = {
   totalKgLifted: 1000,
   currentWeekVolumeByExercise: [{ exerciseId: "e1", setCount: 3, repCount: 24 }],
   recentExercises: [{ exerciseId: "e1", exerciseName: "Panca piana" }],
-  streakCalendar: [],
+  dailyActivity: [],
 };
 
 const exercises = [

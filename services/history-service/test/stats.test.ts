@@ -7,7 +7,10 @@ const OWNER_B = "22222222-2222-2222-a222-222222222222";
 const WORKOUT_ID = "33333333-3333-3333-a333-333333333333";
 const EXERCISE_ID = "55555555-5555-5555-a555-555555555555";
 
-function sessionPayload(performedAt: string) {
+function sessionPayload(
+  performedAt: string,
+  sets = [{ setNumber: 1, actualReps: 10, actualWeight: 80 }]
+) {
   return {
     workoutId: WORKOUT_ID,
     workoutName: "Push day",
@@ -16,7 +19,7 @@ function sessionPayload(performedAt: string) {
       {
         exerciseId: EXERCISE_ID,
         exerciseName: "Panca piana",
-        sets: [{ setNumber: 1, actualReps: 10, actualWeight: 80 }],
+        sets,
       },
     ],
   };
@@ -63,7 +66,69 @@ describe("GET /stats", () => {
       totalKgLifted: 0,
       currentWeekVolumeByExercise: [],
       recentExercises: [],
-      streakCalendar: [],
+      dailyActivity: [],
     });
+  });
+
+  it("conta i set anche nei giorni di sole sessioni a corpo libero (niente peso)", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const today = new Date().toISOString();
+
+    await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(
+        sessionPayload(today, [
+          { setNumber: 1, actualReps: 12, actualWeight: null },
+          { setNumber: 2, actualReps: 12, actualWeight: null },
+        ])
+      );
+
+    const response = await request(app).get("/stats").set("Authorization", `Bearer ${token}`);
+
+    // Un totale kg*peso darebbe 0 per questo giorno, facendolo sembrare un
+    // giorno di riposo: dailyActivity usa il numero di set, non il peso,
+    // per questo esatto motivo (vedi commento su DailyActivityEntry).
+    expect(response.body.dailyActivity).toEqual([{ date: today.slice(0, 10), setCount: 2 }]);
+  });
+
+  it("somma i set di più sessioni nello stesso giorno", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const today = new Date().toISOString();
+
+    await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(sessionPayload(today));
+    await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(
+        sessionPayload(today, [
+          { setNumber: 1, actualReps: 8, actualWeight: 40 },
+          { setNumber: 2, actualReps: 8, actualWeight: 40 },
+        ])
+      );
+
+    const response = await request(app).get("/stats").set("Authorization", `Bearer ${token}`);
+
+    expect(response.body.dailyActivity).toEqual([{ date: today.slice(0, 10), setCount: 3 }]);
+  });
+
+  it("esclude dalla heatmap i giorni più vecchi di 365 giorni", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const tooOld = new Date(Date.now() - 400 * 24 * 60 * 60 * 1000).toISOString();
+
+    await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(sessionPayload(tooOld));
+
+    const response = await request(app).get("/stats").set("Authorization", `Bearer ${token}`);
+
+    expect(response.body.dailyActivity).toEqual([]);
   });
 });

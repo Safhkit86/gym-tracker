@@ -247,10 +247,10 @@
       "viewAll": "Vedi tutte →"
     },
     "streak": {
-      "title": "Costanza recente",
-      "trainedLegend": "Sessione registrata",
-      "restLegend": "Giorno di riposo",
-      "note": "Ultime 5 settimane, un riquadro per giorno."
+      "title": "Costanza",
+      "legendLess": "Meno",
+      "legendMore": "Più",
+      "note": "Ultimi 12 mesi, un riquadro per giorno. Più scuro = più set."
     },
     "nextSession": {
       "title": "Prossima sessione",

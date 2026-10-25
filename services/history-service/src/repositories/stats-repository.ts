@@ -1,11 +1,20 @@
 import { type Kysely, sql } from "kysely";
-import type { DashboardStats, MuscleGroupVolumeEntry } from "@gym-tracker/shared";
+import type {
+  DailyActivityEntry,
+  DashboardStats,
+  MuscleGroupVolumeEntry,
+} from "@gym-tracker/shared";
 import type { Database } from "../db/types.js";
 import type { SessionRepository } from "./session-repository.js";
 
-/** Finestra per "esercizi recenti" (candidati per i grafici della Dashboard)
- *  e per il calendario di costanza: stessa ampiezza di entrambi i widget. */
+/** Finestra per "esercizi recenti", i candidati per i grafici della
+ *  Dashboard. */
 const RECENT_WINDOW_DAYS = 35;
+/** Finestra per la heatmap "Costanza" della Dashboard: 12 mesi scorrevoli
+ *  (non l'anno calendario) — cosi' non si azzera a gennaio e non perde i
+ *  mesi a cavallo di un cambio d'anno, stesso principio di RECENT_WINDOW_DAYS
+ *  ma su scala più ampia. */
+const YEARLY_WINDOW_DAYS = 365;
 const MAX_RECENT_EXERCISES = 20;
 
 function startOfWeekUtc(date: Date): Date {
@@ -37,8 +46,9 @@ export class KyselyStatsRepository implements StatsRepository {
     const weekStart = startOfWeekUtc(now);
     const weekEnd = addDays(weekStart, 7);
     const recentFrom = addDays(now, -RECENT_WINDOW_DAYS);
+    const yearlyFrom = addDays(now, -YEARLY_WINDOW_DAYS);
 
-    const [sessionCountRow, weekRows, kgRow, volumeRows, recentRows, calendarRows] =
+    const [sessionCountRow, weekRows, kgRow, volumeRows, recentRows, dailyActivityRows] =
       await Promise.all([
         this.db
           .selectFrom("workout_sessions")
@@ -80,11 +90,13 @@ export class KyselyStatsRepository implements StatsRepository {
           .limit(MAX_RECENT_EXERCISES)
           .execute(),
         this.db
-          .selectFrom("workout_sessions")
-          .select(sql<Date>`date_trunc('day', performed_at)`.as("day"))
-          .distinct()
-          .where("user_id", "=", userId)
-          .where("performed_at", ">=", recentFrom)
+          .selectFrom("session_sets as ss")
+          .innerJoin("workout_sessions as ws", "ws.id", "ss.session_id")
+          .select(sql<Date>`date_trunc('day', ws.performed_at)`.as("day"))
+          .select((eb) => eb.fn.countAll<string>().as("set_count"))
+          .where("ws.user_id", "=", userId)
+          .where("ws.performed_at", ">=", yearlyFrom)
+          .groupBy("day")
           .execute(),
       ]);
 
@@ -115,7 +127,9 @@ export class KyselyStatsRepository implements StatsRepository {
         exerciseId: r.exercise_id,
         exerciseName: r.exercise_name,
       })),
-      streakCalendar: calendarRows.map((r) => toDateOnly(new Date(r.day))).sort(),
+      dailyActivity: dailyActivityRows
+        .map((r) => ({ date: toDateOnly(new Date(r.day)), setCount: Number(r.set_count) }))
+        .sort((a, b) => a.date.localeCompare(b.date)),
     };
   }
 }
@@ -136,6 +150,7 @@ export class InMemoryStatsRepository implements StatsRepository {
     const weekStart = startOfWeekUtc(now);
     const weekEnd = addDays(weekStart, 7);
     const recentFrom = addDays(now, -RECENT_WINDOW_DAYS);
+    const yearlyFrom = addDays(now, -YEARLY_WINDOW_DAYS);
 
     const weekSet = new Set(
       sessions.map((s) => toDateOnly(startOfWeekUtc(new Date(s.performedAt))))
@@ -156,14 +171,15 @@ export class InMemoryStatsRepository implements StatsRepository {
       string,
       { exerciseName: string; lastPerformed: Date }
     >();
-    const trainedDays = new Set<string>();
+    const setCountByDay = new Map<string, number>();
 
     for (const session of sessions) {
       const performedAt = new Date(session.performedAt);
-      if (performedAt >= recentFrom) {
-        trainedDays.add(toDateOnly(performedAt));
-      }
       for (const exercise of session.exercises) {
+        if (performedAt >= yearlyFrom && exercise.sets.length > 0) {
+          const day = toDateOnly(performedAt);
+          setCountByDay.set(day, (setCountByDay.get(day) ?? 0) + exercise.sets.length);
+        }
         for (const set of exercise.sets) {
           totalKgLifted += (set.actualWeight ?? 0) * set.actualReps;
         }
@@ -201,7 +217,9 @@ export class InMemoryStatsRepository implements StatsRepository {
       totalKgLifted,
       currentWeekVolumeByExercise: [...volumeByExercise.values()],
       recentExercises,
-      streakCalendar: [...trainedDays].sort(),
+      dailyActivity: [...setCountByDay.entries()]
+        .map(([date, setCount]): DailyActivityEntry => ({ date, setCount }))
+        .sort((a, b) => a.date.localeCompare(b.date)),
     };
   }
 }
