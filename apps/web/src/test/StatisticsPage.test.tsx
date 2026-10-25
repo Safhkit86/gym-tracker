@@ -63,7 +63,7 @@ const STATS = {
     { exerciseId: "e1", exerciseName: "Dip", setCount: 4, repCount: 40 },
   ],
   recentExercises: [],
-  streakCalendar: [],
+  dailyActivity: [],
 };
 
 const MEASUREMENTS = [

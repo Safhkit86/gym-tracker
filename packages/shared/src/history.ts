@@ -112,6 +112,15 @@ export interface RecentExerciseRef {
   exerciseName: string;
 }
 
+/** Un giorno con almeno una sessione, per la heatmap "Costanza" della
+ *  Dashboard. setCount (non kg) e' la misura di intensita': i set a corpo
+ *  libero (peso nullo) andrebbero persi in un totale kg, facendo sembrare
+ *  "giorno di riposo" un giorno in cui si e' comunque allenati. */
+export interface DailyActivityEntry {
+  date: string;
+  setCount: number;
+}
+
 export interface DashboardStats {
   sessionCount: number;
   /** Settimane consecutive (Lun-Dom) con almeno una sessione, contate a
@@ -126,8 +135,10 @@ export interface DashboardStats {
   /** Esercizi loggati negli ultimi 35 giorni, piu' recenti prima, max 20:
    *  il set su cui la Dashboard richiede lo storico per i grafici. */
   recentExercises: RecentExerciseRef[];
-  /** Date (YYYY-MM-DD) con almeno una sessione, ultimi 35 giorni. */
-  streakCalendar: string[];
+  /** Giorni con almeno una sessione, ultimi 365 giorni: la heatmap annuale
+   *  "Costanza" della Dashboard (sostituisce il vecchio calendario a 35
+   *  giorni, stesso ruolo su una finestra più lunga). */
+  dailyActivity: DailyActivityEntry[];
 }
 
 /** Un punto del grafico "Progressioni per esercizio": il valore e' il peso

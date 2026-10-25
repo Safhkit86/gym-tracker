@@ -247,10 +247,10 @@
       "viewAll": "View all →"
     },
     "streak": {
-      "title": "Recent consistency",
-      "trainedLegend": "Session logged",
-      "restLegend": "Rest day",
-      "note": "Last 5 weeks, one tile per day."
+      "title": "Consistency",
+      "legendLess": "Less",
+      "legendMore": "More",
+      "note": "Last 12 months, one tile per day. Darker = more sets."
     },
     "nextSession": {
       "title": "Next session",

@@ -149,7 +149,10 @@ const STATS = {
     { exerciseId: "e1", exerciseName: "Dip" },
     { exerciseId: "e2", exerciseName: "Curl a martello" },
   ],
-  streakCalendar: ["2026-07-15", "2026-07-20"],
+  dailyActivity: [
+    { date: "2026-07-15", setCount: 12 },
+    { date: "2026-07-20", setCount: 20 },
+  ],
 };
 
 function baseHandlers(
@@ -520,7 +523,7 @@ describe("DashboardPage", () => {
       totalKgLifted: 0,
       currentWeekVolumeByExercise: [],
       recentExercises: [],
-      streakCalendar: [],
+      dailyActivity: [],
     };
 
     mockFetchResponses([
@@ -595,7 +598,7 @@ describe("DashboardPage", () => {
         { exerciseId: "e2", exerciseName: "Calf raise", setCount: 2, repCount: 20 },
       ],
       recentExercises: [],
-      streakCalendar: [],
+      dailyActivity: [],
     };
 
     mockFetchResponses([
@@ -664,7 +667,7 @@ describe("DashboardPage", () => {
       currentWeekVolumeByExercise: [],
       // "Esercizio rimosso" non e' piu' in nessuna scheda attuale: non deve comparire.
       recentExercises: [{ exerciseId: "e9", exerciseName: "Esercizio rimosso" }],
-      streakCalendar: [],
+      dailyActivity: [],
     };
 
     mockFetchResponses([

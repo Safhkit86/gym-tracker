@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import type {
+  DailyActivityEntry,
   DashboardStats,
   Exercise,
   ExerciseHistoryPoint,
@@ -29,7 +30,7 @@ import { usePager } from "../hooks/usePager";
 import { PagerControls } from "../components/PagerControls";
 import { MiniLineChart } from "../components/MiniLineChart";
 import { Sparkline } from "../components/Sparkline";
-import { StreakCalendar } from "../components/StreakCalendar";
+import { ActivityHeatmap } from "../components/ActivityHeatmap";
 import { StatisticheCard } from "../components/StatisticheCard";
 import {
   UNSPECIFIED_MUSCLE_GROUP,
@@ -323,7 +324,7 @@ export function DashboardPage() {
             exerciseHistories={exerciseHistories}
           />
           <MisureCard measurements={measurements} />
-          <CostanzaCard streakCalendar={stats.streakCalendar} />
+          <CostanzaCard dailyActivity={stats.dailyActivity} />
         </div>
 
         <div className="dashboard-col">
@@ -524,23 +525,44 @@ function MisureCard({ measurements }: { measurements: MeasurementEntry[] }) {
   );
 }
 
-function CostanzaCard({ streakCalendar }: { streakCalendar: string[] }) {
+function CostanzaCard({ dailyActivity }: { dailyActivity: DailyActivityEntry[] }) {
   return (
     <section className="card">
       <div className="card__header">
-        <h2>Costanza recente</h2>
+        <h2>Costanza</h2>
       </div>
-      <StreakCalendar trainedDates={streakCalendar} />
-      <div className="streak-legend">
-        <span className="streak-legend__swatch streak-legend__swatch--on"></span> Sessione
-        registrata
+      <ActivityHeatmap dailyActivity={dailyActivity} />
+      <div className="activity-heatmap-legend">
+        Meno
         <span
-          className="streak-legend__swatch"
-          style={{ marginLeft: "var(--space-3)" }}
-        ></span>{" "}
-        Giorno di riposo
+          className="activity-heatmap-legend__swatch"
+          style={{ background: "var(--color-surface-2)" }}
+        ></span>
+        <span
+          className="activity-heatmap-legend__swatch"
+          style={{
+            background: "color-mix(in srgb, var(--color-accent) 25%, var(--color-surface-2))",
+          }}
+        ></span>
+        <span
+          className="activity-heatmap-legend__swatch"
+          style={{
+            background: "color-mix(in srgb, var(--color-accent) 50%, var(--color-surface-2))",
+          }}
+        ></span>
+        <span
+          className="activity-heatmap-legend__swatch"
+          style={{
+            background: "color-mix(in srgb, var(--color-accent) 75%, var(--color-surface-2))",
+          }}
+        ></span>
+        <span
+          className="activity-heatmap-legend__swatch"
+          style={{ background: "var(--color-accent)" }}
+        ></span>
+        Più
       </div>
-      <p className="section-note">Ultime 5 settimane, un riquadro per giorno.</p>
+      <p className="section-note">Ultimi 12 mesi, un riquadro per giorno. Più scuro = più set.</p>
     </section>
   );
 }

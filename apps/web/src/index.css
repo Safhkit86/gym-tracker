@@ -2044,24 +2044,53 @@ details.muscle-accordion[open] summary::after {
   fill: var(--color-accent);
 }
 
-.streak-cal {
+.activity-heatmap {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(42px, 1fr));
+  gap: var(--space-3);
+}
+
+.activity-heatmap__month-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-1);
+}
+
+.activity-heatmap__grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 2px;
 }
 
-.streak-cal__cell {
+.activity-heatmap__cell {
   aspect-ratio: 1;
-  border-radius: 3px;
-  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  background: var(--color-surface-2);
 }
 
-.streak-cal__cell--trained {
+.activity-heatmap__cell--empty {
+  visibility: hidden;
+}
+
+/* Livelli di intensita' (0-4, vedi dailyActivityLevel): sfumatura
+   dell'accent sulla superficie, non colori nuovi. */
+.activity-heatmap__cell[data-level="1"] {
+  background: color-mix(in srgb, var(--color-accent) 25%, var(--color-surface-2));
+}
+.activity-heatmap__cell[data-level="2"] {
+  background: color-mix(in srgb, var(--color-accent) 50%, var(--color-surface-2));
+}
+.activity-heatmap__cell[data-level="3"] {
+  background: color-mix(in srgb, var(--color-accent) 75%, var(--color-surface-2));
+}
+.activity-heatmap__cell[data-level="4"] {
   background: var(--color-accent);
-  border-color: var(--color-accent);
 }
 
-.streak-legend {
+.activity-heatmap-legend {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -2070,17 +2099,11 @@ details.muscle-accordion[open] summary::after {
   color: var(--color-text-muted);
 }
 
-.streak-legend__swatch {
+.activity-heatmap-legend__swatch {
   width: 0.7rem;
   height: 0.7rem;
-  border-radius: 3px;
-  border: 1px solid var(--color-border);
+  border-radius: 2px;
   display: inline-block;
-}
-
-.streak-legend__swatch--on {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
 }
 
 .session-exercise-list {

@@ -13,6 +13,7 @@ import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type {
+  DailyActivityEntry,
   DashboardStats,
   Exercise,
   ExerciseHistoryPoint,
@@ -42,7 +43,7 @@ import { ApiRequestError } from "../../api/client";
 import { VerticalPeekList } from "../../components/VerticalPeekList";
 import { MiniLineChart } from "../../components/MiniLineChart";
 import { MeasureTilesGrid } from "../../components/MeasureTilesGrid";
-import { StreakCalendar } from "../../components/StreakCalendar";
+import { ActivityHeatmap } from "../../components/ActivityHeatmap";
 import { StatisticheCard } from "../../components/StatisticheCard";
 import { ResponsiveCardColumns } from "../../components/ResponsiveCardColumns";
 import {
@@ -370,7 +371,7 @@ export function DashboardScreen({ navigation }: Props) {
       }
     />
   );
-  const costanzaCard = <CostanzaCard streakCalendar={stats.streakCalendar} />;
+  const costanzaCard = <CostanzaCard dailyActivity={stats.dailyActivity} />;
   const prossimaSessioneCard = nextWorkout && (
     <ProssimaSessioneCard
       workout={nextWorkout}
@@ -648,21 +649,20 @@ function MisureCard({
   );
 }
 
-function CostanzaCard({ streakCalendar }: { streakCalendar: string[] }) {
+function CostanzaCard({ dailyActivity }: { dailyActivity: DailyActivityEntry[] }) {
   const { t } = useTranslation();
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>{t("dashboard.streak.title")}</Text>
-      <StreakCalendar trainedDates={streakCalendar} />
+      <ActivityHeatmap dailyActivity={dailyActivity} />
       <View style={styles.streakLegend}>
-        <View style={styles.legendRow}>
-          <View style={[styles.legendSwatch, styles.legendSwatchOn]} />
-          <Text style={styles.legendText}>{t("dashboard.streak.trainedLegend")}</Text>
-        </View>
-        <View style={styles.legendRow}>
-          <View style={styles.legendSwatch} />
-          <Text style={styles.legendText}>{t("dashboard.streak.restLegend")}</Text>
-        </View>
+        <Text style={styles.legendText}>{t("dashboard.streak.legendLess")}</Text>
+        {([0, 0.25, 0.5, 0.75, 1] as const).map((opacity, index) => (
+          <View key={index} style={styles.legendSwatch}>
+            <View style={[styles.legendSwatchFill, { opacity }]} />
+          </View>
+        ))}
+        <Text style={styles.legendText}>{t("dashboard.streak.legendMore")}</Text>
       </View>
       <Text style={styles.sectionNote}>{t("dashboard.streak.note")}</Text>
     </View>
@@ -946,24 +946,20 @@ const styles = StyleSheet.create({
   },
   streakLegend: {
     flexDirection: "row",
-    gap: spacing.lg,
-  },
-  legendRow: {
-    flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
   },
   legendSwatch: {
-    width: 12,
-    height: 12,
+    width: 10,
+    height: 10,
     borderRadius: radius.sm,
     backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
+    overflow: "hidden",
   },
-  legendSwatchOn: {
+  legendSwatchFill: {
+    width: "100%",
+    height: "100%",
     backgroundColor: colors.accent,
-    borderColor: colors.accent,
   },
   legendText: {
     color: colors.textMuted,
