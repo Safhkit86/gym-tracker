@@ -32,6 +32,8 @@ export interface NormalizedExercise {
   restSeconds: number | null;
   /** Vedi WorkoutExerciseInput.progressionIncrement in @gym-tracker/shared. */
   progressionIncrement: number | null;
+  /** Vedi WorkoutExerciseInput.supersetGroupId in @gym-tracker/shared. */
+  supersetGroupId: string | null;
   sets: NormalizedSet[];
 }
 
@@ -167,6 +169,7 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
         "we.notes as notes",
         "we.rest_seconds as rest_seconds",
         "we.progression_increment as progression_increment",
+        "we.superset_group_id as superset_group_id",
         "e.name as exercise_name",
       ])
       .where("we.workout_id", "=", id)
@@ -214,6 +217,7 @@ export class KyselyWorkoutRepository implements WorkoutRepository {
         restSeconds: r.rest_seconds,
         progressionIncrement:
           r.progression_increment === null ? null : Number(r.progression_increment),
+        supersetGroupId: r.superset_group_id,
         sets: setsByExercise.get(r.id) ?? [],
       })),
       createdAt: workout.created_at.toISOString(),
@@ -287,6 +291,7 @@ async function insertChildren(
         notes: ex.notes,
         rest_seconds: ex.restSeconds,
         progression_increment: ex.progressionIncrement,
+        superset_group_id: ex.supersetGroupId,
       })
       .returning("id")
       .executeTakeFirstOrThrow();
@@ -429,6 +434,7 @@ function buildExercises(exercises: NormalizedExercise[]): WorkoutExercise[] {
     notes: ex.notes,
     restSeconds: ex.restSeconds,
     progressionIncrement: ex.progressionIncrement,
+    supersetGroupId: ex.supersetGroupId,
     sets: ex.sets.map((s) => ({
       id: randomUUID(),
       setNumber: s.setNumber,

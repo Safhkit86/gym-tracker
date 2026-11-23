@@ -87,6 +87,37 @@ describe("POST /sessions", () => {
     });
   });
 
+  it("registra lo snapshot di supersetGroupId su ogni esercizio del gruppo", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const groupId = "44444444-4444-4444-a444-444444444444";
+    const payload = sessionPayload({ performedAt: "2026-07-01T10:00:00.000Z" });
+    payload.exercises[0].supersetGroupId = groupId;
+    payload.exercises.push({
+      exerciseId: "66666666-6666-6666-a666-666666666666",
+      exerciseName: "Trazioni alla sbarra",
+      progressionIncrement: null,
+      restSeconds: 90,
+      supersetGroupId: groupId,
+      sets: [{ setNumber: 1, targetMinReps: 8, actualReps: 9, actualWeight: null }],
+    });
+
+    const response = await request(app)
+      .post("/sessions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(payload);
+
+    expect(response.status).toBe(201);
+    expect(response.body.exercises[0].supersetGroupId).toBe(groupId);
+    expect(response.body.exercises[1].supersetGroupId).toBe(groupId);
+
+    const getResponse = await request(app)
+      .get(`/sessions/${response.body.id}`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(getResponse.body.exercises[0].supersetGroupId).toBe(groupId);
+    expect(getResponse.body.exercises[1].supersetGroupId).toBe(groupId);
+  });
+
   it("rifiuta una sessione senza esercizi con 400", async () => {
     const { app } = buildTestApp();
     const token = await bearerFor(OWNER_A);

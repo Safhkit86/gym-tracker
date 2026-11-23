@@ -140,6 +140,7 @@ function normalize(input: SessionInput): NormalizedSession {
       workoutExerciseId: e.workoutExerciseId ?? null,
       progressionIncrement: e.progressionIncrement ?? null,
       restSeconds: e.restSeconds ?? null,
+      supersetGroupId: e.supersetGroupId ?? null,
       sets: e.sets.map((s) => ({
         setNumber: s.setNumber,
         targetMinReps: s.targetMinReps ?? null,

@@ -45,6 +45,8 @@ export interface SessionSetsTable {
   /** Snapshot di WorkoutExercise.restSeconds (recupero prima dell'esercizio
    *  successivo) al momento del log. */
   rest_seconds: number | null;
+  /** Snapshot di WorkoutExercise.supersetGroupId al momento del log. */
+  superset_group_id: string | null;
   /** Snapshot di WorkoutSet.restMinSeconds (recupero tra i set) al momento del log. */
   target_rest_min_seconds: number | null;
   /** Snapshot di WorkoutSet.restMaxSeconds al momento del log. */

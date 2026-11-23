@@ -49,6 +49,8 @@ export interface WorkoutExercisesTable {
   /** Recupero dopo questo esercizio, prima del successivo (secondi); null = non specificato. */
   rest_seconds: number | null;
   progression_increment: ColumnType<string | null, number | null, number | null>;
+  /** Vedi WorkoutExerciseInput.supersetGroupId in @gym-tracker/shared. */
+  superset_group_id: string | null;
 }
 
 export interface WorkoutSetsTable {

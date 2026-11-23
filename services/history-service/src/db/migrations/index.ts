@@ -1,5 +1,6 @@
 import type { Migration } from "kysely/migration";
 import * as addMeasurementEntries from "./001-add-measurement-entries.js";
+import * as addSupersetGroupId from "./002-add-superset-group-id.js";
 
 /**
  * Registro statico delle migrazioni (chiavi ordinate). Preferito a
@@ -12,4 +13,5 @@ import * as addMeasurementEntries from "./001-add-measurement-entries.js";
  */
 export const migrations: Record<string, Migration> = {
   "001-add-measurement-entries": addMeasurementEntries,
+  "002-add-superset-group-id": addSupersetGroupId,
 };

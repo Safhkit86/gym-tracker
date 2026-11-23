@@ -61,6 +61,10 @@ const exerciseSchema = z.object({
   restSeconds: z.number().int().nonnegative().nullish(),
   /** Incremento di progressione (kg o reps a seconda dell'esercizio); vedi @gym-tracker/shared. */
   progressionIncrement: z.number().positive().nullish(),
+  /** Esercizi con lo stesso id sono un superset; vedi i refine su
+   *  workoutSchema.exercises per i vincoli (almeno 2 membri, posizioni
+   *  contigue, stesso numero di set). */
+  supersetGroupId: z.string().uuid().nullish(),
   sets: z
     .array(setSchema)
     .min(1, "Ogni esercizio deve avere almeno un set.")
@@ -69,6 +73,25 @@ const exerciseSchema = z.object({
       "I numeri dei set devono essere univoci nell'esercizio."
     ),
 });
+
+/** Raggruppa gli esercizi per supersetGroupId (esclusi i non raggruppati),
+ *  ordinati per position: usato dai refine sotto per validare i vincoli di
+ *  un superset senza ripetere la stessa aggregazione tre volte. */
+function groupsByPosition(
+  exs: z.infer<typeof exerciseSchema>[]
+): Array<z.infer<typeof exerciseSchema>[]> {
+  const sorted = [...exs].sort((a, b) => a.position - b.position);
+  const byGroup = new Map<string, z.infer<typeof exerciseSchema>[]>();
+  for (const e of sorted) {
+    if (!e.supersetGroupId) {
+      continue;
+    }
+    const list = byGroup.get(e.supersetGroupId) ?? [];
+    list.push(e);
+    byGroup.set(e.supersetGroupId, list);
+  }
+  return [...byGroup.values()];
+}
 
 const workoutSchema = z.object({
   name: z.string().trim().min(1, "Il nome della scheda e' obbligatorio."),
@@ -82,6 +105,27 @@ const workoutSchema = z.object({
     .refine(
       (exs) => new Set(exs.map((e) => e.position)).size === exs.length,
       "Le posizioni degli esercizi devono essere univoche nella scheda."
+    )
+    .refine(
+      (exs) => groupsByPosition(exs).every((group) => group.length >= 2),
+      "Un superset deve avere almeno 2 esercizi."
+    )
+    .refine(
+      // Contiguita': una volta ordinato per position, ogni membro del gruppo
+      // deve essere immediatamente consecutivo al precedente — altrimenti
+      // un esercizio di un altro gruppo (o senza gruppo) si infila in mezzo.
+      (exs) =>
+        groupsByPosition(exs).every((group) =>
+          group.every((e, i) => i === 0 || e.position === (group[i - 1]?.position ?? 0) + 1)
+        ),
+      "Gli esercizi di un superset devono essere consecutivi, senza altri esercizi in mezzo."
+    )
+    .refine(
+      (exs) =>
+        groupsByPosition(exs).every((group) =>
+          group.every((e) => e.sets.length === group[0]?.sets.length)
+        ),
+      "Gli esercizi di un superset devono avere lo stesso numero di set (= round)."
     ),
 });
 
