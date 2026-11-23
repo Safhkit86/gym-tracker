@@ -332,6 +332,45 @@ describe("SessionHistoryPage", () => {
     expect(block.getByText("90s")).toBeInTheDocument();
   });
 
+  it("mostra un superset passato con il riquadro tratteggiato e i tag A1/A2, sia stretto che tabella", async () => {
+    const SESSION_SUPERSET = {
+      ...SESSION_OLDER,
+      id: "sess-superset",
+      exercises: [
+        { ...SESSION_OLDER.exercises[0], exerciseId: "e1", supersetGroupId: "g1" },
+        {
+          ...SESSION_OLDER.exercises[0],
+          exerciseId: "e2",
+          exerciseName: "Trazioni alla sbarra",
+          supersetGroupId: "g1",
+        },
+      ],
+    };
+
+    stubNarrowViewport(true);
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      ...sessionsHandlers([SESSION_SUPERSET]),
+    ]);
+
+    const narrowRender = renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+
+    await screen.findByText("Panca piana");
+    const bracket = document.querySelector(".superset-bracket");
+    expect(bracket).not.toBeNull();
+    const withinBracket = within(bracket as HTMLElement);
+    expect(withinBracket.getByText("A1")).toBeInTheDocument();
+    expect(withinBracket.getByText("A2")).toBeInTheDocument();
+    expect(withinBracket.getByText("Panca piana")).toBeInTheDocument();
+    expect(withinBracket.getByText("Trazioni alla sbarra")).toBeInTheDocument();
+    narrowRender.unmount();
+
+    stubNarrowViewport(false);
+    renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
+    await screen.findAllByText("Panca piana");
+    expect(document.querySelectorAll(".superset-tag").length).toBeGreaterThanOrEqual(2);
+  });
+
   it("mostra il recupero EFFETTIVO inserito in Registra Sessione, non quello informativo prescritto dalla scheda", async () => {
     const sessionWithDifferentRest = {
       ...SESSION_OLDER,

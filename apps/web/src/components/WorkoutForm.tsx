@@ -18,11 +18,16 @@ import { ApiRequestError } from "../api/client";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ExerciseFieldset } from "./ExerciseFieldset";
 import {
+  canGroupAsSuperset,
   emptyExercise,
   emptySet,
   extractFieldErrorPaths,
+  groupAsSuperset,
   groupByMuscle,
+  isLastInSupersetGroup,
+  supersetLabels,
   toWorkoutInput,
+  ungroupSuperset,
   type ExerciseForm,
   type SetForm,
 } from "./workout-form-utils";
@@ -56,6 +61,12 @@ export function WorkoutForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [exerciseToRemove, setExerciseToRemove] = useState<number | null>(null);
   const [scrollToFormId, setScrollToFormId] = useState<string | null>(null);
+  // Raggruppamento in superset: modalita' a parte (non un'azione diretta su
+  // ogni esercizio) perche' serve selezionarne 2+ prima di poter creare il
+  // gruppo. selectedForGroup usa formId (stabile), non indice.
+  const [groupModeActive, setGroupModeActive] = useState(false);
+  const [selectedForGroup, setSelectedForGroup] = useState<Set<string>>(new Set());
+  const [groupError, setGroupError] = useState<string | null>(null);
 
   function addExercise(): void {
     const defaultId = catalog[0]?.id ?? "";
@@ -151,6 +162,44 @@ export function WorkoutForm({
     });
   }
 
+  function toggleGroupMode(): void {
+    setGroupModeActive((current) => !current);
+    setSelectedForGroup(new Set());
+    setGroupError(null);
+  }
+
+  function toggleSelectedForGroup(formId: string): void {
+    setSelectedForGroup((current) => {
+      const next = new Set(current);
+      if (next.has(formId)) {
+        next.delete(formId);
+      } else {
+        next.add(formId);
+      }
+      return next;
+    });
+  }
+
+  function handleCreateSuperset(): void {
+    const indices = exercises
+      .map((exercise, index) => (selectedForGroup.has(exercise.formId) ? index : -1))
+      .filter((index) => index !== -1);
+    if (!canGroupAsSuperset(exercises, indices)) {
+      setGroupError(
+        "Seleziona 2 o piu' esercizi adiacenti, non gia' in un superset, con lo stesso numero di set."
+      );
+      return;
+    }
+    setExercises((current) => groupAsSuperset(current, indices));
+    setGroupModeActive(false);
+    setSelectedForGroup(new Set());
+    setGroupError(null);
+  }
+
+  function handleUngroup(groupId: string): void {
+    setExercises((current) => ungroupSuperset(current, groupId));
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setError(null);
@@ -177,6 +226,7 @@ export function WorkoutForm({
 
   const groupedCatalog = groupByMuscle(catalog);
   const catalogById = new Map(catalog.map((item) => [item.id, item]));
+  const supersetLabelByFormId = supersetLabels(exercises);
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -191,12 +241,26 @@ export function WorkoutForm({
         <button type="button" className="secondary" onClick={addExercise}>
           Aggiungi esercizio
         </button>
+        <button type="button" className="secondary" onClick={toggleGroupMode}>
+          {groupModeActive ? "Annulla" : "Raggruppa esercizi"}
+        </button>
       </div>
 
       {error && (
         <p role="alert" className="form-error">
           {error}
         </p>
+      )}
+
+      {groupModeActive && (
+        <div className="toolbar toolbar--end superset-group-bar">
+          <span className={groupError ? "form-error" : "section-note"}>
+            {groupError ?? "Seleziona 2 o piu' esercizi adiacenti con lo stesso numero di set."}
+          </span>
+          <button type="button" disabled={selectedForGroup.size < 2} onClick={handleCreateSuperset}>
+            Crea superset
+          </button>
+        </div>
       )}
 
       <label>
@@ -231,6 +295,16 @@ export function WorkoutForm({
               groupedCatalog={groupedCatalog}
               fieldErrors={fieldErrors}
               canRemove={exercises.length > 1}
+              supersetLabel={supersetLabelByFormId.get(exercise.formId) ?? null}
+              showRestSeconds={isLastInSupersetGroup(exercises, exerciseIndex)}
+              groupModeActive={groupModeActive}
+              isSelectedForGroup={selectedForGroup.has(exercise.formId)}
+              onToggleSelectedForGroup={() => toggleSelectedForGroup(exercise.formId)}
+              onRequestUngroup={
+                exercise.supersetGroupId
+                  ? () => handleUngroup(exercise.supersetGroupId as string)
+                  : undefined
+              }
               onUpdateExercise={(patch) => updateExercise(exerciseIndex, patch)}
               onAddSet={() => addSet(exerciseIndex)}
               onDuplicateSet={() => duplicateSet(exerciseIndex)}

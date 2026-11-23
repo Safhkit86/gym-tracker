@@ -21,11 +21,19 @@ export interface ExerciseForm {
   formId: string;
   exerciseId: string;
   notes: string;
-  /** Recupero dopo questo esercizio, prima del successivo. */
+  /** Recupero dopo questo esercizio, prima del successivo. Per un esercizio
+   *  non ultimo del proprio superset (vedi supersetGroupId), il campo non
+   *  viene mostrato nel form ed e' sempre inviato come assente da
+   *  toWorkoutInput, indipendentemente da questo valore — nessuna pausa tra
+   *  gli esercizi dello stesso giro, vedi isLastInSupersetGroup. */
   restSeconds: string;
   /** Incremento (kg o reps) da suggerire quando progress-service rileva che
    *  e' il momento di progredire su questo esercizio; vuoto = non configurato. */
   progressionIncrement: string;
+  /** Esercizi con lo stesso id sono un superset (eseguiti senza riposo tra
+   *  loro, poi riposo, poi si ripete); null = esercizio singolo. Assegnato
+   *  da groupAsSuperset, rimosso da ungroupSuperset. */
+  supersetGroupId: string | null;
   sets: SetForm[];
 }
 
@@ -47,6 +55,7 @@ export function emptyExercise(defaultExerciseId: string): ExerciseForm {
     notes: "",
     restSeconds: "",
     progressionIncrement: "",
+    supersetGroupId: null,
     sets: [emptySet()],
   };
 }
@@ -64,6 +73,87 @@ export function groupByMuscle(catalog: Exercise[]): Array<[string, Exercise[]]> 
   return [...groups.entries()];
 }
 
+/** True se non c'e' nessun esercizio successivo nello stesso superset: solo
+ *  per questo esercizio il riposo "prima del prossimo" ha senso ed e'
+ *  inviato al server — un esercizio non ultimo del gruppo lo ha sempre
+ *  assente (nessuna pausa tra gli esercizi dello stesso giro). Un esercizio
+ *  senza supersetGroupId e' sempre "ultimo" (caso normale, invariato). */
+export function isLastInSupersetGroup(exercises: ExerciseForm[], index: number): boolean {
+  const groupId = exercises[index]?.supersetGroupId;
+  if (!groupId) {
+    return true;
+  }
+  return !exercises.slice(index + 1).some((e) => e.supersetGroupId === groupId);
+}
+
+/** True se gli indici selezionati (2+) possono diventare un superset:
+ *  adiacenti nell'array corrente, nessuno gia' in un gruppo, stesso numero
+ *  di set tra tutti — stessi vincoli validati anche server-side in
+ *  workout-routes.ts, controllati qui prima per un errore immediato invece
+ *  di aspettare il submit. */
+export function canGroupAsSuperset(exercises: ExerciseForm[], indices: number[]): boolean {
+  if (indices.length < 2) {
+    return false;
+  }
+  const sorted = [...indices].sort((a, b) => a - b);
+  for (let i = 0; i < sorted.length; i++) {
+    const current = sorted[i] as number;
+    if (i > 0 && current !== (sorted[i - 1] as number) + 1) {
+      return false;
+    }
+    if (exercises[current]?.supersetGroupId) {
+      return false;
+    }
+  }
+  const setCount = exercises[sorted[0] as number]?.sets.length;
+  return sorted.every((i) => exercises[i]?.sets.length === setCount);
+}
+
+/** Assegna un nuovo supersetGroupId condiviso agli esercizi agli indici
+ *  dati; chiamare solo dopo aver verificato canGroupAsSuperset. */
+export function groupAsSuperset(exercises: ExerciseForm[], indices: number[]): ExerciseForm[] {
+  const groupId = crypto.randomUUID();
+  const indexSet = new Set(indices);
+  return exercises.map((exercise, i) =>
+    indexSet.has(i) ? { ...exercise, supersetGroupId: groupId } : exercise
+  );
+}
+
+/** Rimuove supersetGroupId da tutti gli esercizi del gruppo dato: tornano
+ *  esercizi singoli indipendenti. */
+export function ungroupSuperset(exercises: ExerciseForm[], groupId: string): ExerciseForm[] {
+  return exercises.map((exercise) =>
+    exercise.supersetGroupId === groupId ? { ...exercise, supersetGroupId: null } : exercise
+  );
+}
+
+/** Etichetta "A1"/"A2"/"B1"... per esercizio raggruppato (una lettera per
+ *  gruppo distinto, nell'ordine in cui compaiono nella scheda; un numero
+ *  per membro all'interno del gruppo) — chiave per formId, non indice:
+ *  stabile anche se l'array viene riordinato/filtrato. Assente per gli
+ *  esercizi non raggruppati. */
+export function supersetLabels(exercises: ExerciseForm[]): Map<string, string> {
+  const letterByGroup = new Map<string, string>();
+  const nextMemberByGroup = new Map<string, number>();
+  const labels = new Map<string, string>();
+  let nextLetterCode = 65; // "A"
+  for (const exercise of exercises) {
+    if (!exercise.supersetGroupId) {
+      continue;
+    }
+    let letter = letterByGroup.get(exercise.supersetGroupId);
+    if (!letter) {
+      letter = String.fromCharCode(nextLetterCode++);
+      letterByGroup.set(exercise.supersetGroupId, letter);
+      nextMemberByGroup.set(exercise.supersetGroupId, 1);
+    }
+    const member = nextMemberByGroup.get(exercise.supersetGroupId) as number;
+    labels.set(exercise.formId, `${letter}${member}`);
+    nextMemberByGroup.set(exercise.supersetGroupId, member + 1);
+  }
+  return labels;
+}
+
 /** Converte il form in un WorkoutInput: posizioni e numeri di set sono
  * derivati dall'ordine, cosi' sono sempre univoci per costruzione. */
 export function toWorkoutInput(
@@ -78,10 +168,14 @@ export function toWorkoutInput(
       exerciseId: exercise.exerciseId,
       position: exerciseIndex + 1,
       notes: exercise.notes.trim() || undefined,
-      restSeconds: exercise.restSeconds.trim() ? Number(exercise.restSeconds) : undefined,
+      restSeconds:
+        exercise.restSeconds.trim() && isLastInSupersetGroup(exercises, exerciseIndex)
+          ? Number(exercise.restSeconds)
+          : undefined,
       progressionIncrement: exercise.progressionIncrement.trim()
         ? Number(exercise.progressionIncrement)
         : undefined,
+      supersetGroupId: exercise.supersetGroupId ?? undefined,
       sets: exercise.sets.map((set, setIndex) => ({
         setNumber: setIndex + 1,
         targetMinReps: set.isMaxEffort
@@ -117,6 +211,7 @@ export function workoutDetailToFormValues(workout: WorkoutDetail): {
       restSeconds: exercise.restSeconds !== null ? String(exercise.restSeconds) : "",
       progressionIncrement:
         exercise.progressionIncrement !== null ? String(exercise.progressionIncrement) : "",
+      supersetGroupId: exercise.supersetGroupId,
       sets: [...exercise.sets]
         .sort((a, b) => a.setNumber - b.setNumber)
         .map((set) => ({
