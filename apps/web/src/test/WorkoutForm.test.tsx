@@ -1,6 +1,20 @@
 import { describe, it, expect } from "vitest";
 import type { WorkoutDetail } from "@gym-tracker/shared";
-import { workoutDetailToFormValues } from "../components/workout-form-utils";
+import {
+  canGroupAsSuperset,
+  emptyExercise,
+  emptySet,
+  groupAsSuperset,
+  isLastInSupersetGroup,
+  supersetLabels,
+  ungroupSuperset,
+  type ExerciseForm,
+  workoutDetailToFormValues,
+} from "../components/workout-form-utils";
+
+function exerciseWithSets(setCount: number): ExerciseForm {
+  return { ...emptyExercise("e1"), sets: Array.from({ length: setCount }, () => emptySet()) };
+}
 
 function workout(overrides: Partial<WorkoutDetail> = {}): WorkoutDetail {
   return {
@@ -246,5 +260,77 @@ describe("workoutDetailToFormValues", () => {
 
     expect(result.exercises[0].sets[0].isMaxEffort).toBe(true);
     expect(result.exercises[0].sets[0].targetMinReps).toBe("");
+  });
+});
+
+describe("canGroupAsSuperset", () => {
+  it("accetta 2+ esercizi adiacenti, non gia' raggruppati, con lo stesso numero di set", () => {
+    const exercises = [exerciseWithSets(2), exerciseWithSets(2), exerciseWithSets(2)];
+    expect(canGroupAsSuperset(exercises, [0, 1])).toBe(true);
+    expect(canGroupAsSuperset(exercises, [0, 1, 2])).toBe(true);
+  });
+
+  it("rifiuta meno di 2 esercizi selezionati", () => {
+    expect(canGroupAsSuperset([exerciseWithSets(2)], [0])).toBe(false);
+  });
+
+  it("rifiuta esercizi non adiacenti", () => {
+    const exercises = [exerciseWithSets(2), exerciseWithSets(2), exerciseWithSets(2)];
+    expect(canGroupAsSuperset(exercises, [0, 2])).toBe(false);
+  });
+
+  it("rifiuta un esercizio gia' in un superset", () => {
+    const exercises = [{ ...exerciseWithSets(2), supersetGroupId: "g1" }, exerciseWithSets(2)];
+    expect(canGroupAsSuperset(exercises, [0, 1])).toBe(false);
+  });
+
+  it("rifiuta esercizi con un numero di set diverso", () => {
+    const exercises = [exerciseWithSets(2), exerciseWithSets(3)];
+    expect(canGroupAsSuperset(exercises, [0, 1])).toBe(false);
+  });
+});
+
+describe("groupAsSuperset / ungroupSuperset", () => {
+  it("assegna lo stesso supersetGroupId a tutti gli indici selezionati", () => {
+    const exercises = [exerciseWithSets(2), exerciseWithSets(2), exerciseWithSets(2)];
+    const grouped = groupAsSuperset(exercises, [0, 1]);
+    expect(grouped[0].supersetGroupId).not.toBeNull();
+    expect(grouped[0].supersetGroupId).toBe(grouped[1].supersetGroupId);
+    expect(grouped[2].supersetGroupId).toBeNull();
+  });
+
+  it("rimuove supersetGroupId da tutti i membri del gruppo", () => {
+    const exercises = [exerciseWithSets(2), exerciseWithSets(2)];
+    const grouped = groupAsSuperset(exercises, [0, 1]);
+    const groupId = grouped[0].supersetGroupId as string;
+    const ungrouped = ungroupSuperset(grouped, groupId);
+    expect(ungrouped[0].supersetGroupId).toBeNull();
+    expect(ungrouped[1].supersetGroupId).toBeNull();
+  });
+});
+
+describe("isLastInSupersetGroup", () => {
+  it("e' sempre true per un esercizio non raggruppato", () => {
+    expect(isLastInSupersetGroup([exerciseWithSets(1)], 0)).toBe(true);
+  });
+
+  it("e' true solo per l'ultimo membro del gruppo nell'ordine dell'array", () => {
+    const grouped = groupAsSuperset([exerciseWithSets(2), exerciseWithSets(2)], [0, 1]);
+    expect(isLastInSupersetGroup(grouped, 0)).toBe(false);
+    expect(isLastInSupersetGroup(grouped, 1)).toBe(true);
+  });
+});
+
+describe("supersetLabels", () => {
+  it("etichetta i gruppi con lettere distinte e i membri con numeri in ordine", () => {
+    const groupA = groupAsSuperset([exerciseWithSets(1), exerciseWithSets(1)], [0, 1]);
+    const exercises = [...groupA, exerciseWithSets(1), exerciseWithSets(1)];
+    const grouped = groupAsSuperset(exercises, [2, 3]);
+    const labels = supersetLabels(grouped);
+
+    expect(labels.get(grouped[0].formId)).toBe("A1");
+    expect(labels.get(grouped[1].formId)).toBe("A2");
+    expect(labels.get(grouped[2].formId)).toBe("B1");
+    expect(labels.get(grouped[3].formId)).toBe("B2");
   });
 });

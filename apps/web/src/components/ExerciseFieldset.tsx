@@ -21,6 +21,21 @@ interface ExerciseFieldsetProps {
    *  non validi dal server: usato per bordare di rosso il campo incriminato. */
   fieldErrors: Set<string>;
   canRemove: boolean;
+  /** "A1"/"A2"/... se l'esercizio e' in un superset, altrimenti null. */
+  supersetLabel: string | null;
+  /** false per un esercizio non ultimo del proprio superset: il campo
+   *  "recupero prima del prossimo esercizio" non ha senso (nessuna pausa
+   *  tra gli esercizi dello stesso giro), vedi isLastInSupersetGroup. */
+  showRestSeconds: boolean;
+  /** true mentre l'utente sta scegliendo quali esercizi raggruppare (vedi
+   *  "Raggruppa esercizi" in WorkoutForm): mostra la checkbox di selezione
+   *  sugli esercizi non gia' in un gruppo. */
+  groupModeActive: boolean;
+  isSelectedForGroup: boolean;
+  onToggleSelectedForGroup: () => void;
+  /** Presente solo se l'esercizio e' gia' in un superset: separa l'intero
+   *  gruppo (non solo questo esercizio). */
+  onRequestUngroup: (() => void) | undefined;
   onUpdateExercise: (patch: Partial<ExerciseForm>) => void;
   onAddSet: () => void;
   onDuplicateSet: () => void;
@@ -42,6 +57,12 @@ export function ExerciseFieldset({
   groupedCatalog,
   fieldErrors,
   canRemove,
+  supersetLabel,
+  showRestSeconds,
+  groupModeActive,
+  isSelectedForGroup,
+  onToggleSelectedForGroup,
+  onRequestUngroup,
   onUpdateExercise,
   onAddSet,
   onDuplicateSet,
@@ -63,9 +84,26 @@ export function ExerciseFieldset({
       ref={setNodeRef}
       style={style}
       data-form-id={exercise.formId}
-      className={`exercise-form${isDragging ? " exercise-form--dragging" : ""}`}
+      className={
+        `exercise-form${isDragging ? " exercise-form--dragging" : ""}` +
+        (supersetLabel ? " exercise-form--superset" : "")
+      }
     >
-      <legend>Esercizio {exerciseIndex + 1}</legend>
+      <legend>
+        Esercizio {exerciseIndex + 1}
+        {supersetLabel && <span className="superset-tag">{supersetLabel}</span>}
+      </legend>
+      {groupModeActive && !exercise.supersetGroupId && (
+        <label className="checkbox-field exercise-form__group-checkbox">
+          <input type="checkbox" checked={isSelectedForGroup} onChange={onToggleSelectedForGroup} />
+          Seleziona per il superset
+        </label>
+      )}
+      {onRequestUngroup && (
+        <button type="button" className="secondary" onClick={onRequestUngroup}>
+          Separa superset
+        </button>
+      )}
       <button
         type="button"
         className="icon-btn exercise-form__drag-handle"
@@ -202,16 +240,20 @@ export function ExerciseFieldset({
       </div>
 
       <div className="exercise-form__meta-row">
-        <label>
-          Recupero prima del prossimo esercizio (s)
-          <input
-            type="number"
-            min={0}
-            className={invalidClass(fieldErrors.has(`exercises.${exerciseIndex}.restSeconds`))}
-            value={exercise.restSeconds}
-            onChange={(event) => onUpdateExercise({ restSeconds: event.target.value })}
-          />
-        </label>
+        {showRestSeconds ? (
+          <label>
+            Recupero prima del prossimo esercizio (s)
+            <input
+              type="number"
+              min={0}
+              className={invalidClass(fieldErrors.has(`exercises.${exerciseIndex}.restSeconds`))}
+              value={exercise.restSeconds}
+              onChange={(event) => onUpdateExercise({ restSeconds: event.target.value })}
+            />
+          </label>
+        ) : (
+          <p className="section-note">Nessun riposo: fa parte di un superset.</p>
+        )}
 
         <label>
           Incremento di progressione (kg o reps)

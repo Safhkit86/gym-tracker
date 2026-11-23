@@ -385,4 +385,89 @@ describe("CreateWorkoutPage", () => {
 
     expect(screen.getAllByText(/^Esercizio \d$/)).toHaveLength(1);
   });
+
+  it("raggruppa due esercizi in un superset e li invia con lo stesso supersetGroupId", async () => {
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/exercises") && m === "GET", body: [FAKE_EXERCISE] },
+      {
+        match: (u, m) => u.endsWith("/workouts") && m === "POST",
+        status: 201,
+        body: {
+          id: "w1",
+          name: "Push day",
+          notes: null,
+          exercises: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    ]);
+
+    renderWithProviders(<CreateWorkoutPage />, ["/workouts/new"]);
+
+    await screen.findByLabelText("Esercizio");
+    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Push day" } });
+    fireEvent.click(screen.getByRole("button", { name: /aggiungi esercizio/i }));
+    const repsInputs = screen.getAllByLabelText("Rep minime");
+    fireEvent.change(repsInputs[0], { target: { value: "10" } });
+    fireEvent.change(repsInputs[1], { target: { value: "8" } });
+    fireEvent.change(screen.getAllByLabelText(/recupero prima del prossimo esercizio/i)[1], {
+      target: { value: "90" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /raggruppa esercizi/i }));
+    const checkboxes = screen.getAllByLabelText("Seleziona per il superset");
+    expect(checkboxes).toHaveLength(2);
+    fireEvent.click(checkboxes[0]);
+    fireEvent.click(checkboxes[1]);
+    fireEvent.click(screen.getByRole("button", { name: /crea superset/i }));
+
+    expect(screen.getByText("A1")).toBeInTheDocument();
+    expect(screen.getByText("A2")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /separa superset/i })).toHaveLength(2);
+    // Il primo esercizio del gruppo non ha piu' il campo di riposo (nessuna
+    // pausa tra gli esercizi dello stesso giro), il secondo (ultimo) lo
+    // mantiene.
+    expect(screen.getByText("Nessun riposo: fa parte di un superset.")).toBeInTheDocument();
+    expect(screen.getAllByLabelText(/recupero prima del prossimo esercizio/i)).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole("button", { name: /crea scheda/i }));
+
+    await waitFor(() => {
+      const postCall = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+      expect(postCall).toBeDefined();
+    });
+    const postCall = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    const body = JSON.parse((postCall?.[1]?.body as string) ?? "{}");
+    expect(body.exercises[0].supersetGroupId).toBeTruthy();
+    expect(body.exercises[0].supersetGroupId).toBe(body.exercises[1].supersetGroupId);
+    expect(body.exercises[0].restSeconds).toBeUndefined();
+    expect(body.exercises[1].restSeconds).toBe(90);
+  });
+
+  it("separa un superset esistente", async () => {
+    mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/exercises") && m === "GET", body: [FAKE_EXERCISE] },
+    ]);
+
+    renderWithProviders(<CreateWorkoutPage />, ["/workouts/new"]);
+
+    await screen.findByLabelText("Esercizio");
+    fireEvent.click(screen.getByRole("button", { name: /aggiungi esercizio/i }));
+    fireEvent.click(screen.getByRole("button", { name: /raggruppa esercizi/i }));
+    const checkboxes = screen.getAllByLabelText("Seleziona per il superset");
+    fireEvent.click(checkboxes[0]);
+    fireEvent.click(checkboxes[1]);
+    fireEvent.click(screen.getByRole("button", { name: /crea superset/i }));
+    expect(screen.getByText("A1")).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole("button", { name: /separa superset/i })[0]);
+
+    expect(screen.queryByText("A1")).not.toBeInTheDocument();
+    expect(screen.queryByText("A2")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /separa superset/i })).not.toBeInTheDocument();
+    expect(screen.getAllByLabelText(/recupero prima del prossimo esercizio/i)).toHaveLength(2);
+  });
 });

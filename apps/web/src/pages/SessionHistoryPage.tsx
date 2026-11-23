@@ -57,6 +57,60 @@ function formatRestSeconds(exercise: SessionDetail["exercises"][number]): string
   return restSeconds !== null ? `${restSeconds}s` : "—";
 }
 
+type SessionExercise = SessionDetail["exercises"][number];
+
+type RenderUnit =
+  { kind: "single"; exercise: SessionExercise } | { kind: "superset"; members: SessionExercise[] };
+
+/** Raggruppa gli esercizi consecutivi con lo stesso supersetGroupId (vedi
+ *  lo stesso schema in LogSessionPage.tsx, qui senza bisogno dei round: la
+ *  sessione e' gia' conclusa, mostra solo che erano un superset). */
+function buildRenderUnits(exercises: SessionExercise[]): RenderUnit[] {
+  const units: RenderUnit[] = [];
+  let i = 0;
+  while (i < exercises.length) {
+    const exercise = exercises[i];
+    if (!exercise.supersetGroupId) {
+      units.push({ kind: "single", exercise });
+      i++;
+      continue;
+    }
+    const groupId = exercise.supersetGroupId;
+    const members: SessionExercise[] = [];
+    while (i < exercises.length && exercises[i].supersetGroupId === groupId) {
+      members.push(exercises[i]);
+      i++;
+    }
+    units.push({ kind: "superset", members });
+  }
+  return units;
+}
+
+/** "A1"/"A2"/"B1"... per esercizio raggruppato, stessa idea di
+ *  supersetLabels in workout-form-utils.ts/LogSessionPage.tsx, qui chiave
+ *  per exerciseId (SessionExercise non ha un id proprio). */
+function supersetLabels(exercises: SessionExercise[]): Map<string, string> {
+  const letterByGroup = new Map<string, string>();
+  const nextMemberByGroup = new Map<string, number>();
+  const labels = new Map<string, string>();
+  let nextLetterCode = 65; // "A"
+  for (const exercise of exercises) {
+    if (!exercise.supersetGroupId) {
+      continue;
+    }
+    let letter = letterByGroup.get(exercise.supersetGroupId);
+    if (!letter) {
+      letter = String.fromCharCode(nextLetterCode++);
+      letterByGroup.set(exercise.supersetGroupId, letter);
+      nextMemberByGroup.set(exercise.supersetGroupId, 1);
+    }
+    const member = nextMemberByGroup.get(exercise.supersetGroupId) as number;
+    labels.set(exercise.exerciseId, `${letter}${member}`);
+    nextMemberByGroup.set(exercise.supersetGroupId, member + 1);
+  }
+  return labels;
+}
+
 /** Numero di settimana per sessione, indipendente dall'ordinamento mostrato:
  *  scorre le sessioni in ordine cronologico e incrementa ogni volta che
  *  ricomincia dalla scheda "1 - ...", cosi' il conteggio resta corretto sia
@@ -677,6 +731,7 @@ export function SessionHistoryPage() {
                 const previousWeek =
                   index > 0 ? weekBySessionId?.get(sessionsPage.items[index - 1].id) : undefined;
                 const isNewWeek = week !== undefined && week !== previousWeek;
+                const supersetLabelByExerciseId = supersetLabels(session.exercises);
                 return (
                   <Fragment key={session.id}>
                     {isNewWeek && (
@@ -712,25 +767,59 @@ export function SessionHistoryPage() {
 
                       {isNarrow ? (
                         <div className="stack-table">
-                          {session.exercises.map((exercise) => (
-                            <div className="stack-block" key={exercise.exerciseId}>
-                              <h3>{exercise.exerciseName}</h3>
-                              {exercise.sets.map((set) => (
-                                <div className="stack-row" key={set.id}>
-                                  <span className="stack-label">Set {set.setNumber}</span>
-                                  <span>{set.actualReps}</span>
+                          {buildRenderUnits(session.exercises).map((unit) => {
+                            if (unit.kind === "single") {
+                              const { exercise } = unit;
+                              return (
+                                <div className="stack-block" key={exercise.exerciseId}>
+                                  <h3>{exercise.exerciseName}</h3>
+                                  {exercise.sets.map((set) => (
+                                    <div className="stack-row" key={set.id}>
+                                      <span className="stack-label">Set {set.setNumber}</span>
+                                      <span>{set.actualReps}</span>
+                                    </div>
+                                  ))}
+                                  <div className="stack-row">
+                                    <span className="stack-label">Kg</span>
+                                    <span>{formatWeight(exercise)}</span>
+                                  </div>
+                                  <div className="stack-row">
+                                    <span className="stack-label">Recupero</span>
+                                    <span>{formatRestSeconds(exercise)}</span>
+                                  </div>
                                 </div>
-                              ))}
-                              <div className="stack-row">
-                                <span className="stack-label">Kg</span>
-                                <span>{formatWeight(exercise)}</span>
+                              );
+                            }
+                            return (
+                              <div className="superset-bracket" key={unit.members[0]?.exerciseId}>
+                                <span className="superset-bracket__label">Superset</span>
+                                {unit.members.map((exercise) => (
+                                  <div className="stack-block" key={exercise.exerciseId}>
+                                    <h3>
+                                      <span className="superset-tag">
+                                        {supersetLabelByExerciseId.get(exercise.exerciseId)}
+                                      </span>{" "}
+                                      {exercise.exerciseName}
+                                    </h3>
+                                    {exercise.sets.map((set) => (
+                                      <div className="stack-row" key={set.id}>
+                                        <span className="stack-label">Set {set.setNumber}</span>
+                                        <span>{set.actualReps}</span>
+                                      </div>
+                                    ))}
+                                    <div className="stack-row">
+                                      <span className="stack-label">Kg</span>
+                                      <span>{formatWeight(exercise)}</span>
+                                    </div>
+                                    <div className="stack-row">
+                                      <span className="stack-label">Recupero</span>
+                                      <span>{formatRestSeconds(exercise)}</span>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
-                              <div className="stack-row">
-                                <span className="stack-label">Recupero</span>
-                                <span>{formatRestSeconds(exercise)}</span>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       ) : (
                         <div className="table-scroll">
@@ -746,18 +835,24 @@ export function SessionHistoryPage() {
                               </tr>
                             </thead>
                             <tbody>
-                              {session.exercises.map((exercise) => (
-                                <tr key={exercise.exerciseId}>
-                                  <td>{exercise.exerciseName}</td>
-                                  {Array.from({ length: maxSets }, (_, i) => (
-                                    <td key={i}>
-                                      {exercise.sets[i] ? exercise.sets[i].actualReps : "—"}
+                              {session.exercises.map((exercise) => {
+                                const label = supersetLabelByExerciseId.get(exercise.exerciseId);
+                                return (
+                                  <tr key={exercise.exerciseId}>
+                                    <td>
+                                      {label && <span className="superset-tag">{label}</span>}{" "}
+                                      {exercise.exerciseName}
                                     </td>
-                                  ))}
-                                  <td>{formatWeight(exercise)}</td>
-                                  <td>{formatRestSeconds(exercise)}</td>
-                                </tr>
-                              ))}
+                                    {Array.from({ length: maxSets }, (_, i) => (
+                                      <td key={i}>
+                                        {exercise.sets[i] ? exercise.sets[i].actualReps : "—"}
+                                      </td>
+                                    ))}
+                                    <td>{formatWeight(exercise)}</td>
+                                    <td>{formatRestSeconds(exercise)}</td>
+                                  </tr>
+                                );
+                              })}
                             </tbody>
                           </table>
                         </div>

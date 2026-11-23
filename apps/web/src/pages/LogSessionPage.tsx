@@ -47,8 +47,16 @@ interface SessionExerciseForm {
   progressionIncrement: number | null;
   /** Recupero prima di passare all'esercizio successivo: solo informativo
    *  in questa pagina (mostrato come riga separatrice tra un esercizio e
-   *  il successivo, mai modificabile). */
+   *  il successivo, mai modificabile). Per un esercizio non ultimo del
+   *  proprio superset, workout-service lo persiste gia' come null (vedi
+   *  toWorkoutInput in workout-form-utils.ts): la riga separatrice tra gli
+   *  esercizi dello stesso superset e' quindi gia' sospesa senza bisogno di
+   *  altra logica qui. */
   restSeconds: number | null;
+  /** Vedi WorkoutExercise.supersetGroupId: esercizi con lo stesso id sono
+   *  un superset (nessuna pausa tra loro, raggruppati per round nel layout
+   *  stretto). null = esercizio singolo. */
+  supersetGroupId: string | null;
   /** Recupero tra i set: obiettivo (range, dal primo set) + effettivo
    *  (editabile, un solo valore per l'intero esercizio). */
   targetRestMinSeconds: number | null;
@@ -150,6 +158,65 @@ function formatRestRange(target: RestRangeTarget): string {
   return target.targetRestMaxSeconds !== null
     ? `${target.targetRestMinSeconds}-${target.targetRestMaxSeconds}s`
     : `${target.targetRestMinSeconds}s`;
+}
+
+interface SupersetMember {
+  exercise: SessionExerciseForm;
+  exerciseIndex: number;
+}
+
+type RenderUnit =
+  | { kind: "single"; exercise: SessionExerciseForm; exerciseIndex: number }
+  | { kind: "superset"; members: SupersetMember[] };
+
+/** Raggruppa gli esercizi consecutivi con lo stesso supersetGroupId in una
+ *  singola unita' di rendering (vedi layout stretto sotto, "Round N"): gli
+ *  esercizi non raggruppati restano unita' "single" invariate. */
+function buildRenderUnits(exercises: SessionExerciseForm[]): RenderUnit[] {
+  const units: RenderUnit[] = [];
+  let i = 0;
+  while (i < exercises.length) {
+    const exercise = exercises[i];
+    if (!exercise.supersetGroupId) {
+      units.push({ kind: "single", exercise, exerciseIndex: i });
+      i++;
+      continue;
+    }
+    const groupId = exercise.supersetGroupId;
+    const members: SupersetMember[] = [];
+    while (i < exercises.length && exercises[i].supersetGroupId === groupId) {
+      members.push({ exercise: exercises[i], exerciseIndex: i });
+      i++;
+    }
+    units.push({ kind: "superset", members });
+  }
+  return units;
+}
+
+/** "A1"/"A2"/"B1"... per esercizio raggruppato (una lettera per superset
+ *  distinto, un numero per membro): stessa idea di supersetLabels in
+ *  workout-form-utils.ts, non condivisa direttamente perche' qui la chiave
+ *  e' workoutExerciseId (SessionExerciseForm non ha formId). */
+function supersetLabels(exercises: SessionExerciseForm[]): Map<string, string> {
+  const letterByGroup = new Map<string, string>();
+  const nextMemberByGroup = new Map<string, number>();
+  const labels = new Map<string, string>();
+  let nextLetterCode = 65; // "A"
+  for (const exercise of exercises) {
+    if (!exercise.supersetGroupId) {
+      continue;
+    }
+    let letter = letterByGroup.get(exercise.supersetGroupId);
+    if (!letter) {
+      letter = String.fromCharCode(nextLetterCode++);
+      letterByGroup.set(exercise.supersetGroupId, letter);
+      nextMemberByGroup.set(exercise.supersetGroupId, 1);
+    }
+    const member = nextMemberByGroup.get(exercise.supersetGroupId) as number;
+    labels.set(exercise.workoutExerciseId, `${letter}${member}`);
+    nextMemberByGroup.set(exercise.supersetGroupId, member + 1);
+  }
+  return labels;
 }
 
 /** Peso/recupero dell'ultima sessione registrata per la stessa scheda+
@@ -255,6 +322,7 @@ function buildInitialExercises(
       workoutExerciseId: exercise.id,
       progressionIncrement: exercise.progressionIncrement,
       restSeconds: exercise.restSeconds,
+      supersetGroupId: exercise.supersetGroupId,
       targetRestMinSeconds: firstSet?.restMinSeconds ?? null,
       targetRestMaxSeconds: firstSet?.restMaxSeconds ?? null,
       actualRestSeconds: initialRestSeconds !== null ? String(initialRestSeconds) : "",
@@ -450,6 +518,7 @@ export function LogSessionPage() {
             workoutExerciseId: exercise.workoutExerciseId,
             progressionIncrement: exercise.progressionIncrement ?? undefined,
             restSeconds: exercise.restSeconds ?? undefined,
+            supersetGroupId: exercise.supersetGroupId ?? undefined,
             sets: exercise.sets.map((set) => ({
               setNumber: set.setNumber,
               targetMinReps: set.targetMinReps ?? undefined,
@@ -563,6 +632,8 @@ export function LogSessionPage() {
   }
 
   const maxSets = Math.max(1, ...exercises.map((e) => e.sets.length));
+  const renderUnits = buildRenderUnits(exercises);
+  const labelByWorkoutExerciseId = supersetLabels(exercises);
 
   return (
     <main className="main-wide main-wide-table">
@@ -598,100 +669,243 @@ export function LogSessionPage() {
 
           {isNarrow ? (
             <div className="stack-table">
-              {exercises.map((exercise, exerciseIndex) => (
-                <Fragment key={exercise.workoutExerciseId}>
-                  <div className="stack-block">
-                    <h3>{exercise.exerciseName}</h3>
-                    {exercise.sets.map((set, setIndex) => (
-                      <div className="stack-row" key={setIndex}>
-                        <span className="stack-label">
-                          Set {set.setNumber}{" "}
-                          <span className="log-cell__target">({formatSetTarget(set)})</span>
-                        </span>
-                        <input
-                          type="number"
-                          min={0}
-                          value={set.actualReps}
-                          onChange={(event) =>
-                            updateSet(exerciseIndex, setIndex, { actualReps: event.target.value })
-                          }
-                          aria-label={`${exercise.exerciseName} set ${set.setNumber} rep effettive`}
-                          required
-                        />
+              {renderUnits.map((unit) => {
+                if (unit.kind === "single") {
+                  const { exercise, exerciseIndex } = unit;
+                  const nextExercise = exercises[exerciseIndex + 1];
+                  return (
+                    <Fragment key={exercise.workoutExerciseId}>
+                      <div className="stack-block">
+                        <h3>{exercise.exerciseName}</h3>
+                        {exercise.sets.map((set, setIndex) => (
+                          <div className="stack-row" key={setIndex}>
+                            <span className="stack-label">
+                              Set {set.setNumber}{" "}
+                              <span className="log-cell__target">({formatSetTarget(set)})</span>
+                            </span>
+                            <input
+                              type="number"
+                              min={0}
+                              value={set.actualReps}
+                              onChange={(event) =>
+                                updateSet(exerciseIndex, setIndex, {
+                                  actualReps: event.target.value,
+                                })
+                              }
+                              aria-label={`${exercise.exerciseName} set ${set.setNumber} rep effettive`}
+                              required
+                            />
+                          </div>
+                        ))}
+                        <div className="stack-row">
+                          <span className="stack-label">Kg</span>
+                          {exercise.isBodyweight ? (
+                            <span>corpo libero</span>
+                          ) : (
+                            <input
+                              type="number"
+                              min={0}
+                              step="0.5"
+                              value={exercise.actualWeight}
+                              onChange={(event) =>
+                                updateExercise(exerciseIndex, { actualWeight: event.target.value })
+                              }
+                              aria-label={`${exercise.exerciseName} kg effettivi`}
+                            />
+                          )}
+                        </div>
+                        <div className="stack-row">
+                          <span className="stack-label">
+                            Recupero{" "}
+                            <span className="log-cell__target">({formatRestRange(exercise)})</span>
+                          </span>
+                          <div className="input-with-button">
+                            <input
+                              type="number"
+                              min={0}
+                              value={exercise.actualRestSeconds}
+                              onChange={(event) =>
+                                updateExercise(exerciseIndex, {
+                                  actualRestSeconds: event.target.value,
+                                })
+                              }
+                              aria-label={`${exercise.exerciseName} recupero effettivo`}
+                            />
+                            <IconButton
+                              icon={<TimerIcon />}
+                              label="Avvia timer recupero"
+                              disabled={
+                                !isPositiveNumber(exercise.actualRestSeconds) || timers.length > 0
+                              }
+                              onClick={() =>
+                                startTimer(
+                                  Number(exercise.actualRestSeconds),
+                                  `${exercise.exerciseName} — recupero tra le serie`
+                                )
+                              }
+                            />
+                          </div>
+                        </div>
                       </div>
-                    ))}
-                    <div className="stack-row">
-                      <span className="stack-label">Kg</span>
-                      {exercise.isBodyweight ? (
-                        <span>corpo libero</span>
-                      ) : (
-                        <input
-                          type="number"
-                          min={0}
-                          step="0.5"
-                          value={exercise.actualWeight}
-                          onChange={(event) =>
-                            updateExercise(exerciseIndex, { actualWeight: event.target.value })
-                          }
-                          aria-label={`${exercise.exerciseName} kg effettivi`}
-                        />
+                      {nextExercise && exercise.restSeconds !== null && (
+                        <div className="rest-divider-stack">
+                          <span className="rest-divider">
+                            Recupero prima del prossimo esercizio: {exercise.restSeconds}s
+                          </span>
+                          <IconButton
+                            icon={<TimerIcon />}
+                            label="Avvia timer recupero"
+                            disabled={
+                              !exercise.restSeconds ||
+                              exercise.restSeconds <= 0 ||
+                              timers.length > 0
+                            }
+                            onClick={() =>
+                              startTimer(
+                                exercise.restSeconds as number,
+                                `Prima di ${nextExercise.exerciseName}`
+                              )
+                            }
+                          />
+                        </div>
                       )}
+                    </Fragment>
+                  );
+                }
+
+                // Superset: le serie si alternano per round (serie 1 di
+                // ogni membro, poi serie 2, ...) invece di finire tutto un
+                // esercizio prima di passare al successivo — riflette come
+                // si esegue davvero un superset. Peso/recupero effettivo
+                // restano per esercizio (non per round, stesso trattamento
+                // semplificato degli esercizi singoli), mostrati sotto la
+                // griglia dei round in un riquadro per membro.
+                const { members } = unit;
+                const roundCount = members[0]?.exercise.sets.length ?? 0;
+                const lastMember = members[members.length - 1];
+                const nextExercise = lastMember
+                  ? exercises[lastMember.exerciseIndex + 1]
+                  : undefined;
+                return (
+                  <Fragment key={members[0]?.exercise.workoutExerciseId}>
+                    <div className="stack-block stack-block--superset">
+                      <h3>Superset</h3>
+                      {Array.from({ length: roundCount }, (_, roundIndex) => (
+                        <div className="superset-round" key={roundIndex}>
+                          <span className="superset-round__title">Round {roundIndex + 1}</span>
+                          {members.map(({ exercise, exerciseIndex }) => {
+                            const set = exercise.sets[roundIndex];
+                            if (!set) {
+                              return null;
+                            }
+                            const label = labelByWorkoutExerciseId.get(exercise.workoutExerciseId);
+                            return (
+                              <div className="stack-row" key={exercise.workoutExerciseId}>
+                                <span className="stack-label">
+                                  {label && <span className="superset-tag">{label}</span>}{" "}
+                                  {exercise.exerciseName}{" "}
+                                  <span className="log-cell__target">({formatSetTarget(set)})</span>
+                                </span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={set.actualReps}
+                                  onChange={(event) =>
+                                    updateSet(exerciseIndex, roundIndex, {
+                                      actualReps: event.target.value,
+                                    })
+                                  }
+                                  aria-label={`${exercise.exerciseName} set ${set.setNumber} rep effettive`}
+                                  required
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                      {members.map(({ exercise, exerciseIndex }) => (
+                        <div className="superset-member-footer" key={exercise.workoutExerciseId}>
+                          <div className="stack-row">
+                            <span className="stack-label">Kg</span>
+                            {exercise.isBodyweight ? (
+                              <span>corpo libero</span>
+                            ) : (
+                              <input
+                                type="number"
+                                min={0}
+                                step="0.5"
+                                value={exercise.actualWeight}
+                                onChange={(event) =>
+                                  updateExercise(exerciseIndex, {
+                                    actualWeight: event.target.value,
+                                  })
+                                }
+                                aria-label={`${exercise.exerciseName} kg effettivi`}
+                              />
+                            )}
+                          </div>
+                          <div className="stack-row">
+                            <span className="stack-label">
+                              Recupero{" "}
+                              <span className="log-cell__target">
+                                ({formatRestRange(exercise)})
+                              </span>
+                            </span>
+                            <div className="input-with-button">
+                              <input
+                                type="number"
+                                min={0}
+                                value={exercise.actualRestSeconds}
+                                onChange={(event) =>
+                                  updateExercise(exerciseIndex, {
+                                    actualRestSeconds: event.target.value,
+                                  })
+                                }
+                                aria-label={`${exercise.exerciseName} recupero effettivo`}
+                              />
+                              <IconButton
+                                icon={<TimerIcon />}
+                                label="Avvia timer recupero"
+                                disabled={
+                                  !isPositiveNumber(exercise.actualRestSeconds) || timers.length > 0
+                                }
+                                onClick={() =>
+                                  startTimer(
+                                    Number(exercise.actualRestSeconds),
+                                    `${exercise.exerciseName} — recupero tra le serie`
+                                  )
+                                }
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="stack-row">
-                      <span className="stack-label">
-                        Recupero{" "}
-                        <span className="log-cell__target">({formatRestRange(exercise)})</span>
-                      </span>
-                      <div className="input-with-button">
-                        <input
-                          type="number"
-                          min={0}
-                          value={exercise.actualRestSeconds}
-                          onChange={(event) =>
-                            updateExercise(exerciseIndex, {
-                              actualRestSeconds: event.target.value,
-                            })
-                          }
-                          aria-label={`${exercise.exerciseName} recupero effettivo`}
-                        />
+                    {lastMember && nextExercise && lastMember.exercise.restSeconds !== null && (
+                      <div className="rest-divider-stack">
+                        <span className="rest-divider">
+                          Recupero prima del prossimo esercizio: {lastMember.exercise.restSeconds}s
+                        </span>
                         <IconButton
                           icon={<TimerIcon />}
                           label="Avvia timer recupero"
                           disabled={
-                            !isPositiveNumber(exercise.actualRestSeconds) || timers.length > 0
+                            !lastMember.exercise.restSeconds ||
+                            lastMember.exercise.restSeconds <= 0 ||
+                            timers.length > 0
                           }
                           onClick={() =>
                             startTimer(
-                              Number(exercise.actualRestSeconds),
-                              `${exercise.exerciseName} — recupero tra le serie`
+                              lastMember.exercise.restSeconds as number,
+                              `Prima di ${nextExercise.exerciseName}`
                             )
                           }
                         />
                       </div>
-                    </div>
-                  </div>
-                  {exerciseIndex < exercises.length - 1 && exercise.restSeconds !== null && (
-                    <div className="rest-divider-stack">
-                      <span className="rest-divider">
-                        Recupero prima del prossimo esercizio: {exercise.restSeconds}s
-                      </span>
-                      <IconButton
-                        icon={<TimerIcon />}
-                        label="Avvia timer recupero"
-                        disabled={
-                          !exercise.restSeconds || exercise.restSeconds <= 0 || timers.length > 0
-                        }
-                        onClick={() =>
-                          startTimer(
-                            exercise.restSeconds as number,
-                            `Prima di ${exercises[exerciseIndex + 1].exerciseName}`
-                          )
-                        }
-                      />
-                    </div>
-                  )}
-                </Fragment>
-              ))}
+                    )}
+                  </Fragment>
+                );
+              })}
             </div>
           ) : (
             <div className="table-scroll">
@@ -712,6 +926,11 @@ export function LogSessionPage() {
                       <tr>
                         <td>
                           <div className="log-exercise-name">
+                            {labelByWorkoutExerciseId.get(exercise.workoutExerciseId) && (
+                              <span className="superset-tag">
+                                {labelByWorkoutExerciseId.get(exercise.workoutExerciseId)}
+                              </span>
+                            )}
                             <span>{exercise.exerciseName}</span>
                           </div>
                         </td>

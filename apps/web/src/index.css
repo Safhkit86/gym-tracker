@@ -941,6 +941,67 @@ button.secondary:hover:not(:disabled) {
   border-top: 1px solid var(--color-border);
 }
 
+.stack-block--superset {
+  border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border));
+}
+
+.superset-round {
+  padding-top: var(--space-2);
+  margin-top: var(--space-2);
+  border-top: 1px dashed var(--color-border);
+}
+
+.superset-round:first-of-type {
+  border-top: none;
+  margin-top: 0;
+}
+
+.superset-round__title {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--space-1);
+}
+
+.superset-member-footer {
+  padding-top: var(--space-2);
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Storico: raggruppa visivamente gli stack-block di un superset passato,
+   stesso linguaggio (tag + riquadro tratteggiato) della creazione scheda. */
+.superset-bracket {
+  position: relative;
+  border: 1px dashed color-mix(in srgb, var(--color-accent) 55%, var(--color-border));
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.superset-bracket__label {
+  position: absolute;
+  top: -0.6rem;
+  left: var(--space-3);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0 var(--space-2);
+}
+
+.superset-bracket .stack-block {
+  border-color: transparent;
+  padding: 0;
+}
+
 .stack-label {
   font-size: 0.85rem;
   color: var(--color-text-muted);
@@ -1049,6 +1110,31 @@ button.secondary:hover:not(:disabled) {
 
 .exercise-form__drag-handle:active {
   cursor: grabbing;
+}
+
+.exercise-form--superset {
+  border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border));
+}
+
+.superset-tag {
+  display: inline-block;
+  margin-left: var(--space-2);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-accent-contrast);
+  background: var(--color-accent);
+  border-radius: 4px;
+  padding: 1px 6px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.exercise-form__group-checkbox {
+  font-size: 0.85rem;
+}
+
+.superset-group-bar {
+  align-items: center;
 }
 
 /* La maniglia di trascinamento e' posizionata in assoluto sopra il primo

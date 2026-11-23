@@ -442,6 +442,147 @@ describe("LogSessionPage", () => {
     expect(await screen.findByText(/aumenta il carico/i)).toBeInTheDocument();
   });
 
+  it("un superset si registra per round, senza riga separatrice tra i membri, con lo stesso supersetGroupId", async () => {
+    // Il layout a "Round N" (vedi buildRenderUnits in LogSessionPage.tsx) e'
+    // specifico dello schermo stretto: sulla tabella larga i due esercizi
+    // restano righe separate (solo il tag A1/A2 cambia), per scelta di
+    // scope — vedi il commento su isLastInSupersetGroup.
+    stubNarrowViewport(true);
+    const WORKOUT_SUPERSET = {
+      id: "w2",
+      name: "Push day",
+      notes: null,
+      exercises: [
+        {
+          id: "we1",
+          exerciseId: "e1",
+          exerciseName: "Panca piana",
+          position: 1,
+          notes: null,
+          // null: non e' l'ultimo membro del superset (vedi toWorkoutInput).
+          restSeconds: null,
+          progressionIncrement: null,
+          supersetGroupId: "g1",
+          sets: [
+            {
+              id: "s1",
+              setNumber: 1,
+              targetMinReps: 10,
+              targetMaxReps: null,
+              targetWeight: 80,
+              restMinSeconds: null,
+              restMaxSeconds: null,
+              isMaxEffort: false,
+            },
+            {
+              id: "s2",
+              setNumber: 2,
+              targetMinReps: 10,
+              targetMaxReps: null,
+              targetWeight: 80,
+              restMinSeconds: null,
+              restMaxSeconds: null,
+              isMaxEffort: false,
+            },
+          ],
+        },
+        {
+          id: "we2",
+          exerciseId: "e2",
+          exerciseName: "Trazioni",
+          position: 2,
+          notes: null,
+          restSeconds: 90,
+          progressionIncrement: null,
+          supersetGroupId: "g1",
+          sets: [
+            {
+              id: "s3",
+              setNumber: 1,
+              targetMinReps: 8,
+              targetMaxReps: null,
+              targetWeight: null,
+              restMinSeconds: null,
+              restMaxSeconds: null,
+              isMaxEffort: false,
+            },
+            {
+              id: "s4",
+              setNumber: 2,
+              targetMinReps: 8,
+              targetMaxReps: null,
+              targetWeight: null,
+              restMinSeconds: null,
+              restMaxSeconds: null,
+              isMaxEffort: false,
+            },
+          ],
+        },
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const fetchMock = mockFetchResponses([
+      { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
+      { match: (u, m) => u.endsWith("/workouts/w2") && m === "GET", body: WORKOUT_SUPERSET },
+      { match: (u, m) => u.endsWith("/sessions") && m === "GET", body: [] },
+      preferencesHandler(),
+      {
+        match: (u, m) => u.endsWith("/sessions") && m === "POST",
+        status: 201,
+        body: {
+          id: "sess1",
+          workoutId: "w2",
+          workoutName: "Push day",
+          workoutNotes: null,
+          performedAt: new Date().toISOString(),
+          notes: null,
+          exercises: [],
+          createdAt: new Date().toISOString(),
+        },
+      },
+      {
+        match: (u, m) => u.endsWith("/sessions/sess1/status") && m === "GET",
+        body: { status: "no-suggestion", suggestions: [] },
+      },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/workouts/:id/log" element={<LogSessionPage />} />
+      </Routes>,
+      ["/workouts/w2/log"]
+    );
+
+    await screen.findByLabelText(/panca piana set 1 rep effettive/i);
+    expect(screen.getByText("Round 1")).toBeInTheDocument();
+    expect(screen.getByText("Round 2")).toBeInTheDocument();
+    // Il tag A1/A2 compare su ogni round (una riga per round per membro),
+    // quindi 2 volte ciascuno con 2 round.
+    expect(screen.getAllByText("A1")).toHaveLength(2);
+    expect(screen.getAllByText("A2")).toHaveLength(2);
+    // Nessuna pausa tra Panca piana e Trazioni (stesso superset): solo UN
+    // riposo mostrato in tutta la pagina (quello di Trazioni, ultimo membro,
+    // prima di un eventuale esercizio successivo — qui non ce n'e', quindi
+    // nessun divisore affatto).
+    expect(screen.queryByText(/recupero prima del prossimo esercizio/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/panca piana set 2 rep effettive/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/trazioni set 2 rep effettive/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /registra sessione/i }));
+
+    await waitFor(() => {
+      const postCall = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+      expect(postCall).toBeDefined();
+    });
+    const postCall = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    const body = JSON.parse((postCall?.[1]?.body as string) ?? "{}");
+    expect(body.exercises[0].supersetGroupId).toBe("g1");
+    expect(body.exercises[1].supersetGroupId).toBe("g1");
+    expect(body.exercises[0].restSeconds).toBeUndefined();
+    expect(body.exercises[1].restSeconds).toBe(90);
+  });
+
   it("un nuovo PR nel polling viene mostrato col trattamento massimale, non come suggerimento di progressione", async () => {
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
