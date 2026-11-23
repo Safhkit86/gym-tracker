@@ -62,6 +62,7 @@ const WORKOUT_DETAIL: WorkoutDetail = {
       notes: "Riscaldamento incluso",
       restSeconds: 90,
       progressionIncrement: 2.5,
+      supersetGroupId: null,
       sets: [
         {
           id: "s1",

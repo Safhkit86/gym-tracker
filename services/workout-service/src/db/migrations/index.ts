@@ -17,6 +17,7 @@ import * as addEserciziSuggeriti from "./015-add-esercizi-suggeriti.js";
 import * as addIsMaxEffort from "./016-add-is-max-effort.js";
 import * as renameOwnerIdToUserId from "./017-rename-owner-id-to-user-id.js";
 import * as addAllenamenti from "./018-add-allenamenti.js";
+import * as addSupersetGroupId from "./019-add-superset-group-id.js";
 
 /**
  * Registro statico delle migrazioni (chiavi ordinate). Preferito a
@@ -42,4 +43,5 @@ export const migrations: Record<string, Migration> = {
   "016-add-is-max-effort": addIsMaxEffort,
   "017-rename-owner-id-to-user-id": renameOwnerIdToUserId,
   "018-add-allenamenti": addAllenamenti,
+  "019-add-superset-group-id": addSupersetGroupId,
 };

@@ -47,7 +47,11 @@ export interface WorkoutExerciseInput {
   exerciseId: string;
   position: number;
   notes?: string | null;
-  /** Recupero dopo questo esercizio, prima del successivo (secondi). */
+  /** Recupero dopo questo esercizio, prima del successivo (secondi). Per un
+   *  esercizio non ultimo del proprio superset (vedi supersetGroupId) questo
+   *  valore e' ignorato dal client (nessuna pausa tra gli esercizi dello
+   *  stesso giro): conta solo quello dell'ultimo membro del gruppo, il
+   *  riposo prima del giro successivo. */
   restSeconds?: number | null;
   /**
    * Incremento da applicare quando progress-service rileva che e' il momento
@@ -57,6 +61,13 @@ export interface WorkoutExerciseInput {
    * motore di progress-service non propone nulla per questo esercizio).
    */
   progressionIncrement?: number | null;
+  /** Esercizi con lo stesso supersetGroupId vengono eseguiti uno dopo
+   *  l'altro senza riposo (es. Panca piana + Trazioni, poi riposo, poi si
+   *  ripete): null/assente = esercizio singolo, non in superset. Un gruppo
+   *  deve avere almeno 2 membri, posizioni contigue (nessun esercizio di un
+   *  altro gruppo o senza gruppo in mezzo) e lo stesso numero di set tra i
+   *  membri (= numero di round) — validato da workout-service. */
+  supersetGroupId?: string | null;
   sets: WorkoutSetInput[];
 }
 
@@ -109,6 +120,8 @@ export interface WorkoutExercise {
   restSeconds: number | null;
   /** Vedi WorkoutExerciseInput.progressionIncrement; null = non configurato. */
   progressionIncrement: number | null;
+  /** Vedi WorkoutExerciseInput.supersetGroupId; null = non in un superset. */
+  supersetGroupId: string | null;
   sets: WorkoutSet[];
 }
 

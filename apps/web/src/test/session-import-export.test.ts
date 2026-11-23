@@ -81,6 +81,7 @@ const SESSION_DETAIL: SessionDetail = {
       workoutExerciseId: "we1",
       progressionIncrement: 2.5,
       restSeconds: 90,
+      supersetGroupId: null,
       sets: [
         {
           id: "set1",

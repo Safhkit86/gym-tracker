@@ -129,6 +129,101 @@ describe("POST /workouts", () => {
     expect(response.body.code).toBe("VALIDATION_ERROR");
   });
 
+  it("crea una scheda con un superset (due esercizi raggruppati)", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const exerciseId = await getExerciseId(app, token, "Panca piana");
+    const squatId = await getExerciseId(app, token, "Squat");
+    const groupId = "44444444-4444-4444-a444-444444444444";
+
+    const payload = workoutPayload(exerciseId);
+    payload.exercises[0].supersetGroupId = groupId;
+    payload.exercises.push({
+      ...payload.exercises[0],
+      exerciseId: squatId,
+      position: 2,
+      supersetGroupId: groupId,
+    });
+
+    const response = await request(app)
+      .post("/workouts")
+      .set("Authorization", `Bearer ${token}`)
+      .send(payload);
+
+    expect(response.status).toBe(201);
+    expect(response.body.exercises[0].supersetGroupId).toBe(groupId);
+    expect(response.body.exercises[1].supersetGroupId).toBe(groupId);
+  });
+
+  it("rifiuta un superset con un solo membro con 400", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const exerciseId = await getExerciseId(app, token, "Panca piana");
+
+    const payload = workoutPayload(exerciseId);
+    payload.exercises[0].supersetGroupId = "44444444-4444-4444-a444-444444444444";
+
+    const response = await request(app)
+      .post("/workouts")
+      .set("Authorization", `Bearer ${token}`)
+      .send(payload);
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("rifiuta un superset con esercizi non consecutivi con 400", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const exerciseId = await getExerciseId(app, token, "Panca piana");
+    const squatId = await getExerciseId(app, token, "Squat");
+    const groupId = "44444444-4444-4444-a444-444444444444";
+
+    const payload = workoutPayload(exerciseId);
+    payload.exercises[0].supersetGroupId = groupId;
+    payload.exercises.push(
+      { ...payload.exercises[0], exerciseId: squatId, position: 2, supersetGroupId: undefined },
+      // Riusa Panca piana (nessun vincolo di unicita' sull'exerciseId tra le
+      // posizioni di una scheda): serve solo un terzo membro in posizione 3
+      // dello stesso gruppo, con lo Squat senza gruppo in mezzo.
+      { ...payload.exercises[0], exerciseId, position: 3, supersetGroupId: groupId }
+    );
+
+    const response = await request(app)
+      .post("/workouts")
+      .set("Authorization", `Bearer ${token}`)
+      .send(payload);
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("rifiuta un superset con numero di set diverso tra i membri con 400", async () => {
+    const { app } = buildTestApp();
+    const token = await bearerFor(OWNER_A);
+    const exerciseId = await getExerciseId(app, token, "Panca piana");
+    const squatId = await getExerciseId(app, token, "Squat");
+    const groupId = "44444444-4444-4444-a444-444444444444";
+
+    const payload = workoutPayload(exerciseId);
+    payload.exercises[0].supersetGroupId = groupId;
+    payload.exercises.push({
+      ...payload.exercises[0],
+      exerciseId: squatId,
+      position: 2,
+      supersetGroupId: groupId,
+      sets: [payload.exercises[0].sets[0]],
+    });
+
+    const response = await request(app)
+      .post("/workouts")
+      .set("Authorization", `Bearer ${token}`)
+      .send(payload);
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe("VALIDATION_ERROR");
+  });
+
   it("rifiuta un esercizio senza set con 400", async () => {
     const { app } = buildTestApp();
     const token = await bearerFor(OWNER_A);

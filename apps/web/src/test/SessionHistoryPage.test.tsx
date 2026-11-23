@@ -174,11 +174,16 @@ describe("SessionHistoryPage", () => {
   });
 
   it("cliccando un giorno nel calendario salta alla pagina di quella sessione ed evidenzia la card", async () => {
+    // Giorno 5 del mese corrente (reale, non fissato): MonthCalendar non
+    // esclude i giorni futuri del mese mostrato, quindi il test resta
+    // valido indipendentemente da quando viene eseguito.
+    const now = new Date();
+    const calendarDateKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-05`;
     const SESSION_CALENDAR = {
       ...SESSION_OLDER,
       id: "sess-cal",
-      performedAt: "2026-10-05T10:00:00.000Z",
-      createdAt: "2026-10-05T10:00:00.000Z",
+      performedAt: `${calendarDateKey}T10:00:00.000Z`,
+      createdAt: `${calendarDateKey}T10:00:00.000Z`,
     };
     mockFetchResponses([
       { match: (u, m) => u.endsWith("/me") && m === "GET", body: FAKE_USER },
@@ -188,15 +193,17 @@ describe("SessionHistoryPage", () => {
     renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
     await screen.findAllByText("Panca piana");
 
-    // Il mese mostrato di default e' quello corrente (ottobre 2026, vedi
-    // system date della sessione di test): il giorno 5 ha una sessione,
-    // è quindi un bottone cliccabile nel calendario.
-    fireEvent.click(screen.getByRole("button", { name: "2026-10-05" }));
+    // Il mese mostrato di default e' quello corrente: il giorno 5 ha una
+    // sessione, è quindi un bottone cliccabile nel calendario.
+    fireEvent.click(screen.getByRole("button", { name: calendarDateKey }));
 
+    const expectedDateLabel = new Date(`${calendarDateKey}T10:00:00.000Z`).toLocaleDateString(
+      "it-IT"
+    );
     await waitFor(() => {
       const card = document.querySelector(".session-card--highlighted");
       expect(card).not.toBeNull();
-      expect(card).toHaveTextContent("05/10/2026");
+      expect(card).toHaveTextContent(expectedDateLabel);
     });
   });
 
@@ -209,9 +216,12 @@ describe("SessionHistoryPage", () => {
     renderWithProviders(<SessionHistoryPage />, ["/sessions"]);
     await screen.findAllByText("Panca piana");
 
-    // Nessuna sessione in ottobre 2026 (mese mostrato di default) in questo
-    // fixture: ogni giorno del mese e' disabilitato.
-    const emptyDay = screen.getByRole("button", { name: "2026-10-05" });
+    // Nessuna sessione nel mese corrente (mese mostrato di default) in
+    // questo fixture (SESSION_OLDER/SESSION_NEWER sono di luglio 2026):
+    // ogni giorno del mese e' disabilitato. Giorno 5 come sopra.
+    const now = new Date();
+    const calendarDateKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-05`;
+    const emptyDay = screen.getByRole("button", { name: calendarDateKey });
     expect(emptyDay).toBeDisabled();
   });
 

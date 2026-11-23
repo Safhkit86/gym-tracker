@@ -38,6 +38,9 @@ export interface SessionExerciseInput {
    *  all'esercizio successivo — concetto diverso dal recupero tra i set,
    *  che vive sul singolo set) al momento del log. */
   restSeconds?: number | null;
+  /** Snapshot di WorkoutExercise.supersetGroupId al momento del log: resta
+   *  leggibile nello Storico anche se la scheda viene poi modificata. */
+  supersetGroupId?: string | null;
   sets: SessionSetInput[];
 }
 
@@ -77,6 +80,8 @@ export interface SessionExercise {
   /** Snapshot di WorkoutExercise.restSeconds (recupero prima dell'esercizio
    *  successivo) al momento del log. */
   restSeconds: number | null;
+  /** Vedi SessionExerciseInput.supersetGroupId; null = non in un superset. */
+  supersetGroupId: string | null;
   sets: SessionSet[];
 }
 

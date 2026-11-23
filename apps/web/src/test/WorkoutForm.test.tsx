@@ -28,6 +28,7 @@ describe("workoutDetailToFormValues", () => {
             notes: null,
             restSeconds: null,
             progressionIncrement: null,
+            supersetGroupId: null,
             sets: [
               {
                 id: "s1",
@@ -64,6 +65,7 @@ describe("workoutDetailToFormValues", () => {
             notes: null,
             restSeconds: null,
             progressionIncrement: null,
+            supersetGroupId: null,
             sets: [
               {
                 id: "s2b",
@@ -95,6 +97,7 @@ describe("workoutDetailToFormValues", () => {
             notes: null,
             restSeconds: null,
             progressionIncrement: null,
+            supersetGroupId: null,
             sets: [
               {
                 id: "s1",
@@ -133,6 +136,7 @@ describe("workoutDetailToFormValues", () => {
             notes: null,
             restSeconds: null,
             progressionIncrement: null,
+            supersetGroupId: null,
             sets: [
               {
                 id: "s1",
@@ -176,6 +180,7 @@ describe("workoutDetailToFormValues", () => {
             notes: null,
             restSeconds: null,
             progressionIncrement: null,
+            supersetGroupId: null,
             sets: [
               {
                 id: "s1",
@@ -221,6 +226,7 @@ describe("workoutDetailToFormValues", () => {
             notes: null,
             restSeconds: null,
             progressionIncrement: null,
+            supersetGroupId: null,
             sets: [
               {
                 id: "s1",

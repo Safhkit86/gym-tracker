@@ -23,6 +23,7 @@ export interface NormalizedSessionExercise {
   workoutExerciseId: string | null;
   progressionIncrement: number | null;
   restSeconds: number | null;
+  supersetGroupId: string | null;
   sets: NormalizedSessionSet[];
 }
 
@@ -141,6 +142,7 @@ export class KyselySessionRepository implements SessionRepository {
               target_max_reps: s.targetMaxReps,
               progression_increment: ex.progressionIncrement,
               rest_seconds: ex.restSeconds,
+              superset_group_id: ex.supersetGroupId,
               target_rest_min_seconds: s.targetRestMinSeconds,
               target_rest_max_seconds: s.targetRestMaxSeconds,
               actual_rest_seconds: s.actualRestSeconds,
@@ -199,6 +201,7 @@ export class KyselySessionRepository implements SessionRepository {
           progressionIncrement:
             s.progression_increment === null ? null : Number(s.progression_increment),
           restSeconds: s.rest_seconds,
+          supersetGroupId: s.superset_group_id,
           sets: [],
         };
         exercisesByExerciseId.set(s.exercise_id, exercise);
@@ -290,6 +293,7 @@ export class KyselySessionRepository implements SessionRepository {
           progressionIncrement:
             s.progression_increment === null ? null : Number(s.progression_increment),
           restSeconds: s.rest_seconds,
+          supersetGroupId: s.superset_group_id,
           sets: [],
         };
         exercisesByExerciseId.set(s.exercise_id, exercise);
@@ -352,6 +356,7 @@ export class KyselySessionRepository implements SessionRepository {
           progressionIncrement:
             s.progression_increment === null ? null : Number(s.progression_increment),
           restSeconds: s.rest_seconds,
+          supersetGroupId: s.superset_group_id,
           sets: [],
         };
         exercisesByExerciseId.set(s.exercise_id, exercise);
@@ -505,6 +510,7 @@ export class InMemorySessionRepository implements SessionRepository {
         workoutExerciseId: ex.workoutExerciseId,
         progressionIncrement: ex.progressionIncrement,
         restSeconds: ex.restSeconds,
+        supersetGroupId: ex.supersetGroupId,
         sets: ex.sets.map((s) => ({
           id: randomUUID(),
           setNumber: s.setNumber,

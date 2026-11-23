@@ -46,6 +46,8 @@ const exerciseSchema = z.object({
   /** Snapshot di WorkoutExercise.restSeconds (recupero prima dell'esercizio
    *  successivo) al momento del log. */
   restSeconds: z.number().int().nonnegative().nullish(),
+  /** Snapshot di WorkoutExercise.supersetGroupId al momento del log. */
+  supersetGroupId: z.string().uuid().nullish(),
   sets: z
     .array(setSchema)
     .min(1, "Ogni esercizio deve avere almeno un set.")
